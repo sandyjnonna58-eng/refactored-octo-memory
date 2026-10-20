@@ -93,6 +93,8 @@ local remHeartStopLoading
 
 local function PlayRemHeartStopSound(uncon)
 	if remHeartStopLoading then return end
+	-- без сознания остановка сердца = умирание, там этот звук уже идёт по кругу
+	if uncon then return end
 
 	remHeartStopLoading = true
 	sound.PlayFile("sound/" .. (uncon and "rem_heartstopuncon.wav" or "rem_heartstop.wav"), "noblock noplay", function(station)
@@ -111,7 +113,7 @@ local function PlayRemDeathStateSound()
 	if remDeathStateLoading then return end
 
 	remDeathStateLoading = true
-	sound.PlayFile("sound/rem_deathstatefull.mp3", "noplay", function(station)
+	sound.PlayFile("sound/rem_heartstopuncon.wav", "noplay noblock", function(station)
 		remDeathStateLoading = nil
 		if not IsValid(station) then return end
 		if not LocalPlayer():Alive() then station:Stop() return end
@@ -123,6 +125,23 @@ local function PlayRemDeathStateSound()
 end
 
 net.Receive("rem_deathstate_sound", PlayRemDeathStateSound)
+
+-- умирание: из центра экрана надвигается белый свет и к концу таймера заливает всё
+local remDeathStateDuration = 25
+local remDeathLightMat = Material("sprites/light_glow02_add")
+
+local function DrawRemDeathLight(progress)
+	local eased = progress * progress
+	local pulse = 1 + math.sin(CurTime() * 2) * 0.04
+	local size = Lerp(eased, ScrH() * 0.2, ScrH() * 4) * pulse
+
+	surface.SetMaterial(remDeathLightMat)
+	surface.SetDrawColor(255, 255, 255, 80 + 175 * progress)
+	surface.DrawTexturedRect(ScrW() / 2 - size / 2, ScrH() / 2 - size / 2, size, size)
+
+	surface.SetDrawColor(255, 255, 255, 235 * eased * progress)
+	surface.DrawRect(0, 0, ScrW(), ScrH())
+end
 
 local function StartRemFibrillationSound()
  if IsValid(remFibrillationStation) then
@@ -543,8 +562,13 @@ hook.Add("Post Post Pre Post Processing", "organism-effects", function()
 
 	if lply:Alive() and (otrub or new_organism.otrub) and incapacitated and deathStateEnd then
 		local seconds = math.max(math.ceil(deathStateEnd - CurTime()), 0)
+		local progress = math.Clamp(1 - (deathStateEnd - CurTime()) / remDeathStateDuration, 0, 1)
 		remDeathStateColor.a = math.Clamp((25 - (deathStateEnd - CurTime())) / 2, 0, 1) * 255
+		-- текст темнеет, чтобы читаться на белом
+		local textShade = 255 * (1 - progress * progress)
+		remDeathStateColor.r, remDeathStateColor.g, remDeathStateColor.b = textShade, textShade, textShade
 		PlayRemDeathStateSound()
+		DrawRemDeathLight(progress)
 		draw.SimpleText("You are incapacitated, You will die in " .. seconds, "RemDeathStateFont", ScrW() / 2, ScrH() / 2, remDeathStateColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 	elseif IsValid(remDeathStateStation) then
 		remDeathStateStation:Stop()
