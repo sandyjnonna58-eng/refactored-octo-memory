@@ -1,0 +1,7 @@
+"VertexlitGeneric"
+{
+	"$basetexture" "models/sweaterport/sweater"
+                "$bumpmap"  "models/sweaterport/sweaternrm"
+                "$nodecal" 1
+                "$nocull" 1
+}

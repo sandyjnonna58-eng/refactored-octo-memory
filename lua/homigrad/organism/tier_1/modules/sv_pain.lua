@@ -67,6 +67,12 @@ local function updatePainUnconscious(owner, org, timeValue)
 	if org.otrub or not org.alive then
 		return
 	end
+	-- эксперименты терпят боль: от неё не отключаются
+	if hg.organism.FractureTolerant(org) then
+		org.painUnconscious = false
+		org.painUnconsciousTime = 0
+		return
+	end
 	org.painUnconscious = false
 
 	local now = CurTime()
@@ -181,7 +187,7 @@ module[2] = function(owner, org, timeValue)
 	org.painlessen = sub
 
 	org.pain = org.avgpain * math.max(1 - adrenaline / 4, 0.75) * math.max(1 - org.analgesia, 0)
-	org.nearpainlimit = not org.otrub and org.pain >= org.pain_turn * pain_fake_threshold
+	org.nearpainlimit = not org.otrub and org.pain >= org.pain_turn * pain_fake_threshold and not hg.organism.FractureTolerant(org)
 
 	if org.isPly and org.pain >= 85 and IsValid(owner) and owner.Thought then
 		owner:Thought("You are experiencing excruciating pain.", 8, "thought_excruciatingpain", 0, Color(255, 160, 160))

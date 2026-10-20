@@ -1781,6 +1781,15 @@ function hg.BreakNeck(ent)
 
 	org.spine3 = 1
 	local owner = IsValid(ply) and ply or nil
+
+	-- эксперимента сломанная шея не убивает, только больно
+	if IsValid(owner) and owner:IsPlayer() and owner:Alive() and hg.organism.FractureTolerant(org) then
+		ent:EmitSound("neck_snap_01.wav", 60, 100, 1, CHAN_AUTO)
+		org.painadd = org.painadd + 40
+		hg.LightStunPlayer(owner, 2)
+		return
+	end
+
 	if ent:IsRagdoll() and org.alive == false then
 		ent:EmitSound("neck_snap_01.wav", 60, 100, 1, CHAN_AUTO)
 		applyBrokenNeckToRagdoll(ent)

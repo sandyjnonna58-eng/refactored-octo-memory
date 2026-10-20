@@ -163,9 +163,23 @@ hook.Add("Org Clear", "Main", function(org)
 	org.SpawnedBrainChunks = nil
 end)
 
+-- классы с FractureTolerance (эксперименты): переломы, позвоночник и шея не обездвиживают
+function hg.organism.FractureTolerant(org)
+	local owner = org and org.owner
+	if not IsValid(owner) or not owner:IsPlayer() then return false end
+
+	local class = owner:GetPlayerClass()
+	return class and class.FractureTolerance == true or false
+end
+
+local function fracturesBlock(org)
+	if hg.organism.FractureTolerant(org) then return false end
+	return org.spine1 >= hg.organism.fake_spine1 or org.spine2 >= hg.organism.fake_spine2 or org.spine3 >= hg.organism.fake_spine3 or (org.lleg == 1 and org.rleg == 1) and org.berserk <= 0.3
+end
+
 hook.Add("Should Fake Up", "organism", function(ply)
 	local org = ply.organism
-	if org.seizureActive or org.otrub or org.fake or org.nearpainlimit or org.shock > 40 or org.spine1 >= hg.organism.fake_spine1 or org.spine2 >= hg.organism.fake_spine2 or org.spine3 >= hg.organism.fake_spine3 or (org.lleg == 1 and org.rleg == 1) and org.berserk <= 0.3 or (org.blood < 2900) or org.consciousness <= 0.4 then
+	if org.seizureActive or org.otrub or org.fake or org.nearpainlimit or org.shock > 40 or fracturesBlock(org) or (org.blood < 2900) or org.consciousness <= 0.4 then
 		return false
 	end
 end)
@@ -828,8 +842,9 @@ hook.Add("Org Think", "Main", function(owner, org, timeValue)
 	if isPly and just_went_uncon then hook.Run("HG_OnOtrub", owner); hook.Run("PlayerDropWeapon", owner) end
 	if isPly and just_woke_up then hook.Run("HG_OnWakeOtrub", owner) end
 
-	org.canmove = (org.spine2 < hg.organism.fake_spine2 and org.spine3 < hg.organism.fake_spine3) and not org.otrub
-	org.canmovehead = (org.spine3 < hg.organism.fake_spine3) and not org.otrub
+	local fractureTolerant = isPly and hg.organism.FractureTolerant(org)
+	org.canmove = (fractureTolerant or org.spine2 < hg.organism.fake_spine2 and org.spine3 < hg.organism.fake_spine3) and not org.otrub
+	org.canmovehead = (fractureTolerant or org.spine3 < hg.organism.fake_spine3) and not org.otrub
 
 	local spineDis = 0
 	if isPly and alive and not org.otrub then

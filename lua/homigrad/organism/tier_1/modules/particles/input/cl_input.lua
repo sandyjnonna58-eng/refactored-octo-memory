@@ -43,7 +43,8 @@ local function addBloodPart(pos, vel, mat, w, h, artery, kishki, owner)
 
 	if #hg.bloodparticles1 > 200 then table.remove(hg.bloodparticles1, 1) end
 	
-	hg.bloodparticles1[#hg.bloodparticles1 + 1] = {pos, pos2, vel, mat or mat_huy, w or 2, h or 2, CurTime(), artery = artery, kishki = kishki, owner = owner, start_velocity = IsValid(owner) and owner:GetVelocity() or vector_origin}
+	local yellow = hg.IsYellowBloodAt and hg.IsYellowBloodAt(owner, pos) or nil
+	hg.bloodparticles1[#hg.bloodparticles1 + 1] = {pos, pos2, vel, mat or mat_huy, w or 2, h or 2, CurTime(), artery = artery, kishki = kishki, owner = owner, yellow = yellow, start_velocity = IsValid(owner) and owner:GetVelocity() or vector_origin}
 end
 
 local function addBloodPart2(pos, vel, mat, w, h, time, water, owner)
@@ -61,7 +62,8 @@ local function addBloodPart2(pos, vel, mat, w, h, time, water, owner)
 	--if water and math.random(2) == 1 then return end
 	--if water and math.random(3) > 1 then return end
 
-	hg.bloodparticles2[#hg.bloodparticles2 + 1] = {pos, pos2, vel, mat or cloudmat, w or 60, h or 60, CurTime() + time, time, water = water, owner = owner}
+	local yellow = hg.IsYellowBloodAt and hg.IsYellowBloodAt(owner, pos) or nil
+	hg.bloodparticles2[#hg.bloodparticles2 + 1] = {pos, pos2, vel, mat or cloudmat, w or 60, h or 60, CurTime() + time, time, water = water, owner = owner, yellow = yellow}
 end
 
 hg.addBloodPart = addBloodPart
@@ -72,6 +74,7 @@ local render_SetMaterial = render.SetMaterial
 local render_DrawSprite = render.DrawSprite
 local table_remove = table.remove
 local spillColor = Color(70, 0, 0, 255)
+local spill_yellow_green = 60
 hg.gibbloodspillparticles = hg.gibbloodspillparticles or {}
 
 local function addGibBloodSpill(ent, stump)
@@ -80,7 +83,7 @@ local function addGibBloodSpill(ent, stump)
 
 	local vel = VectorRand(-18, 18) + ent:GetVelocity() * 0.04
 	vel[3] = vel[3] + (stump and Rand(10, 22) or Rand(-2, 10))
-	hg.gibbloodspillparticles[#hg.gibbloodspillparticles + 1] = {ent:GetPos() + VectorRand(-3, 3), vel, bloodSpillMats[math.random(#bloodSpillMats)], CurTime(), Rand(0.35, 0.55), stump and Rand(1, 2) or Rand(0.25, 0.6), stump and Rand(9, 16) or Rand(3, 6), stump}
+	hg.gibbloodspillparticles[#hg.gibbloodspillparticles + 1] = {ent:GetPos() + VectorRand(-3, 3), vel, bloodSpillMats[math.random(#bloodSpillMats)], CurTime(), Rand(0.35, 0.55), stump and Rand(1, 2) or Rand(0.25, 0.6), stump and Rand(9, 16) or Rand(3, 6), stump, yellow = hg.HasYellowBlood and hg.HasYellowBlood(ent) or nil}
 end
 
 hook.Add("PostDrawTranslucentRenderables", "hg_gib_bloodspill", function()
@@ -98,6 +101,7 @@ hook.Add("PostDrawTranslucentRenderables", "hg_gib_bloodspill", function()
 		local grow = 1 - (1 - frac) * (1 - frac)
 		local size = Lerp(grow, part[6], part[7])
 		spillColor.a = 255 * (1 - frac)
+		spillColor.g = part.yellow and spill_yellow_green or 0
 		render_SetMaterial(part[3])
 		render_DrawSprite(part[1], size, size, spillColor)
 	end

@@ -19,6 +19,7 @@ local render_DrawSprite = render.DrawSprite
 local surface_SetDrawColor = surface.SetDrawColor
 
 local color = Color(90,0,0,122)
+local yellow_green = 75
 
 bloodparticles_hook[3] = function(anim_pos)
     local time = CurTime()
@@ -28,6 +29,7 @@ bloodparticles_hook[3] = function(anim_pos)
         if not part then continue end
         local animpos = math.max((part[7] - time) / part[8], 0)
         color.a = part.water and (200 * animpos) or (122 * animpos)
+        color.g = part.yellow and yellow_green or 0
         local sizeing = part.water and math.max((1 - animpos), 0.1) or 1
         render_SetMaterial(part[4])
         render_DrawSprite(LerpVector(anim_pos,part[2],part[1]),part[5] * sizeing, part[6] * sizeing, color)

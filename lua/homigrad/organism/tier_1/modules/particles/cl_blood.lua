@@ -30,6 +30,8 @@ end)
 
 local mat_huy = Material("effects/blood_core")
 local lightcolor = Color(0, 0, 0, 255)
+-- жёлтая кровь (эксперименты): к красному каналу добавляется зелёный
+local yellow_green_mul = 0.8
 bloodparticles_hook[1] = function(anim_pos, mul)
 	 
 	local int = hg_blood_draw_distance:GetInt()
@@ -56,6 +58,7 @@ bloodparticles_hook[1] = function(anim_pos, mul)
 		if part.kishki then
 			render_SetMaterial(part[4])
 			lightcolor.r = math.min((part.artery and 45 or 10) * light[1], 255)
+			lightcolor.g = part.yellow and lightcolor.r * yellow_green_mul or 0
 			render_DrawSprite(pos, part[5], part[6], lightcolor)
 		else
 			local len = (part[2] - part[1]):LengthSqr()
@@ -63,6 +66,7 @@ bloodparticles_hook[1] = function(anim_pos, mul)
 			--if len > 1 * 1 then
 				render_SetMaterial(mat_huy)
 				lightcolor.r = math.min((part.artery and 45 or 20) * light[1], 255)
+				lightcolor.g = part.yellow and lightcolor.r * yellow_green_mul or 0
 				--part.lerpedshit = LerpFT(!part.lasthit and 1 or mul * 1, part.lerpedshit or 1, part.lasthit and 7 or 1)
 				--render_DrawBeam(pos - (len < 2 and (part[2] - part[1]):GetNormalized() * part.lerpedshit or (part[2] - part[1])) * 0.5 / mul / 24,pos + (part[2] - part[1]) * 0.5 / mul / 24, part.lerpedshit, 0, 1, part[9] or lightcolor )
 				--render_DrawBeam(pos - (part[2] - part[1]) * part.lerpedshit / mul / 24 * 0.5,pos + (part[2] - part[1]) * part.lerpedshit / mul / 24 * 0.5, part.lerpedshit, 0, 1, part[9] or lightcolor )
@@ -93,7 +97,13 @@ local function playBloodDripImpact(pos, tr)
 	end
 end
 
-local function decalBlood(pos, normal, tr, artery, owner)
+local function decalBlood(pos, normal, tr, artery, owner, yellow)
+	if yellow then
+		util_Decal("YellowBlood", pos + normal, pos - normal, owner)
+		playBloodDripImpact(pos, tr)
+		return
+	end
+
 	local vec = tostring(math.Round(pos[1]))..tostring(math.Round(pos[2]))..tostring(math.Round(pos[3]))
 
 	hg.bloodcount = hg.bloodcount + 1
@@ -200,7 +210,7 @@ bloodparticles_hook[2] = function(mul)
 		if result.Hit and result.Entity:IsWorld() then
 			table_remove(hg.bloodparticles1, i)
 			local dir = result.HitNormal
-			decalBlood(result.HitPos, dir, result, part.artery, part.owner)
+			decalBlood(result.HitPos, dir, result, part.artery, part.owner, part.yellow)
 			
 			
 			--sound.Play("zbattle/blood_drop.mp3", hitPos, math.random(10, 60), math.random(120, 120))
@@ -228,7 +238,7 @@ bloodparticles_hook[2] = function(mul)
 				if !insolid and (part.nextput or 0) < CurTime() then
 					part.nextput = CurTime() + 1
 
-					decalBlood(result.HitPos, result.HitNormal, result, part.artery, part.owner)
+					decalBlood(result.HitPos, result.HitNormal, result, part.artery, part.owner, part.yellow)
 				end
 
 				local insolid = result.StartSolid and IsValid(result.Entity)
@@ -253,7 +263,7 @@ bloodparticles_hook[2] = function(mul)
 				part.lerpedmove = LerpVector(1, part.lerpedmove or part[3] * mul, nextpos * mul * 2)
 				
 				if part.lerpedmove:LengthSqr() < 0.1 * mul then
-					decalBlood(result.HitPos, result.HitNormal, result, part.artery, part.owner)
+					decalBlood(result.HitPos, result.HitNormal, result, part.artery, part.owner, part.yellow)
 					
 					table_remove(hg.bloodparticles1, i)
 					
