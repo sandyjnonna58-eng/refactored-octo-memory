@@ -1,0 +1,7 @@
+"VertexlitGeneric"
+{
+	"$basetexture" "models/akittu/stylizedexpie/eye4"
+                "$selfillum" 1
+	"$selfillummask" "models/akittu/stylizedexpie/eye4"
+                "$nodecal" 1
+}

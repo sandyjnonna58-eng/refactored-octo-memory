@@ -1,0 +1,7 @@
+"VertexlitGeneric"
+{
+	"$basetexture" "models/akittu/stylizedexpie/cosmetics"
+                "$bumpmap"  "models/akittu/stylizedexpie/cosmeticsnormal"
+                "$nodecal" 1
+                "$nocull" 1
+}

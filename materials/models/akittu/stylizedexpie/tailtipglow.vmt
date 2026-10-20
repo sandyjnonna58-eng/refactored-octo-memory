@@ -1,0 +1,7 @@
+"VertexlitGeneric"
+{
+	"$basetexture" "models/akittu/stylizedexpie/tailtip"
+                "$selfillum" 1
+	"$selfillummask" "models/akittu/stylizedexpie/white"
+                "$nodecal" 1
+}

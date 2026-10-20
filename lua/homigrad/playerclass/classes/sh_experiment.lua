@@ -1,7 +1,8 @@
 -- Эксперимент: жёлтая кровь; переломы, позвоночник и шея не обездвиживают - двигаться можно, но больно.
 local CLASS = player.RegClass("experiment")
 
--- модели из аддона Akittu's Expie and Milky, толстовку на них надевает lua/autorun/akittu_sweater.lua
+-- Expie лежит в сборке (models/akittu/stylizedexpie), Milky - только если стоит его аддон;
+-- толстовку на них надевает lua/autorun/akittu_sweater.lua
 local models = {
 	"models/akittu/stylizedexpie/akittuexpie.mdl",
 	"models/akittu/stylizedexpie/akittuexpiev3.mdl",
@@ -53,7 +54,7 @@ function CLASS.On(self)
 
 	if #valid == 0 then
 		ApplyAppearance(self)
-		self:ChatPrint("Experiment: Expie/Milky models are not installed, using a normal model.")
+		self:ChatPrint("Experiment: Expie model is not installed, using a normal model.")
 		return
 	end
 
@@ -62,6 +63,7 @@ function CLASS.On(self)
 	Appearance.AAttachments = ""
 	Appearance.AColthes = ""
 	self:SetModel(valid[math.random(#valid)])
+	self:SetSkin(math.random(0, math.max(self:SkinCount() - 1, 0)))
 	self:SetSubMaterial()
 	self:SetNetVar("Accessories", "")
 	self.CurAppearance = Appearance

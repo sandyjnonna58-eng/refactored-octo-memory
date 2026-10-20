@@ -1,0 +1,15 @@
+"VertexlitGeneric"
+{
+	"$basetexture" "models/akittu/stylizedexpie/tailtipcolor"
+                "$nodecal" 1
+                "$blendtintcoloroverbase" "1"
+Proxies
+	{
+		PlayerColor
+		{
+			resultVar	$color2
+			default		0.5 0.5 0.5
+		}
+                }
+}
+
