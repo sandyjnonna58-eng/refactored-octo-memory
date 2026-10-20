@@ -8,11 +8,12 @@ local urge_presses_needed = 12
 local urge_initial_delay = 8
 local urge_adrenaline_threshold = 1.5
 local urge_adrenaline_delay = 3
--- сколько держится поза после проигранного позыва: курок игрок жмёт сам
-local urge_hold_time = 10
+-- сколько держится поза после проигранного позыва: курок жмёт сам игрок, а потом оружие стреляет само
+local urge_hold_time = 20
 
 util.AddNetworkString("rem_urges_press")
 util.AddNetworkString("rem_urges_end")
+util.AddNetworkString("rem_urges_lost")
 
 local function findSuicideWeapon(ply)
 	local melee
@@ -44,6 +45,73 @@ local function autoEquipSuicideWeapon(ply)
 	return true
 end
 
+local function doUrgeCut(ply)
+	if not hasSuicideWeapon(ply) then return end
+
+	local org = ply.organism
+	if not org or not org.alive then return end
+
+	local wep = ply.GetActiveWeapon and ply:GetActiveWeapon()
+	if IsValid(wep) and wep.SuicideFunc then
+		wep:SuicideFunc()
+		return
+	end
+
+	if IsValid(wep) and ishgweapon(wep) and not (wep.ismelee2 or wep.Base == "weapon_melee") then
+		if wep:Clip1() <= 0 then
+			if wep.PrimaryShootEmpty then
+				wep:PrimaryShootEmpty()
+			elseif wep.Primary and wep.Primary.SoundEmpty then
+				ply:EmitSound(wep.Primary.SoundEmpty, 75)
+			end
+
+			return
+		end
+
+		local oldStart = ply.startsuicide
+		ply.startsuicide = CurTime() - 2
+		ply.suiciding = true
+		ply.remUrgeFiring = true
+		wep:PrimaryAttack(true)
+		ply.remUrgeFiring = nil
+		ply.suiciding = false
+		ply.startsuicide = oldStart
+		return
+	end
+
+	local ent = hg.GetCurrentCharacter(ply)
+	if not IsValid(ent) then return end
+
+	local neck = ent:LookupBone("ValveBiped.Bip01_Neck1")
+	if not neck then return end
+
+	local matrix = ent:GetBoneMatrix(neck)
+	if not matrix then return end
+
+	local dmgInfo = DamageInfo()
+	dmgInfo:SetAttacker(ply)
+	if IsValid(wep) then dmgInfo:SetInflictor(wep) end
+	dmgInfo:SetDamageType(DMG_SLASH)
+
+	local ang = matrix:GetAngles()
+	local _, cutAng = LocalToWorld(vector_origin, Angle(0, -60, 0), vector_origin, ang)
+
+	hg.organism.input_list["arteria"](org, 0, 5, dmgInfo, nil, -cutAng:Forward())
+
+	for i = 1, 5 do
+		hg.organism.AddWoundManual(ply, 50, VectorRand(-2, 2), cutAng, "ValveBiped.Bip01_Neck1", CurTime() + math.Rand(0, 2))
+	end
+
+	ply:AddNaturalAdrenaline(math.max(2 - (org.adrenaline or 0), 0))
+	org.fear = math.max(org.fear, 1)
+
+	hook.Run("HomigradDamage", ply, dmgInfo, HITGROUP_HEAD, ent, 15)
+
+	if IsValid(wep) then
+		ply:EmitSound(wep.SuicideSound or wep.Attack2HitFlesh or wep.AttackHitFlesh, 50)
+	end
+end
+
 local function endHold(ply)
 	if not IsValid(ply) then return end
 
@@ -54,7 +122,8 @@ local function endHold(ply)
 	ply.suiciding = false
 end
 
--- позыв не побороли: оружие остаётся у головы, выстрелить или ударить игрок должен сам
+-- позыв не побороли: оружие остаётся у головы, выстрелить или ударить игрок должен сам,
+-- а если не решится за urge_hold_time - оружие выстрелит само
 local function startHold(ply)
 	if not hasSuicideWeapon(ply) then return end
 
@@ -62,7 +131,13 @@ local function startHold(ply)
 	ply.suiciding = true
 	ply:SetNWFloat("rem_suicide_hold", CurTime() + urge_hold_time)
 
+	net.Start("rem_urges_lost")
+	net.Send(ply)
+
 	timer.Create("rem_urges_hold_" .. ply:EntIndex(), urge_hold_time, 1, function()
+		if not IsValid(ply) then return end
+
+		if ply:Alive() and ply.suiciding then doUrgeCut(ply) end
 		endHold(ply)
 	end)
 end

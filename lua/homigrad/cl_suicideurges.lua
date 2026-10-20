@@ -119,6 +119,14 @@ net.Receive("rem_urges_end", function()
 	surface.PlaySound("rem_enditall.mp3")
 end)
 
+-- позыв проигран: оружие у головы, звенит в ушах
+net.Receive("rem_urges_lost", function()
+	stopUrgeLoop()
+	sound.PlayFile(urgeLoopPath, "noblock", function(station)
+		if IsValid(station) then station:Play() end
+	end)
+end)
+
 hook.Add("PlayerButtonDown", "REM_UrgesPress", function(ply, button)
 	if ply ~= LocalPlayer() or button ~= KEY_E then return end
 
@@ -300,5 +308,6 @@ hook.Add("HUDPaint", "REM_SuicideWhispers", function()
 
 	local wep = ply:GetActiveWeapon()
 	local melee = IsValid(wep) and (wep.ismelee2 or wep.Base == "weapon_melee")
-	drawResistText(melee and "DO IT" or "PULL THE TRIGGER", ScrW() / 2 + math.random(-4, 4), ScrH() / 2 + ScrH() * 0.12 + math.random(-3, 3))
+	local left = math.ceil(ply:GetNWFloat("rem_suicide_hold", 0) - now)
+	drawResistText((melee and "DO IT" or "PULL THE TRIGGER") .. " " .. left, ScrW() / 2 + math.random(-4, 4), ScrH() / 2 + ScrH() * 0.12 + math.random(-3, 3))
 end)
