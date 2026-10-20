@@ -103,6 +103,14 @@ if SERVER then
 		end
 	end)
 
+	-- у мёртвого Expie глаза закрыты (живым моргание делает hg.mouthmove)
+	hook.Add("RagdollDeath", "hg_experiment_closeeyes", function(ply, ragdoll)
+		if not IsValid(ragdoll) then return end
+
+		local blinks = ragdoll:GetFlexIDByName("Blinks")
+		if blinks then ragdoll:SetFlexWeight(blinks, 1) end
+	end)
+
 	return
 end
 

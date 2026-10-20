@@ -768,6 +768,11 @@ players : 1 humans, 0 bots (20 max)
 			if ent:GetFlexIDByName("half_closed") then
 				ent:SetFlexWeight(ent:GetFlexIDByName("half_closed"), ent.Blinking or 0)
 			end
+
+			-- модели Expie (эксперименты)
+			if ent:GetFlexIDByName("Blinks") then
+				ent:SetFlexWeight(ent:GetFlexIDByName("Blinks"), ent.Blinking or 0)
+			end
 		end
 
 		hook.Add("Player Think", "MouthThink", function(ply) if IsValid(ply.FakeRagdoll) then mouthmove(ply) end end)
