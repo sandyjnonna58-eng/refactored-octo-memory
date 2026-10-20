@@ -167,6 +167,26 @@ local function StopRemFibrillationSound()
  end)
 end
 
+-- сердце в критическом состоянии: каждый удар слышен (у остановки и фибрилляции свои звуки)
+local remBadHeartbeatSound = "rem_heartbeatbad.mp3"
+local remNextBadHeartbeat = 0
+
+local function IsHeartCritical(org)
+ local pulse = org.pulse or 70
+ return (org.heart or 0) >= 0.6 or (org.arrhythmia or 0) >= 0.5 or (org.myocardialOxygen or 1) <= 0.45
+  or (org.heartStrain or 0) >= 0.75 or pulse < 40 or pulse > 160
+end
+
+local function ThinkBadHeartbeat(org)
+ local now = CurTime()
+ if now < remNextBadHeartbeat then return end
+
+ local bpm = math.Clamp(org.heartbeat or org.pulse or 70, 30, 200)
+ local jitter = 1 + math.Rand(-0.4, 0.4) * math.Clamp(org.arrhythmia or 0, 0, 1)
+ remNextBadHeartbeat = now + 60 / bpm * jitter
+ surface.PlaySound(remBadHeartbeatSound)
+end
+
 hook.Add("Think", "RemCardiacSounds", function()
  local ply = LocalPlayer()
  if not IsValid(ply) then return end
@@ -183,6 +203,8 @@ hook.Add("Think", "RemCardiacSounds", function()
  else
   StopRemFibrillationSound()
  end
+
+ if org and not heartstop and not fibrillation and IsHeartCritical(org) then ThinkBadHeartbeat(org) end
 end)
 
 hook.Add("Think", "RemDeathStateSoundStop", function()

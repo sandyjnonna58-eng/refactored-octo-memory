@@ -254,6 +254,7 @@ local function send_organism(org, ply)
 	sendtable.fibrillation = org.fibrillation
 	sendtable.myocardialOxygen = org.myocardialOxygen
 	sendtable.heartStrain = org.heartStrain
+	sendtable.heart = org.heart
 	sendtable.hypertension = org.hypertension
 	sendtable.hypotension = org.hypotension
 	sendtable.timeValue = org.timeValue
@@ -336,6 +337,7 @@ local function send_bareinfo(org)
 	sendtable.fibrillation = org.fibrillation
 	sendtable.myocardialOxygen = org.myocardialOxygen
 	sendtable.heartStrain = org.heartStrain
+	sendtable.heart = org.heart
 	sendtable.hypertension = org.hypertension
 	sendtable.hypotension = org.hypotension
 	sendtable.analgesia = org.analgesia
