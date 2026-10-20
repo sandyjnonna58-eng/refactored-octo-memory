@@ -36,6 +36,7 @@ function CLASS.Off(self)
 
 	self:SetNWBool("hg_yellowblood", false)
 	self.bloodColorHitFix = BLOOD_COLOR_RED
+	if hg.Mutations and hg.Mutations.Clear then hg.Mutations.Clear(self) end
 end
 
 function CLASS.On(self)

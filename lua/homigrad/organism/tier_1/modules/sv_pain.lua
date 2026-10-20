@@ -186,7 +186,8 @@ module[2] = function(owner, org, timeValue)
 	if !org.lasthit or org.lasthit + 1 < CurTime() then org.avgpain = max(org.avgpain - sub, 0) end
 	org.painlessen = sub
 
-	org.pain = org.avgpain * math.max(1 - adrenaline / 4, 0.75) * math.max(1 - org.analgesia, 0)
+	-- painResist: мутация экспериментов "Pain Endurance"
+	org.pain = org.avgpain * math.max(1 - adrenaline / 4, 0.75) * math.max(1 - org.analgesia, 0) * (1 - (org.painResist or 0))
 	org.nearpainlimit = not org.otrub and org.pain >= org.pain_turn * pain_fake_threshold and not hg.organism.FractureTolerant(org)
 
 	if org.isPly and org.pain >= 85 and IsValid(owner) and owner.Thought then
