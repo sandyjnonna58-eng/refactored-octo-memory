@@ -1,8 +1,7 @@
 -- Эксперимент: жёлтая кровь; переломы, позвоночник и шея не обездвиживают - двигаться можно, но больно.
 local CLASS = player.RegClass("experiment")
 
--- Expie лежит в сборке (models/akittu/stylizedexpie), Milky - только если стоит его аддон;
--- толстовку на них надевает lua/autorun/akittu_sweater.lua
+-- Expie лежит в сборке (models/akittu/stylizedexpie), Milky - только если стоит его аддон
 local models = {
 	"models/akittu/stylizedexpie/akittuexpie.mdl",
 	"models/akittu/stylizedexpie/akittuexpiev3.mdl",
