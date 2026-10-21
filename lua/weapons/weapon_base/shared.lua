@@ -157,12 +157,7 @@ end
 	Name: SWEP:TakePrimaryAmmo()
 	Desc: A convenience function to remove ammo
 -----------------------------------------------------------]]
-local hg_infiniteammo = ConVarExists("hg_infiniteammo") and GetConVar("hg_infiniteammo") or CreateConVar("hg_infiniteammo", 0, FCVAR_ARCHIVE + FCVAR_REPLICATED + FCVAR_NOTIFY, "Infinite ammo: weapons never use up their magazine", 0, 1)
-
 function SWEP:TakePrimaryAmmo( num )
-
-	-- серверная настройка: бесконечные патроны (расходники вроде спичек помечены NoInfiniteAmmo)
-	if hg_infiniteammo:GetBool() and not self.NoInfiniteAmmo then return end
 
 	-- Doesn't use clips
 	if ( self:Clip1() <= 0 ) then
