@@ -8,6 +8,10 @@ SWEP.Category = "ZCity Medicine"
 SWEP.Spawnable = true
 SWEP.Slot = 3
 SWEP.SlotPos = 8
+SWEP.IconOverride = "entities/weapon_hg_lifesupport_portable.png"
+if CLIENT then
+	SWEP.WepSelectIcon = Material("entities/weapon_hg_lifesupport_portable.png")
+end
 
 SWEP.WorldModel = "models/props_lab/reciever01b.mdl"
 SWEP.ViewModel = ""

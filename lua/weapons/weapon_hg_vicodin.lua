@@ -5,8 +5,30 @@ SWEP.PrintName = "Vicodin"
 SWEP.Instructions = "Prescription painkillers. Dulls the pain for a few minutes, you can't overdose on them. 3 pills.\nLMB to take one, RMB to give one to someone else."
 SWEP.Category = "ZCity Medicine"
 SWEP.Spawnable = true
+SWEP.IconOverride = "entities/weapon_hg_vicodin.png"
+if CLIENT then
+	SWEP.WepSelectIcon = Material("entities/weapon_hg_vicodin.png")
+end
 
 local pills = 3
+
+-- жёлтые таблетки
+local pill_color = Color(255, 215, 40)
+
+if CLIENT then
+	function SWEP:AfterDrawModel(model)
+		self.pillModel = model
+	end
+
+	-- модель флакона общая с обычными таблетками, поэтому цвет красим только на время отрисовки
+	function SWEP:DrawWorldModel2(nodraw)
+		self.Color = pill_color
+		self.BaseClass.DrawWorldModel2(self, nodraw)
+		self.Color = nil
+
+		if IsValid(self.pillModel) then self.pillModel:SetColor(color_white) end
+	end
+end
 
 function SWEP:InitializeAdd()
 	self:SetHold(self.HoldType)

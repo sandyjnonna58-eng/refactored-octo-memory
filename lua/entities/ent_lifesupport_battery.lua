@@ -6,6 +6,7 @@ ENT.PrintName = "Life Support Battery"
 ENT.Category = "ZCity Medicine"
 ENT.Spawnable = true
 ENT.Model = "models/items/battery.mdl"
+ENT.IconOverride = "entities/ent_lifesupport_battery.png"
 
 function ENT:Initialize()
 	if CLIENT then return end

@@ -4,6 +4,7 @@ ENT.Base = "rem_bomb_base"
 ENT.Spawnable = true
 ENT.AdminSpawnable = true
 ENT.PrintName = "Rem 500Lb"
+ENT.IconOverride = "entities/rem_bomb_500.png"
 ENT.Author = "Remorse"
 ENT.Category = "ZCity Other"
 ENT.Model = "models/damik/500lb.mdl"
