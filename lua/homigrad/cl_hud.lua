@@ -268,6 +268,75 @@ local radialIconMaterials = {
 	["fix dislocation"] = Material("radialmenu/broken.png", "smooth mips"),
 }
 
+-- иконки для пунктов без своей картинки (materials/radialmenu_rem, Tabler Icons, MIT)
+local function RemRadialIcon(name)
+	return Material("radialmenu_rem/" .. name .. ".png", "smooth mips")
+end
+
+local matPosture = radialIconMaterials["change posture rmb menu"]
+
+for text, icon in pairs({
+	["choose attachments"] = "adjustments-horizontal",
+	["experiment control"] = "radar-2",
+	["pain shock"] = "bolt",
+	["paralyze"] = "hand-off",
+	["terminate"] = "skull",
+	["locate all"] = "radar",
+	["enable nvg"] = "eye",
+	["disable nvg"] = "eye-off",
+	["scan"] = "zoom-scan",
+	["toggle laser"] = "focus-centered",
+	["place bipod"] = "arrow-bar-to-down",
+	["pickup bipod"] = "arrow-bar-to-up",
+	["tape glass shard"] = "tools",
+	["tape a knife to a spear"] = "tools",
+	["drop clothes"] = "shirt",
+	["request airstrike"] = "plane-tilt",
+	["request support"] = "lifebuoy",
+	["create pipe bomb"] = "bomb",
+	["create molotov"] = "flame",
+	["public stations"] = "broadcast",
+	["turn on walkietalkie"] = "radio",
+	["turn off walkietalkie"] = "radio",
+	-- жесты
+	["wave"] = "hand-move",
+	["salute"] = "military-rank",
+	["halt"] = "hand-stop",
+	["group"] = "users-group",
+	["forward"] = "arrow-right",
+	["disagree"] = "thumb-down",
+	["agree"] = "thumb-up",
+	["becon"] = "hand-finger",
+	["point"] = "hand-finger-right",
+	["fuck you"] = "hand-middle-finger",
+	["thumb up"] = "thumb-up",
+	-- фразы
+	["cheer"] = "mood-happy",
+	["satisfied"] = "mood-smile",
+	["scared"] = "ghost",
+	["someone died"] = "grave-2",
+	["yell for help"] = "sos",
+	["yell"] = "speakerphone",
+}) do
+	radialIconMaterials[text] = RemRadialIcon(icon)
+end
+
+-- позы оружия (подменю Change Posture)
+for _, text in ipairs({"regular hold", "hipfire", "left shoulder", "high ready", "low ready", "point shooting", "shooting from cover", "gangsta", "onehanded", "somalian"}) do
+	radialIconMaterials[text] = matPosture
+end
+
+-- текст с именем игрока или оружия: ищем по части, по порядку, после точных совпадений
+local radialIconPatterns = {
+	{"dislocation", radialIconMaterials["fix dislocation"]},
+	{"from yourself", RemRadialIcon("arrow-up-right")},
+	{"order supplies", RemRadialIcon("package")},
+	{"mhz", RemRadialIcon("antenna")},
+	{"reload ", RemRadialIcon("refresh")},
+	{"pump ", RemRadialIcon("refresh")},
+	{"drop ", radialIconMaterials["drop equipment"]},
+}
+
 local function NormalizeRadialText(txt)
 	txt = string.lower((txt or ""):gsub("\n", " "))
 	txt = txt:gsub("[^%w%s]", "")
@@ -334,6 +403,12 @@ local function GetRadialIcon(option)
 
 	if radialIconMaterials[txt] then
 		return radialIconMaterials[txt]
+	end
+
+	for _, pattern in ipairs(radialIconPatterns) do
+		if string.find(txt, pattern[1], 1, true) then
+			return pattern[2]
+		end
 	end
 
 	for key, mat in pairs(radialIconMaterials) do

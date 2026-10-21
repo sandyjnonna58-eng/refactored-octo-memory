@@ -9,9 +9,11 @@ util.AddNetworkString("rem_skills_levelup")
 
 local save_dir = "zcity_skills"
 
--- иконки навыков и перков (materials/rem_skills, Tabler Icons, MIT)
-for _, name in ipairs(file.Find("materials/rem_skills/*.png", "GAME")) do
-	resource.AddSingleFile("materials/rem_skills/" .. name)
+-- иконки навыков, перков и радиального меню (Tabler Icons, MIT)
+for _, dir in ipairs({"materials/rem_skills/", "materials/radialmenu_rem/"}) do
+	for _, name in ipairs(file.Find(dir .. "*.png", "GAME")) do
+		resource.AddSingleFile(dir .. name)
+	end
 end
 
 -- опыт за события

@@ -93,6 +93,9 @@ local function OpenTargetMenu(target)
 	hg.CreateRadialMenu(options)
 end
 
+-- ник игрока не должен случайно совпасть с иконкой жеста или фразы
+local matTarget = Material("radialmenu_rem/user.png", "smooth mips")
+
 local function OpenControlMenu()
 	local ply = LocalPlayer()
 	local options = {{function() SendCommand("locate") end, M.Commands.locate.name}}
@@ -102,7 +105,7 @@ local function OpenControlMenu()
 			options[#options + 1] = {function()
 				OpenTargetMenu(target)
 				return -1
-			end, target:Nick()}
+			end, target:Nick(), nil, nil, matTarget}
 		end
 	end
 
