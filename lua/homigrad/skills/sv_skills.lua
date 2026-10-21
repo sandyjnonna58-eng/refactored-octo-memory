@@ -4,6 +4,7 @@ local SK = hg.Skills
 util.AddNetworkString("rem_skills_open")
 util.AddNetworkString("rem_skills_upgrade")
 util.AddNetworkString("rem_skills_perk")
+util.AddNetworkString("rem_skills_reset")
 util.AddNetworkString("rem_skills_levelup")
 
 local save_dir = "zcity_skills"
@@ -205,6 +206,34 @@ hook.Add("InitPostEntity", "rem_skills_exp", function()
 end)
 
 COMMANDS = COMMANDS or {}
+-- сброс: снимаются все навыки и перки (плохие тоже), очков становится столько, сколько уровней
+local reset_cooldown = 3
+
+function SK.Reset(ply)
+	local data = Data(ply)
+	data.skills = {}
+	data.perks = {}
+	data.points = data.level
+
+	Sync(ply)
+	Save(ply)
+	ply:Notify("Skills and perks reset. You have " .. data.points .. " skill points.", 0, "skills_reset", 3, nil, colPerk)
+end
+
+net.Receive("rem_skills_reset", function(len, ply)
+	if (ply.skillResetNext or 0) > CurTime() then return end
+	ply.skillResetNext = CurTime() + reset_cooldown
+
+	SK.Reset(ply)
+end)
+
+COMMANDS.resetskills = {function(ply)
+	if (ply.skillResetNext or 0) > CurTime() then return end
+	ply.skillResetNext = CurTime() + reset_cooldown
+
+	SK.Reset(ply)
+end, 0}
+
 COMMANDS.skills = {function(ply)
 	net.Start("rem_skills_open")
 	net.Send(ply)

@@ -169,6 +169,25 @@ function SK.BuildPanel(parent)
 	tabs:SetTall(U(34))
 	tabs.Paint = nil
 
+	-- сброс с подтверждением: второй клик в течение 3 секунд
+	local confirmUntil = 0
+	local reset = UI.TextButton(tabs, "Click again to reset", {
+		font = "RemUI_Small",
+		color = function() return confirmUntil > CurTime() and UI.Accent or UI.TextDim end,
+		getLabel = function() return confirmUntil > CurTime() and "Click again to reset" or "Reset all" end,
+		onClick = function()
+			if confirmUntil <= CurTime() then
+				confirmUntil = CurTime() + 3
+				return
+			end
+
+			confirmUntil = 0
+			net.Start("rem_skills_reset")
+			net.SendToServer()
+		end,
+	})
+	reset:Dock(RIGHT)
+
 	local scroll = vgui.Create("DScrollPanel", parent)
 	scroll:Dock(FILL)
 	UI.StyleScroll(scroll)
