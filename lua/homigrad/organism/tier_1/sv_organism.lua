@@ -831,6 +831,7 @@ hook.Add("Org Think", "Main", function(owner, org, timeValue)
 	--bullshit
 
 	local lastBattle = isPly and hg.LastBattle and hg.LastBattle.OrganismThink and hg.LastBattle.OrganismThink(owner, org) or false
+	if isPly and hg.LifeSupport then hg.LifeSupport.OrganismThink(owner, org) end
 
 	if org.otrub then
 		org.uncon_timer = org.uncon_timer or 0

@@ -16,6 +16,9 @@ local pain_unconscious_threshold = 112
 local pain_unconscious_time = 1.5
 local pain_unconscious_cooldown = 12
 local shock_stage_thresholds = {15, 35, 60, 80}
+-- Викодин: глушит боль, но не трогает пульс и дыхание - умереть от него нельзя
+local vicodin_strength = 0.6
+local vicodin_duration = 180
 
 local function getShockScore(org)
 	local blood = Clamp((5000 - (org.blood or 5000)) / 2500, 0, 1)
@@ -104,6 +107,7 @@ module[1] = function(org)
 	org.painkiller = 0
 	org.analgesia = 0
 	org.analgesiaAdd = 0
+	org.vicodin = 0
 	org.naloxone = 0
 	org.naloxoneadd = 0
 	org.immobilization = 0
@@ -187,7 +191,8 @@ module[2] = function(owner, org, timeValue)
 	org.painlessen = sub
 
 	-- painResist: мутация экспериментов "Pain Endurance"
-	org.pain = org.avgpain * math.max(1 - adrenaline / 4, 0.75) * math.max(1 - org.analgesia, 0) * (1 - (org.painResist or 0))
+	org.vicodin = Approach(org.vicodin or 0, 0, timeValue / vicodin_duration)
+	org.pain = org.avgpain * math.max(1 - adrenaline / 4, 0.75) * math.max(1 - org.analgesia, 0) * (1 - (org.painResist or 0)) * (1 - math.min(org.vicodin, 1) * vicodin_strength)
 	org.nearpainlimit = not org.otrub and org.pain >= org.pain_turn * pain_fake_threshold and not hg.organism.FractureTolerant(org)
 
 	if org.isPly and org.pain >= 85 and IsValid(owner) and owner.Thought then
