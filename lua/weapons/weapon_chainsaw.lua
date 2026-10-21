@@ -655,7 +655,7 @@ function SWEP:ChainsawHit()
 
     mul = mul * math.Clamp(ent:GetVelocity():Length() / 250, 0.9, 1.25)
     mul = mul * (ent ~= owner and 0.75 or 1)
-    mul = mul * (owner.MeleeDamageMul or 1)
+    mul = mul * (owner.MeleeDamageMul or 1) * (owner.SkillMeleeMul or 1)
 
     if owner.organism and owner.organism.superfighter then
         mul = mul * 5

@@ -192,7 +192,7 @@ module[2] = function(owner, org, timeValue)
 
 	-- painResist: мутация экспериментов "Pain Endurance"
 	org.vicodin = Approach(org.vicodin or 0, 0, timeValue / vicodin_duration)
-	org.pain = org.avgpain * math.max(1 - adrenaline / 4, 0.75) * math.max(1 - org.analgesia, 0) * (1 - (org.painResist or 0)) * (1 - math.min(org.vicodin, 1) * vicodin_strength)
+	org.pain = org.avgpain * math.max(1 - adrenaline / 4, 0.75) * math.max(1 - org.analgesia, 0) * (1 - (org.painResist or 0)) * (1 - (org.skillPainResist or 0)) * (1 - math.min(org.vicodin, 1) * vicodin_strength)
 	org.nearpainlimit = not org.otrub and org.pain >= org.pain_turn * pain_fake_threshold and not hg.organism.FractureTolerant(org)
 
 	if org.isPly and org.pain >= 85 and IsValid(owner) and owner.Thought then

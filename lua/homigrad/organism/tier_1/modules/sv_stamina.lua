@@ -71,7 +71,7 @@ module[2] = function(owner, org, timeValue)
 	end
 
 	stamina.sub = stamina.sub + stamina.subadd + (org.painkiller > 1.6 and (stamina[1] > 10 and 0.8 or 0) or 0) + (org.analgesia > 1.7 and (stamina[1] > 10 and 2 or 0) or 0)
-	stamina.sub = stamina.sub * (owner.StaminaExhaustMul or 1)
+	stamina.sub = stamina.sub * (owner.StaminaExhaustMul or 1) * (owner.SkillStaminaMul or 1)
 	stamina.sub = stamina.sub / (1 + org.berserk)
 	
 	if org.o2[1] < 10 then

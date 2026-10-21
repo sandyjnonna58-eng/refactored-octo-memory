@@ -1281,7 +1281,7 @@ function SWEP:MultiplyDMG(owner, ent, vellen, mul)
     mul = mul * 1 / math.Clamp((180 - owner.organism.stamina[1]) / 90,1,1.3)
     mul = mul * math.Clamp(vellen / 250, 0.9, 1.25)
     mul = mul * (ent ~= owner and 0.75 or 1)
-    mul = mul * (owner.MeleeDamageMul or 1)
+    mul = mul * (owner.MeleeDamageMul or 1) * (owner.SkillMeleeMul or 1)
 
     if owner.organism.superfighter then
         mul = mul * 5

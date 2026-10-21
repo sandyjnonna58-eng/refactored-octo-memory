@@ -770,7 +770,7 @@ local math_abs, math_Approach, math_AngleDifference, math_Clamp, math_cos, math_
 		end
 		mv:SetMaxSpeed(inertia_len)
 		mv:SetMaxClientSpeed(inertia_len)
-		ply:SetJumpPower(DEFAULT_JUMP_POWER * math_min(k, 1.1) * (not tauntStopMoving and 1 or 0) * (ply.organism.superfighter and 1.5 or 1) * (ply.JumpPowerMul or 1))
+		ply:SetJumpPower(DEFAULT_JUMP_POWER * math_min(k, 1.1) * (not tauntStopMoving and 1 or 0) * (ply.organism.superfighter and 1.5 or 1) * (ply.JumpPowerMul or 1) * ply:GetNWFloat("SkillJumpMul", 1))
 
 		mv:SetForwardSpeed(forward_move * inertia_len)
 		mv:SetSideSpeed(side_move * inertia_len)
