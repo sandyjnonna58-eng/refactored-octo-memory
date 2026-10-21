@@ -1,5 +1,5 @@
 -- Шейдеры из Simple Custom Shaders:
--- радиальное размытие - попадания, взрывы, старт последнего боя;
+-- радиальное размытие - попадания (от игроков сильнее), взрывы, адреналин, старт последнего боя;
 -- серость по глубине - кровопотеря, таймер смерти, депрессия;
 -- размытие по глубине - урон мозгу, дезориентация.
 hg.RemFX = hg.RemFX or {}
@@ -14,7 +14,14 @@ local hg_potatopc = ConVarExists("hg_potatopc") and GetConVar("hg_potatopc")
 
 local kick_width = 0.15
 local kick_decay = 2.5
-local kick_max = 2
+local kick_max = 2.5
+
+-- адреналин: постоянное размытие, пульсирует как сердце
+local adrenaline_start = 0.2
+local adrenaline_full = 2.5
+local adrenaline_max = 1.1
+local adrenaline_pulse_speed = 7
+local adrenaline_pulse = 0.35
 
 local blood_gray_start = 4200
 local blood_gray_full = 2600
@@ -29,6 +36,7 @@ local kick = 0
 local kickX, kickY = 0.5, 0.5
 local gray = 0
 local blur = 0
+local adrenalineBlur = 0
 
 local function EffectMul()
 	return hg_reduce_screeneffects:GetBool() and 0.5 or 1
@@ -94,6 +102,9 @@ hook.Add("Think", "rem_fx", function()
 	local allowed = DepthEffectsAllowed()
 	gray = Lerp(math.min(dt * 2, 1), gray, (org and allowed) and GrayTarget(org) or 0)
 	blur = Lerp(math.min(dt * 2, 1), blur, (org and allowed) and BlurTarget(org) or 0)
+
+	local adrenaline = org and Remap01(org.adrenaline or 0, adrenaline_start, adrenaline_full) * adrenaline_max * EffectMul() or 0
+	adrenalineBlur = Lerp(math.min(dt * 3, 1), adrenalineBlur, adrenaline)
 end)
 
 hook.Add("NeedsDepthPass", "rem_fx", function()
@@ -121,10 +132,15 @@ hook.Add("Post Processing", "rem_fx", function()
 		DrawShader(mat_depthblur)
 	end
 
-	if kick > 0.01 and not mat_radialblur:IsError() then
-		mat_radialblur:SetFloat("$c0_x", kickX)
-		mat_radialblur:SetFloat("$c0_y", kickY)
-		mat_radialblur:SetFloat("$c0_z", kick * kick_width)
+	-- адреналин всегда из центра; удар перекрывает его, если сильнее
+	local pulse = adrenalineBlur * (1 - adrenaline_pulse + adrenaline_pulse * math.abs(math.sin(CurTime() * adrenaline_pulse_speed)))
+	local radial = math.max(kick, pulse)
+
+	if radial > 0.01 and not mat_radialblur:IsError() then
+		local fromKick = kick >= pulse
+		mat_radialblur:SetFloat("$c0_x", fromKick and kickX or 0.5)
+		mat_radialblur:SetFloat("$c0_y", fromKick and kickY or 0.5)
+		mat_radialblur:SetFloat("$c0_z", radial * kick_width)
 		DrawShader(mat_radialblur)
 	end
 end)

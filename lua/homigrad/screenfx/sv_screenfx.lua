@@ -3,6 +3,9 @@ util.AddNetworkString("rem_fx_kick")
 
 local kick_cooldown = 0.1
 local hit_damage_full = 40
+-- удар от другого игрока размывает сильнее, чем падение или NPC
+local player_hit_mul = 1.8
+local player_hit_min = 0.5
 local blast_radius = 600
 
 local function SendKick(ply, strength, pos)
@@ -20,7 +23,16 @@ hook.Add("HomigradDamage", "rem_fx_kick", function(ply, dmgInfo)
 	if not IsValid(ply) or not ply:IsPlayer() or not ply:Alive() then return end
 	if dmgInfo:IsDamageType(DMG_BLAST) then return end
 
-	SendKick(ply, math.Clamp(dmgInfo:GetDamage() / hit_damage_full, 0.2, 1))
+	local strength = math.Clamp(dmgInfo:GetDamage() / hit_damage_full, 0.2, 1)
+	local attacker = dmgInfo:GetAttacker()
+
+	-- размытие идёт от того, кто ударил
+	if IsValid(attacker) and attacker:IsPlayer() and attacker ~= ply then
+		SendKick(ply, math.max(strength, player_hit_min) * player_hit_mul, attacker:EyePos())
+		return
+	end
+
+	SendKick(ply, strength)
 end)
 
 -- взрыв: размытие из точки взрыва у всех, кто рядом, даже без урона
