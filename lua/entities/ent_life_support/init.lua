@@ -43,18 +43,11 @@ function ENT:FindPatient(activator)
 end
 
 function ENT:Connect(ply)
-	self:SetPatient(ply)
-	ply.LifeSupportMachine = self
-	self:EmitSound("items/medshot4.wav", 65)
-	ply:Notify("Something pumps air into your lungs.", 0, "lifesupport_on", 3, nil, Color(150, 220, 255))
+	hg.LifeSupport.Connect(self, ply)
 end
 
 function ENT:Disconnect()
-	local ply = self:GetPatient()
-	if IsValid(ply) and ply.LifeSupportMachine == self then ply.LifeSupportMachine = nil end
-
-	self:SetPatient(NULL)
-	self:EmitSound("buttons/button10.wav", 65)
+	hg.LifeSupport.Disconnect(self)
 end
 
 function ENT:Use(activator)
