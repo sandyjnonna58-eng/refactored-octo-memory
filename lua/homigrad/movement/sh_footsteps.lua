@@ -51,6 +51,8 @@ local hg_coolcamera = ConVarExists("hg_coolcamera") and GetConVar("hg_coolcamera
 
 	hook.Add("PlayerFootstep", "CustomFootstep2sad", function(ply, pos, foot, sound, volume, rf)
 		if (ply.lastStepTime or 0) > CurTime() then return true end
+		-- перк Silent Steps: тихо всё, кроме бега (бряцанье брони остаётся)
+		local silent = hg.Skills and hg.Skills.HasPerk and hg.Skills.HasPerk(ply, "silentsteps") and not ply.hg_isSprinting and not ply.hg_isJogging
 		local vel = ply:GetVelocity()
 		local len = vel:Length()
 		local ent = hg.GetCurrentCharacter(ply)
@@ -99,7 +101,7 @@ local hg_coolcamera = ConVarExists("hg_coolcamera") and GetConVar("hg_coolcamera
 			local Hook = hook_Run("HG_PlayerFootstep", ply, pos, foot, sound, volume, rf)
 			if Hook then return true end
 
-			if !(ply:IsWalking() or ply:Crouching()) and ent == ply then
+			if !(ply:IsWalking() or ply:Crouching()) and ent == ply and not silent then
 				local snd
 				if ply.PlayerClassName == "furry" then
 					snd = "zbattle/footstep/hardbarefoot" .. math.random(1, 5) .. ".ogg"
@@ -121,7 +123,7 @@ local hg_coolcamera = ConVarExists("hg_coolcamera") and GetConVar("hg_coolcamera
 			local Hook = hook_Run("HG_PlayerFootstep", ply, pos, foot, sound, volume, rf)
 			if Hook then return Hook end
 
-			if !(ply:IsWalking() or ply:Crouching()) and ent == ply then
+			if !(ply:IsWalking() or ply:Crouching()) and ent == ply and not silent then
 				local snd
 				if ply.PlayerClassName == "furry" then
 					snd = "zbattle/footstep/hardbarefoot" .. math.random(1, 5) .. ".ogg"

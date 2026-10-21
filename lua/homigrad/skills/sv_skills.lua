@@ -3,6 +3,7 @@ local SK = hg.Skills
 
 util.AddNetworkString("rem_skills_open")
 util.AddNetworkString("rem_skills_upgrade")
+util.AddNetworkString("rem_skills_perk")
 util.AddNetworkString("rem_skills_levelup")
 
 local save_dir = "zcity_skills"
@@ -26,6 +27,7 @@ local function Data(ply)
 	data.level = tonumber(data.level) or 0
 	data.points = tonumber(data.points) or 0
 	data.skills = istable(data.skills) and data.skills or {}
+	data.perks = istable(data.perks) and data.perks or {}
 
 	ply.skillData = data
 	return data
@@ -44,8 +46,14 @@ function SK.Apply(ply)
 	ply.SkillStaminaMul = 1 - SK.Bonus(ply, "endurance")
 	ply:SetNWFloat("SkillJumpMul", 1 + SK.Bonus(ply, "agility"))
 	ply:SetNWFloat("SkillRecoilMul", 1 - SK.Bonus(ply, "marksman"))
+	ply:SetNWFloat("SkillSpeedMul", 1 + SK.Bonus(ply, "runner"))
+	ply.SkillReloadMul = 1 - SK.Bonus(ply, "quickhands")
+	ply.SkillMedicMul = 1 + SK.Bonus(ply, "medic")
 
-	if ply.organism then ply.organism.skillPainResist = SK.Bonus(ply, "toughness") end
+	if ply.organism then
+		ply.organism.skillPainResist = SK.Bonus(ply, "toughness")
+		ply.organism.skillBleedMul = 1 - SK.Bonus(ply, "vitality")
+	end
 end
 
 local function Sync(ply)
@@ -56,6 +64,10 @@ local function Sync(ply)
 
 	for _, skill in ipairs(SK.List) do
 		ply:SetNWInt("skill_" .. skill.id, math.Clamp(tonumber(data.skills[skill.id]) or 0, 0, SK.MaxRank))
+	end
+
+	for _, perk in ipairs(SK.Perks) do
+		ply:SetNWBool("perk_" .. perk.id, data.perks[perk.id] == true)
 	end
 
 	SK.Apply(ply)
@@ -98,6 +110,21 @@ net.Receive("rem_skills_upgrade", function(len, ply)
 
 	Sync(ply)
 	Save(ply)
+end)
+
+net.Receive("rem_skills_perk", function(len, ply)
+	local perk = SK.PerkByID[net.ReadString()]
+	if not perk then return end
+
+	local data = Data(ply)
+	if data.perks[perk.id] or data.points < perk.cost then return end
+
+	data.points = data.points - perk.cost
+	data.perks[perk.id] = true
+
+	Sync(ply)
+	Save(ply)
+	ply:Notify("New perk: " .. perk.name .. ".", 0, "skills_perk", 3, nil, Color(230, 190, 0))
 end)
 
 hook.Add("PlayerInitialSpawn", "rem_skills", function(ply)

@@ -761,6 +761,8 @@ local math_abs, math_Approach, math_AngleDifference, math_Clamp, math_cos, math_
 			inertia_len = 100
 		end
 
+		inertia_len = inertia_len * ply:GetNWFloat("SkillSpeedMul", 1)
+
 		if org.noradrenaline and org.noradrenaline > 0 and inertia_len > 0 then
 			inertia_len = inertia_len + 200 * math_Round(org.noradrenaline, 1)
 		end

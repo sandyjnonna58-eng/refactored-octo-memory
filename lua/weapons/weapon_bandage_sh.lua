@@ -619,7 +619,7 @@ if SERVER then
 	
 		local owner = self:GetOwner()
 		if ent == hg.GetCurrentCharacter(owner) and hg_healanims:GetBool() then
-			self:SetHolding(math.min(self:GetHolding() + 10, 100))
+			self:SetHolding(math.min(self:GetHolding() + 10 * (owner.SkillMedicMul or 1), 100))
 
 			if self:GetHolding() < 100 then return end
 		end

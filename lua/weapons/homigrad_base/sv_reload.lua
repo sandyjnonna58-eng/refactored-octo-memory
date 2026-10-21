@@ -10,7 +10,7 @@ function SWEP:Reload(time)
 	self:ReloadStartPost()
 	local org = self:GetOwner().organism
 	self.StaminaReloadMul = (org and ((2 - (self:GetOwner().organism.stamina[1] / 180)) + ((org.pain / 40) + (org.larm / 3) + (org.rarm / 5)) - (1 - math.Clamp(org.recoilmul or 1,0.45,1.4))) or 1)
-	self.StaminaReloadMul = math.Clamp(self.StaminaReloadMul,0.65,1.5)
+	self.StaminaReloadMul = math.Clamp(self.StaminaReloadMul,0.65,1.5) * (self:GetOwner().SkillReloadMul or 1)
 	self.StaminaReloadTime = self.ReloadTime * self.StaminaReloadMul
 	self.StaminaReloadTime = (self.StaminaReloadTime + (self:Clip1() > 0 and -self.StaminaReloadTime/3 or 0 ))
 	self.reload = self.LastReload + self.StaminaReloadTime

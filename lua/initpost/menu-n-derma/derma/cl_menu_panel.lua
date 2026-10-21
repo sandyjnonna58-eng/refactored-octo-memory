@@ -155,6 +155,9 @@ local Selects = {
     {Title = "Achievements", Func = function(luaMenu,pp) 
         hg.DrawAchievmentsMenu(pp)
     end},
+    {Title = "Skills", Func = function(luaMenu,pp)
+        if hg.DrawSkillsMenu then hg.DrawSkillsMenu(pp) end
+    end},
     {Title = "Information", Func = function(luaMenu,pp)
         hg.DrawInformation(pp)
     end},
