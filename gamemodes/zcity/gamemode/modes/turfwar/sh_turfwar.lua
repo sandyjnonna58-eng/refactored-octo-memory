@@ -11,3 +11,10 @@ MODE.VariantNames = {
 	[MODE.VARIANT_MELEE] = "Melee",
 	[MODE.VARIANT_GUNS] = "Firearms",
 }
+
+-- варианты в админ-меню (F6): ключ уходит в MODE:SetMenuOption
+MODE.MenuOptions = {
+	{"random", "Random"},
+	{"melee", "Melee"},
+	{"guns", "Firearms"},
+}

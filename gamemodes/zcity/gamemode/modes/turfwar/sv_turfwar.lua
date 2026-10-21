@@ -63,8 +63,18 @@ function MODE.GuiltCheck(Attacker, Victim, add, harm, amt)
 	return 1, true
 end
 
+local variantArgs = {melee = 1, guns = 2, firearms = 2, random = 0}
+
+-- вариант только на следующий раунд Turf War (из админ-меню или !turfwar), конвар не трогает
+function MODE:SetMenuOption(option)
+	local variant = variantArgs[string.lower(option or "")]
+	if variant then self.NextVariant = variant end
+	return variant
+end
+
 function MODE:PickVariant()
-	local forced = variantConVar:GetInt()
+	local forced = self.NextVariant or variantConVar:GetInt()
+	self.NextVariant = nil
 	if forced == self.VARIANT_MELEE or forced == self.VARIANT_GUNS then return forced end
 
 	return math.random(2) == 1 and self.VARIANT_MELEE or self.VARIANT_GUNS
@@ -184,19 +194,17 @@ function MODE:PlayerDeath(ply)
 end
 
 -- !turfwar [melee|guns|random] - выбрать вариант и запустить режим следующим раундом
-local variantArgs = {melee = 1, guns = 2, firearms = 2, random = 0}
 
 if COMMANDS then COMMANDS.turfwar = {
 	function(ply, args)
 		if not ply:IsAdmin() then ply:ChatPrint("You don't have access") return end
 
-		local variant = variantArgs[string.lower(args[1] or "random")]
+		local variant = MODE:SetMenuOption(args[1] or "random")
 		if not variant then
 			ply:ChatPrint("Usage: !turfwar [melee|guns|random]")
 			return
 		end
 
-		variantConVar:SetInt(variant)
 		NextRound("turfwar", true)
 		ply:ChatPrint("Next round: Turf War (" .. (MODE.VariantNames[variant] or "Random") .. ")")
 	end, 0

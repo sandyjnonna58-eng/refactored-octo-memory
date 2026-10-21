@@ -573,14 +573,17 @@ function zb.GetModesInfo()
 	local modesInfo = {}
 
 	for name, mode in pairs(zb.modes) do
-		if ZB_FORCE_LIMITED_MODE_POOL and !ZB_FORCED_MODE_POOL[name] then continue end
+		-- админка показывает все режимы; inrotation - выпадает ли режим сам по себе
+		local inrotation = (!ZB_FORCE_LIMITED_MODE_POOL or ZB_FORCED_MODE_POOL[name]) and 1 or 0
 		if name == "hmcd" then
 			table.insert(modesInfo, {
 				key = name,
 				name = mode.PrintName or mode.name or name,
 				description = mode.Description or "",
 				forBigMaps = mode.ForBigMaps or false,
-				canlaunch = (mode:CanLaunch() and 1 or 0)
+				canlaunch = (mode:CanLaunch() and 1 or 0),
+				inrotation = inrotation,
+				options = mode.MenuOptions
 			})
 		elseif mode.Types then
 			for name2, mode2 in pairs(mode.Types) do
@@ -589,7 +592,9 @@ function zb.GetModesInfo()
 					name = (mode.PrintName or mode.name or name).."/"..name2,
 					description = mode.Description or "",
 					forBigMaps = mode.ForBigMaps or false,
-					canlaunch = (mode:CanLaunch() and 1 or 0)
+					canlaunch = (mode:CanLaunch() and 1 or 0),
+					inrotation = inrotation,
+					options = mode.MenuOptions
 				})
 			end
 		else
@@ -598,7 +603,9 @@ function zb.GetModesInfo()
 				name = mode.PrintName or mode.name or name,
 				description = mode.Description or "",
 				forBigMaps = mode.ForBigMaps or false,
-				canlaunch = (mode:CanLaunch() and 1 or 0)
+				canlaunch = (mode:CanLaunch() and 1 or 0),
+				inrotation = inrotation,
+				options = mode.MenuOptions
 			})
 		end
 	end
@@ -760,10 +767,28 @@ net.Receive("AdminSetGameMode", function(len, ply)
 	if not ply:IsAdmin() then return end
 
 	local command = net.ReadString()
-	local modeKey = ZB_NormalizeModeKey(net.ReadString())
+	-- "режим:вариант" - вариант передаётся режиму через MODE:SetMenuOption
+	local modeKey, option = string.match(net.ReadString(), "^([^:]*):?(.*)$")
+	modeKey = ZB_NormalizeModeKey(modeKey)
 	local addToQueue = net.ReadBool() or false
 
-	if command == "setmode" then
+	if command == "setforcemode" and modeKey == "random" then
+		forcemode = "random"
+		forcemodeconvar:SetString("random")
+		ply:ChatPrint("Auto next mode disabled, modes are random again.")
+		return
+	end
+
+	if not zb:GetMode(modeKey) then return end
+
+	local modeTable = zb.modes[modeKey]
+	if option ~= "" and modeTable and modeTable.SetMenuOption then modeTable:SetMenuOption(option) end
+
+	if command == "changenow" then
+		NextRound(modeKey, true)
+		PrintMessage(HUD_PRINTTALK, ply:Nick() .. " changed the game mode to " .. (zb.GetRoundName(modeKey) or modeKey) .. ".")
+		zb:EndRound(true)
+	elseif command == "setmode" then
                 NextRound(modeKey, true)
 		ply:ChatPrint("Game mode set to: " .. modeKey)
 
@@ -774,7 +799,9 @@ net.Receive("AdminSetGameMode", function(len, ply)
 			zb.SyncQueueToAdmins()
 		end
 	elseif command == "setforcemode" then
+		-- RoundStart перечитывает forcemode из конвара, без него режим слетал через раунд
 		forcemode = modeKey
+		forcemodeconvar:SetString(modeKey)
                 NextRound(forcemode, true)
 		ply:ChatPrint("Force mode set to: " .. modeKey)
 
@@ -883,9 +910,17 @@ COMMANDS.setforcemode = {
 		if not args[1] or (not zb:GetMode(args[1]) and args[1]~="random") then return end
 		ply:ChatPrint(args[1])
 		forcemode = args[1]
+		forcemodeconvar:SetString(args[1])
 		if args[1] ~= "random" then
                         NextRound(args[1], true)
 		end
+	end, 0
+}
+
+COMMANDS.adminmenu = {
+	function(ply, args)
+		if not ply:IsAdmin() then ply:ChatPrint("You don't have access") return end
+		ply:ConCommand("zb_adminmenu")
 	end, 0
 }
 

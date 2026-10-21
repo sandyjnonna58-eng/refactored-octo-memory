@@ -69,6 +69,16 @@ if CLIENT then
         title:Dock(LEFT)
         title:DockMargin(10, 0, 0, 0)
         title:SizeToContents()
+
+        if not queue and mode.inrotation == 0 then
+            local note = vgui.Create("DLabel", modePanel)
+            note:SetFont("DermaDefault")
+            note:SetText("not in rotation")
+            note:SetTextColor(Color(150, 150, 150))
+            note:Dock(LEFT)
+            note:DockMargin(8, 0, 0, 0)
+            note:SizeToContents()
+        end
         
         if queue then
             local posLabel = vgui.Create("DLabel", modePanel)
@@ -299,6 +309,9 @@ if CLIENT then
             ["riot"] = true,
             ["gwars"] = true,
             ["criresp"] = true,
+            ["dm"] = true,
+            ["realish"] = true,
+            ["turfwar"] = true,
         }
         
         for i, mode in SortedPairsByMemberValue(zb.availableModes,"canlaunch",true) do
@@ -341,19 +354,33 @@ if CLIENT then
                 indicator:SetTooltip("This mode can't launch")
             end
             
-            if command == "setmode" or command == "setforcemode" then
+            if command == "setmode" or command == "setforcemode" or command == "changenow" then
+                local function Send(key)
+                    net.Start("AdminSetGameMode")
+                    net.WriteString(command)
+                    net.WriteString(key)
+                    net.WriteBool(false) 
+                    net.SendToServer()
+                    if IsValid(frame) then frame:Close() end
+                end
+
                 local selectBtn = vgui.Create("DButton", modeBtn)
                 selectBtn:SetSize(80, 26)
                 selectBtn:Dock(RIGHT)
                 selectBtn:DockMargin(5, 7, 5, 7)
-                selectBtn:SetText("Select")
+                selectBtn:SetText(command == "changenow" and "Start" or "Select")
                 selectBtn.DoClick = function()
-                    net.Start("AdminSetGameMode")
-                    net.WriteString(command)
-                    net.WriteString(mode.key)
-                    net.WriteBool(false) 
-                    net.SendToServer()
-                    frame:Close()
+                    -- у режима есть варианты (Turf War: ближний бой / огнестрел) - сначала выбрать вариант
+                    if istable(mode.options) and #mode.options > 0 then
+                        local menu = DermaMenu()
+                        for _, option in ipairs(mode.options) do
+                            menu:AddOption(option[2], function() Send(mode.key .. ":" .. option[1]) end)
+                        end
+                        menu:Open()
+                        return
+                    end
+
+                    Send(mode.key)
                 end
             end
         end
@@ -702,10 +729,20 @@ if CLIENT then
         frame:SetTitle("Admin Panel")
         frame:MakePopup()
 
+        local changeNowBtn = vgui.Create("DButton", frame)
+        changeNowBtn:SetText("Change Mode Now")
+        changeNowBtn:Dock(TOP)
+        changeNowBtn:DockMargin(5, 10, 5, 2)
+        changeNowBtn:SetSize(300, 40)
+        StyleElement(changeNowBtn)
+        changeNowBtn.DoClick = function()
+            OpenModeSelection("changenow")
+        end
+
         local setModeBtn = vgui.Create("DButton", frame)
         setModeBtn:SetText("Set Next Mode")
         setModeBtn:Dock(TOP)
-        setModeBtn:DockMargin(5, 10, 5, 2)
+        setModeBtn:DockMargin(5, 2, 5, 2)
         setModeBtn:SetSize(300, 40)
         StyleElement(setModeBtn)
         setModeBtn.DoClick = function()
@@ -722,6 +759,20 @@ if CLIENT then
             OpenModeSelection("setforcemode")
         end
         
+        local clearForceModeBtn = vgui.Create("DButton", frame)
+        clearForceModeBtn:SetText("Disable Auto Next Mode")
+        clearForceModeBtn:Dock(TOP)
+        clearForceModeBtn:DockMargin(5, 2, 5, 2)
+        clearForceModeBtn:SetSize(300, 40)
+        StyleElement(clearForceModeBtn)
+        clearForceModeBtn.DoClick = function()
+            net.Start("AdminSetGameMode")
+            net.WriteString("setforcemode")
+            net.WriteString("random")
+            net.WriteBool(false)
+            net.SendToServer()
+        end
+
         local queueModeBtn = vgui.Create("DButton", frame)
         queueModeBtn:SetText("Manage Game Mode Queue")
         queueModeBtn:Dock(TOP)
@@ -774,6 +825,11 @@ if CLIENT then
     end)
 
     local f6Key = KEY_F6
+
+    -- то же меню без F6: консоль zb_adminmenu или !adminmenu в чате
+    concommand.Add("zb_adminmenu", function()
+        if LocalPlayer():IsAdmin() and not IsValid(isMenuOpen) then OpenAdminMenu() end
+    end)
 
     hook.Add("PlayerButtonDown", "OpenAdminMenuF6", function(ply, key)
         if key == f6Key and LocalPlayer():IsAdmin() and not IsValid(isMenuOpen) then
