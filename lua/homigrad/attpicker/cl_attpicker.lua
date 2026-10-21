@@ -2,13 +2,7 @@
 hg.AttPicker = hg.AttPicker or {}
 local AP = hg.AttPicker
 
-local colBack = Color(0, 0, 0, 240)
-local colOutline = Color(255, 255, 255, 255)
-local colRow = Color(20, 20, 20, 235)
-local colRowHover = Color(40, 40, 40, 235)
-local colInstalled = Color(40, 70, 40, 235)
-local colInstalledHover = Color(55, 90, 55, 235)
-local colHeader = Color(200, 200, 200)
+local colInstalled = Color(120, 200, 120)
 
 local function InstalledSet(wep)
 	local set = {}
@@ -18,15 +12,16 @@ local function InstalledSet(wep)
 	return set
 end
 
-local function PaintRow(self, w, h)
-	local hovered = self:IsHovered()
-	surface.SetDrawColor(self.installed and (hovered and colInstalledHover or colInstalled) or (hovered and colRowHover or colRow))
-	surface.DrawRect(0, 0, w, h)
-	surface.SetDrawColor(colOutline)
-	surface.DrawOutlinedRect(0, 0, w, h, 1)
+local icons = {}
+local function Icon(path)
+	if not path then return end
+	if icons[path] == nil then icons[path] = Material(path, "smooth mips") end
+	return icons[path]
 end
 
 local function Fill(frame, scroll)
+	local UI = hg.RemUI
+	local U = UI.U
 	scroll:Clear()
 
 	local wep = LocalPlayer():GetActiveWeapon()
@@ -39,55 +34,61 @@ local function Fill(frame, scroll)
 	local groups = AP.GetMountable(wep)
 
 	if #groups == 0 then
-		local label = scroll:Add("DLabel")
-		label:SetText("No attachments fit this weapon.")
-		label:SetFont("ZCity_Tiny")
-		label:SetTextColor(colHeader)
-		label:Dock(TOP)
-		label:DockMargin(8, 8, 8, 0)
+		local empty = scroll:Add("DPanel")
+		empty:Dock(TOP)
+		empty:SetTall(U(40))
+		empty.Paint = function(self, w, h)
+			draw.SimpleText("No attachments fit this weapon.", "RemUI_Small", U(4), h / 2, UI.TextDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+		end
 		return
 	end
 
 	for _, group in ipairs(groups) do
-		local header = scroll:Add("DLabel")
-		header:SetText(group.name)
-		header:SetFont("ZCity_Menu_Settings_Small")
-		header:SetTextColor(colHeader)
+		local header = scroll:Add("DPanel")
 		header:Dock(TOP)
-		header:DockMargin(8, 8, 8, 4)
-		header:SetTall(ScreenScaleH(14))
+		header:DockMargin(U(2), U(10), 0, U(6))
+		header:SetTall(U(24))
+		header.Paint = function(self, w, h)
+			draw.SimpleText(group.name, "RemUI_Small", 0, h / 2, UI.White, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+		end
 
 		for _, att in ipairs(group.list) do
 			local has = installed[att]
+			local name = hg.attachmentslaunguage[att] or language.GetPhrase(att)
+			local icon = Icon(hg.attachmentsIcons[att])
 
 			local row = scroll:Add("DButton")
-			row.installed = has
-			row:SetText((hg.attachmentslaunguage[att] or language.GetPhrase(att)) .. (has and "  - on the weapon" or ""))
-			row:SetFont("ZCity_Tiny")
-			row:SetTextColor(color_white)
+			row:SetText("")
 			row:Dock(TOP)
-			row:DockMargin(6, 0, 6, 4)
-			row:SetTall(ScreenScaleH(20))
-			row.Paint = PaintRow
+			row:DockMargin(0, 0, U(6), U(4))
+			row:SetTall(U(44))
+			row.Paint = function(self, w, h)
+				UI.PaintCard(w, h, self:IsHovered() and UI.CardHover or UI.Card)
 
-			local icon = hg.attachmentsIcons[att]
-			if icon then
-				local img = vgui.Create("DImage", row)
-				img:SetSize(ScreenScaleH(20), ScreenScaleH(20))
-				img:Dock(LEFT)
-				img:DockMargin(5, 0, 0, 0)
-				img:SetImage(icon)
+				local x = U(12)
+				if icon then
+					UI.DrawIcon(icon, x, (h - U(34)) / 2, U(34), color_white)
+					x = x + U(44)
+				end
+
+				draw.SimpleText(name, "RemUI_Small", x, h / 2, has and colInstalled or UI.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+				if has then draw.SimpleText("on the weapon", "RemUI_Tiny", w - U(12), h / 2, colInstalled, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER) end
+				return true
 			end
+			row.OnCursorEntered = function() surface.PlaySound(UI.SoundHover) end
 
 			row.DoClick = function()
 				if has then return end
+				surface.PlaySound(UI.SoundClick)
 				net.Start("rem_attpicker_install")
 					net.WriteString(att)
 				net.SendToServer()
 			end
 
 			row.DoRightClick = function()
-				if has then RunConsoleCommand("ZB_AttachRemove", att) end
+				if not has then return end
+				surface.PlaySound(UI.SoundClick)
+				RunConsoleCommand("ZB_AttachRemove", att)
 			end
 		end
 	end
@@ -99,35 +100,13 @@ function AP.Open()
 	local wep = LocalPlayer():GetActiveWeapon()
 	if not IsValid(wep) or not ishgweapon(wep) then return end
 
-	local frame = vgui.Create("DFrame")
+	local UI = hg.RemUI
+	local frame = UI.Frame(ScrW() / 3, ScrH() * 0.6, "ATTACHMENTS  -  " .. string.upper(language.GetPhrase(wep.PrintName or "")), "LMB - put on the weapon  |  RMB - take off")
 	AP.Frame = frame
-	frame:SetTitle("")
-	frame:SetSize(ScrW() / 3, ScrH() * 0.6)
-	frame:Center()
-	frame:MakePopup()
-	frame:SetKeyboardInputEnabled(false)
-	frame.Paint = function(self, w, h)
-		hg.DrawBlur(self)
-		surface.SetDrawColor(colBack)
-		surface.DrawRect(0, 0, w, h)
-		surface.SetDrawColor(colOutline)
-		surface.DrawOutlinedRect(0, 0, w, h, 1)
-		draw.SimpleText("choose attachments: " .. (wep.PrintName or ""), "ZCity_Menu_Settings_Small", 14, 18, color_white, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-	end
-
-	local hint = vgui.Create("DLabel", frame)
-	hint:Dock(BOTTOM)
-	hint:DockMargin(10, 0, 10, 8)
-	hint:SetTall(ScreenScaleH(14))
-	hint:SetText("")
-	hint.Paint = function(self, w, h)
-		draw.SimpleText("LMB - put on the weapon | RMB - take off", "ZCity_Tiny", w * 0.5, h * 0.5, color_white, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-	end
 
 	local scroll = vgui.Create("DScrollPanel", frame)
 	scroll:Dock(FILL)
-	scroll:DockMargin(4, 14, 4, 4)
-	frame.scroll = scroll
+	UI.StyleScroll(scroll)
 
 	Fill(frame, scroll)
 	frame.Refresh = function() if IsValid(scroll) then Fill(frame, scroll) end end

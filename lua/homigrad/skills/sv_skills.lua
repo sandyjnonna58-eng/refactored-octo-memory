@@ -8,6 +8,11 @@ util.AddNetworkString("rem_skills_levelup")
 
 local save_dir = "zcity_skills"
 
+-- иконки навыков и перков (materials/rem_skills, Tabler Icons, MIT)
+for _, name in ipairs(file.Find("materials/rem_skills/*.png", "GAME")) do
+	resource.AddSingleFile("materials/rem_skills/" .. name)
+end
+
 -- опыт за события
 local xp_player_kill = 60
 local xp_npc_kill = 15

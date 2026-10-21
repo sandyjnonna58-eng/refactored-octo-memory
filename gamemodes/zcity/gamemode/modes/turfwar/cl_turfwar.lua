@@ -47,10 +47,10 @@ net.Receive("turfwar_end", function()
 end)
 
 surface.CreateFont("TurfWar_Timer", {
-	font = "Courier Prime",
+	font = "Verily Serif Mono",
 	size = ScreenScale(12),
 	extended = true,
-	weight = 650,
+	weight = 300,
 	antialias = true,
 })
 
@@ -81,7 +81,7 @@ function MODE:HUDPaint()
 
 	if not ended and start + 8.5 < CurTime() then
 		local left = math.max(start + (zb.ROUND_TIME or 240) - CurTime(), 0)
-		draw.SimpleText(string.FormattedTime(left, "%02i:%02i:%02i"), "TurfWar_Timer", sw * 0.5, sh * 0.05, color_white, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		draw.SimpleTextOutlined(string.FormattedTime(left, "%02i:%02i:%02i"), "TurfWar_Timer", sw * 0.5, sh * 0.05, color_white, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER, 1, color_black)
 	end
 
 	if start + 8.5 < CurTime() then return end

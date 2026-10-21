@@ -1,222 +1,212 @@
--- cl_ грузится раньше sh_ (по алфавиту), таблицу заполнит sh_skills.lua
+-- cl_ грузится раньше sh_ (по алфавиту), таблицу заполнит sh_skills.lua; стиль - hg.RemUI (remui/cl_remui.lua)
 hg.Skills = hg.Skills or {}
 local SK = hg.Skills
 
 local levelup_sound = "sound/rem_levelup.mp3"
 
-local colBack = Color(0, 0, 0, 240)
-local colOutline = Color(255, 255, 255, 255)
-local colRow = Color(20, 20, 20, 235)
-local colBar = Color(230, 190, 0)
-local colBarBack = Color(50, 50, 50)
-local colPip = Color(230, 190, 0)
-local colPipEmpty = Color(60, 60, 60)
-local colButton = Color(40, 70, 40, 235)
-local colButtonHover = Color(60, 100, 60, 235)
-local colButtonOff = Color(40, 40, 40, 235)
-local colRowHover = Color(40, 40, 40, 235)
-
-surface.CreateFont("Rem_SkillTitle", {font = "Lora", size = ScreenScale(11), weight = 800, antialias = true, extended = true})
-surface.CreateFont("Rem_SkillName", {font = "Lora", size = ScreenScale(8), weight = 700, antialias = true, extended = true})
-surface.CreateFont("Rem_SkillDesc", {font = "Lora", size = ScreenScale(6), weight = 400, antialias = true, extended = true})
-
-local colTab = Color(30, 30, 30, 235)
-local colTabActive = Color(60, 50, 0, 235)
-
-local function PaintBox(self, w, h, col)
-	surface.SetDrawColor(col)
-	surface.DrawRect(0, 0, w, h)
-	surface.SetDrawColor(colOutline)
-	surface.DrawOutlinedRect(0, 0, w, h, 1)
+local icons = {}
+function SK.Icon(id)
+	if icons[id] == nil then icons[id] = Material("rem_skills/" .. id .. ".png", "smooth mips") end
+	return icons[id]
 end
-
-local function MakeButton(parent, text, canFn, onClick)
-	local btn = vgui.Create("DButton", parent)
-	btn:SetText(text)
-	btn:SetFont("Rem_SkillName")
-	btn:SetTextColor(color_white)
-	btn.Paint = function(self, w, h)
-		local can = canFn()
-		PaintBox(self, w, h, can and (self:IsHovered() and colButtonHover or colButton) or colButtonOff)
-	end
-	btn.DoClick = function()
-		if canFn() then onClick() end
-	end
-
-	return btn
-end
-
-local function SkillRow(scroll, ply, skill, rowH)
-	local row = scroll:Add("DPanel")
-	row:Dock(TOP)
-	row:DockMargin(0, 0, 0, ScrH() * 0.006)
-	row:SetTall(rowH)
-	row.Paint = function(self, rw, rh)
-		local rank = SK.GetRank(ply, skill.id)
-		PaintBox(self, rw, rh, colRow)
-
-		draw.SimpleText(skill.name .. " - " .. SK.RankNames[rank], "Rem_SkillName", 10, rh * 0.3, color_white, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-		draw.SimpleText(skill.desc, "Rem_SkillDesc", 10, rh * 0.72, colOutline, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-
-		local pip = rh * 0.22
-		for r = 1, SK.MaxRank do
-			draw.RoundedBox(2, rw - rh * 1.2 - (SK.MaxRank - r + 1) * (pip + 4), rh / 2 - pip / 2, pip, pip, r <= rank and colPip or colPipEmpty)
-		end
-	end
-
-	local plus = MakeButton(row, "+", function()
-		return ply:GetNWInt("skill_points", 0) > 0 and SK.GetRank(ply, skill.id) < SK.MaxRank
-	end, function()
-		net.Start("rem_skills_upgrade")
-			net.WriteString(skill.id)
-		net.SendToServer()
-	end)
-	plus:SetFont("Rem_SkillTitle")
-	plus:Dock(RIGHT)
-	plus:DockMargin(0, rowH * 0.18, rowH * 0.15, rowH * 0.18)
-	plus:SetWide(rowH * 0.7)
-end
-
-local colBad = Color(255, 120, 120)
-local colBadButton = Color(90, 35, 35, 235)
-local colBadButtonHover = Color(120, 50, 50, 235)
 
 local function PerkState(ply, perk)
 	local owned = SK.HasPerk(ply, perk.id)
 	local points = ply:GetNWInt("skill_points", 0)
-	local conflict = perk.conflicts and SK.HasPerk(ply, perk.conflicts) and SK.PerkByID[perk.conflicts]
+	local conflict = perk.conflicts and SK.HasPerk(ply, perk.conflicts)
 
 	if perk.bad then
-		if owned then return "Remove (-" .. perk.gain .. ")", points >= perk.gain end
+		if owned then return "Remove  -" .. perk.gain, points >= perk.gain end
 		if conflict then return "Conflict", false end
-		return "+" .. perk.gain .. " pts", SK.CountBadPerks(ply) < SK.MaxBadPerks
+		return "Take  +" .. perk.gain, SK.CountBadPerks(ply) < SK.MaxBadPerks
 	end
 
 	if owned then return "Owned", false end
 	if conflict then return "Conflict", false end
-	return perk.cost .. " pts", points >= perk.cost
+	return "Buy  " .. perk.cost, points >= perk.cost
 end
 
-local function PerkRow(scroll, ply, perk, rowH)
+-- строка: иконка, название, описание; справа - что передали в addRight
+local function Row(scroll, iconId, iconColor, getName, nameColor, desc, addRight)
+	local UI = hg.RemUI
+	local U = UI.U
+
 	local row = scroll:Add("DPanel")
 	row:Dock(TOP)
-	row:DockMargin(0, 0, 0, ScrH() * 0.006)
-	row:SetTall(rowH)
-	row.Paint = function(self, rw, rh)
-		local owned = SK.HasPerk(ply, perk.id)
-		PaintBox(self, rw, rh, colRow)
+	row:DockMargin(0, 0, U(6), U(6))
+	row:SetTall(U(64))
+	row.Paint = function(self, w, h)
+		local hovered = self:IsHovered() or self:IsChildHovered()
+		UI.PaintCard(w, h, hovered and UI.CardHover or UI.Card)
 
-		local nameCol = perk.bad and colBad or (owned and colPip or color_white)
-		local desc = perk.desc
-		if perk.conflicts and SK.PerkByID[perk.conflicts] then desc = desc .. "  Not with " .. SK.PerkByID[perk.conflicts].name .. "." end
+		local size = U(38)
+		UI.DrawIcon(SK.Icon(iconId), U(12), (h - size) / 2, size, isfunction(iconColor) and iconColor() or iconColor)
 
-		draw.SimpleText(perk.name .. (owned and "  (yours)" or ""), "Rem_SkillName", 10, rh * 0.3, nameCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-		draw.SimpleText(desc, "Rem_SkillDesc", 10, rh * 0.72, colOutline, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+		draw.SimpleText(getName(), "RemUI_Small", U(62), h * 0.34, isfunction(nameColor) and nameColor() or nameColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+		draw.SimpleText(desc, "RemUI_Tiny", U(62), h * 0.7, UI.TextDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 	end
 
-	local btn = vgui.Create("DButton", row)
-	btn:SetFont("Rem_SkillName")
-	btn:SetTextColor(color_white)
-	btn:Dock(RIGHT)
-	btn:DockMargin(0, rowH * 0.2, rowH * 0.15, rowH * 0.2)
-	btn:SetWide(rowH * 2)
-	btn.Think = function(self)
-		local text = PerkState(ply, perk)
-		if self:GetText() ~= text then self:SetText(text) end
-	end
-	btn.Paint = function(self, w, h)
-		local _, can = PerkState(ply, perk)
-		local on, hover = colButton, colButtonHover
-		if perk.bad then on, hover = colBadButton, colBadButtonHover end
-		PaintBox(self, w, h, can and (self:IsHovered() and hover or on) or colButtonOff)
-	end
-	btn.DoClick = function()
-		local _, can = PerkState(ply, perk)
-		if not can then return end
-
-		net.Start("rem_skills_perk")
-			net.WriteString(perk.id)
-			net.WriteBool(perk.bad and SK.HasPerk(ply, perk.id) or false)
-		net.SendToServer()
-	end
+	addRight(row)
+	return row
 end
 
-local function PerkHeader(scroll, text, col)
-	local label = scroll:Add("DLabel")
+local function SkillRow(scroll, ply, skill)
+	local UI = hg.RemUI
+	local U = UI.U
+
+	Row(scroll, skill.id, function() return SK.GetRank(ply, skill.id) > 0 and UI.White or UI.TextDim end,
+		function() return skill.name .. "  -  " .. SK.RankNames[SK.GetRank(ply, skill.id)] end, UI.Text, skill.desc,
+		function(row)
+			local plus = UI.TextButton(row, "+", {
+				font = "RemUI_Medium",
+				center = true,
+				canClick = function() return ply:GetNWInt("skill_points", 0) > 0 and SK.GetRank(ply, skill.id) < SK.MaxRank end,
+				onClick = function()
+					net.Start("rem_skills_upgrade")
+						net.WriteString(skill.id)
+					net.SendToServer()
+				end,
+			})
+			plus:Dock(RIGHT)
+			plus:DockMargin(0, U(12), U(10), U(12))
+			plus:SetWide(U(40))
+
+			local pips = vgui.Create("DPanel", row)
+			pips:Dock(RIGHT)
+			pips:SetWide(U(16) * SK.MaxRank)
+			pips:SetMouseInputEnabled(false)
+			pips.Paint = function(self, w, h)
+				local rank, size = SK.GetRank(ply, skill.id), U(9)
+				for r = 1, SK.MaxRank do
+					local x, y = (r - 1) * U(16), (h - size) / 2
+					if r <= rank then
+						surface.SetDrawColor(UI.White)
+						surface.DrawRect(x, y, size, size)
+					else
+						surface.SetDrawColor(UI.Dim)
+						surface.DrawOutlinedRect(x, y, size, size, 1)
+					end
+				end
+			end
+		end)
+end
+
+local function PerkRow(scroll, ply, perk)
+	local UI = hg.RemUI
+	local U = UI.U
+
+	local desc = perk.desc
+	if perk.conflicts and SK.PerkByID[perk.conflicts] then desc = desc .. "  Not with " .. SK.PerkByID[perk.conflicts].name .. "." end
+
+	local function iconColor()
+		if perk.bad then return UI.Accent end
+		return SK.HasPerk(ply, perk.id) and UI.White or UI.TextDim
+	end
+
+	Row(scroll, perk.id, iconColor, function() return perk.name .. (SK.HasPerk(ply, perk.id) and "  (yours)" or "") end,
+		perk.bad and UI.Accent or UI.Text, desc,
+		function(row)
+			local btn = UI.TextButton(row, "Remove  -00", {
+				center = true,
+				color = perk.bad and UI.Accent or nil,
+				getLabel = function() return (PerkState(ply, perk)) end,
+				canClick = function() return select(2, PerkState(ply, perk)) end,
+				onClick = function()
+					net.Start("rem_skills_perk")
+						net.WriteString(perk.id)
+						net.WriteBool(perk.bad and SK.HasPerk(ply, perk.id) or false)
+					net.SendToServer()
+				end,
+			})
+			btn:Dock(RIGHT)
+			btn:DockMargin(0, U(12), U(10), U(12))
+			btn:SetWide(U(150))
+		end)
+end
+
+local function Header(scroll, getText, col)
+	local UI = hg.RemUI
+	local U = UI.U
+
+	local label = scroll:Add("DPanel")
 	label:Dock(TOP)
-	label:DockMargin(4, ScrH() * 0.006, 0, ScrH() * 0.004)
-	label:SetFont("Rem_SkillName")
-	label:SetTextColor(col)
-	label:SetText(text)
-	label:SizeToContents()
-	return label
+	label:DockMargin(U(2), U(10), 0, U(6))
+	label:SetTall(U(24))
+	label.Paint = function(self, w, h)
+		draw.SimpleText(getText(), "RemUI_Small", 0, h / 2, col, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+	end
 end
 
--- общая начинка: окно на Q / !skills и вкладка Skills в главном меню
+-- общая начинка: окно (!skills) и вкладка Skills в главном меню
 function SK.BuildPanel(parent)
+	local UI = hg.RemUI
+	local U = UI.U
 	local ply = LocalPlayer()
-	local rowH = ScrH() * 0.075
 	SK.Tab = SK.Tab or "skills"
 
-	local header = vgui.Create("DPanel", parent)
-	header:Dock(TOP)
-	header:SetTall(ScrH() * 0.085)
-	header.Paint = function(self, pw, ph)
+	local info = vgui.Create("DPanel", parent)
+	info:Dock(TOP)
+	info:SetTall(U(56))
+	info.Paint = function(self, w, h)
+		UI.PaintCard(w, h, UI.CardStrong)
+
 		local level = ply:GetNWInt("skill_level", 0)
 		local xp, need = ply:GetNWInt("skill_xp", 0), SK.XPForLevel(level)
-		draw.SimpleText("SKILLS - level " .. level, "Rem_SkillTitle", 4, ph * 0.25, color_white, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-		draw.SimpleText("Points: " .. ply:GetNWInt("skill_points", 0), "Rem_SkillName", pw - 4, ph * 0.25, colBar, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+		draw.SimpleText("Level " .. level, "RemUI_Medium", U(14), h * 0.36, UI.White, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+		draw.SimpleText(ply:GetNWInt("skill_points", 0) .. " skill points", "RemUI_Tiny", U(14), h * 0.74, UI.TextDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
-		local barY, barH = ph * 0.55, ph * 0.28
-		draw.RoundedBox(0, 4, barY, pw - 8, barH, colBarBack)
-		draw.RoundedBox(0, 4, barY, (pw - 8) * math.Clamp(xp / need, 0, 1), barH, colBar)
-		draw.SimpleText(xp .. " / " .. need .. " XP", "Rem_SkillDesc", pw / 2, barY + barH / 2, color_white, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		local barW, barX = w * 0.45, w - w * 0.45 - U(14)
+		draw.SimpleText(xp .. " / " .. need .. " XP", "RemUI_Tiny", w - U(14), h * 0.36, UI.TextDim, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+		surface.SetDrawColor(UI.Dim)
+		surface.DrawRect(barX, h * 0.68, barW, math.max(2, U(3)))
+		surface.SetDrawColor(UI.White)
+		surface.DrawRect(barX, h * 0.68, barW * math.Clamp(xp / need, 0, 1), math.max(2, U(3)))
 	end
 
 	local tabs = vgui.Create("DPanel", parent)
 	tabs:Dock(TOP)
-	tabs:DockMargin(0, ScrH() * 0.008, 0, ScrH() * 0.008)
-	tabs:SetTall(ScrH() * 0.04)
+	tabs:DockMargin(0, U(8), 0, U(8))
+	tabs:SetTall(U(34))
 	tabs.Paint = nil
 
 	local scroll = vgui.Create("DScrollPanel", parent)
 	scroll:Dock(FILL)
+	UI.StyleScroll(scroll)
 
 	local function Show(tab)
 		SK.Tab = tab
 		scroll:Clear()
 
 		if tab == "perks" then
-			PerkHeader(scroll, "Perks - cost skill points", colPip)
+			Header(scroll, function() return "Perks  -  cost skill points" end, UI.White)
 			for _, perk in ipairs(SK.Perks) do
-				if not perk.bad then PerkRow(scroll, ply, perk, rowH) end
+				if not perk.bad then PerkRow(scroll, ply, perk) end
 			end
 
-			local badHeader = PerkHeader(scroll, "", colBad)
-			badHeader.Think = function(self)
-				local text = "Flaws - give skill points (" .. SK.CountBadPerks(ply) .. " / " .. SK.MaxBadPerks .. ")"
-				if self:GetText() ~= text then self:SetText(text) self:SizeToContents() end
-			end
+			Header(scroll, function() return "Flaws  -  give skill points  (" .. SK.CountBadPerks(ply) .. " / " .. SK.MaxBadPerks .. ")" end, UI.Accent)
 			for _, perk in ipairs(SK.Perks) do
-				if perk.bad then PerkRow(scroll, ply, perk, rowH) end
+				if perk.bad then PerkRow(scroll, ply, perk) end
 			end
 		else
-			for _, skill in ipairs(SK.List) do SkillRow(scroll, ply, skill, rowH) end
+			for _, skill in ipairs(SK.List) do SkillRow(scroll, ply, skill) end
 		end
 	end
 
-	for i, tab in ipairs({{"skills", "Skills"}, {"perks", "Perks"}}) do
-		local btn = vgui.Create("DButton", tabs)
-		btn:SetText(tab[2])
-		btn:SetFont("Rem_SkillName")
-		btn:SetTextColor(color_white)
+	for _, tab in ipairs({{"skills", "Skills"}, {"perks", "Perks"}}) do
+		local btn = UI.TextButton(tabs, tab[2], {
+			font = "RemUI_Medium",
+			color = function() return SK.Tab == tab[1] and UI.White or UI.TextDim end,
+			onClick = function() Show(tab[1]) end,
+		})
 		btn:Dock(LEFT)
-		btn:DockMargin(0, 0, 6, 0)
-		btn:SetWide(ScrW() * 0.08)
-		btn.Paint = function(self, w, h)
-			PaintBox(self, w, h, SK.Tab == tab[1] and colTabActive or (self:IsHovered() and colRowHover or colTab))
+		btn:DockMargin(0, 0, U(18), 0)
+		btn.PaintOver = function(self, w, h)
+			if SK.Tab ~= tab[1] then return end
+			surface.SetFont(self.Font)
+			local lw, lh = surface.GetTextSize(self.Label)
+			surface.SetDrawColor(UI.Accent)
+			surface.DrawRect(U(4), h / 2 + lh / 2 + U(2), lw, math.max(1, U(2)))
 		end
-		btn.DoClick = function() Show(tab[1]) end
 	end
 
 	Show(SK.Tab)
@@ -225,29 +215,14 @@ end
 function SK.Open()
 	if IsValid(SK.Frame) then SK.Frame:Remove() end
 
-	local frame = vgui.Create("DFrame")
+	local UI = hg.RemUI
+	local frame = UI.Frame(ScrW() * 0.45, ScrH() * 0.78, "SKILLS", "Spend points on skills, perks and flaws")
 	SK.Frame = frame
-	frame:SetTitle("")
-	frame:SetSize(ScrW() * 0.42, ScrH() * 0.7)
-	frame:Center()
-	frame:MakePopup()
-	frame:SetKeyboardInputEnabled(false)
-	frame:DockPadding(12, 26, 12, 12)
-	frame.Paint = function(self, pw, ph)
-		hg.DrawBlur(self)
-		surface.SetDrawColor(colBack)
-		surface.DrawRect(0, 0, pw, ph)
-		surface.SetDrawColor(colOutline)
-		surface.DrawOutlinedRect(0, 0, pw, ph, 1)
-	end
-
 	SK.BuildPanel(frame)
 end
 
 -- вкладка в главном меню (ESC); Return возвращает кнопки меню так же, как в Achievements
 local function ReturnToMenu(ParentPanel)
-	surface.PlaySound("ui/rem_select.wav")
-
 	local luaMenu = ParentPanel:GetParent()
 	ParentPanel:AlphaTo(0, 0.2, 0, function()
 		if IsValid(ParentPanel) then ParentPanel:Remove() end
@@ -276,37 +251,35 @@ end
 function hg.DrawSkillsMenu(ParentPanel)
 	if not IsValid(ParentPanel) then return end
 
+	local UI = hg.RemUI
+	local U = UI.U
+	local openTime = CurTime()
+
 	ParentPanel:SetAlpha(0)
-	ParentPanel.Paint = function(self, w, h)
-		hg.DrawBlur(self, 5)
-		surface.SetDrawColor(0, 0, 0, 200)
-		surface.DrawRect(0, 0, w, h)
+	ParentPanel.Paint = function(self, w, h) UI.PaintBackground(self, w, h) end
+	ParentPanel:AlphaTo(255, 0.15, 0)
+
+	local header = vgui.Create("DPanel", ParentPanel)
+	header:Dock(TOP)
+	header:SetTall(U(70))
+	header.Paint = function(self, w, h)
+		draw.RoundedBox(0, 0, 0, w, h, UI.CardStrong)
+		surface.SetDrawColor(255, 255, 255, 140)
+		surface.DrawRect(0, h - U(1), w, U(1))
+		draw.SimpleText(UI.Typewriter("SKILLS", openTime, 15), "RemUI_Title", U(25), U(18), UI.White)
 	end
-	ParentPanel:AlphaTo(255, 0.25, 0)
+
+	local back = UI.TextButton(ParentPanel, "<- Return", {onClick = function() ReturnToMenu(ParentPanel) end})
+	back:Dock(BOTTOM)
+	back:DockMargin(U(15), U(2), 0, U(20))
+	back:SetTall(U(42))
 
 	local holder = vgui.Create("DPanel", ParentPanel)
-	holder:SetSize(ScrW() * 0.45, ScrH() * 0.78)
-	holder:Center()
-	holder:DockPadding(14, 14, 14, 14)
-	holder.Paint = function(self, w, h)
-		surface.SetDrawColor(colBack)
-		surface.DrawRect(0, 0, w, h)
-		surface.SetDrawColor(colOutline)
-		surface.DrawOutlinedRect(0, 0, w, h, 1)
-	end
+	holder:Dock(FILL)
+	holder:DockMargin(ScrW() * 0.2, U(22), ScrW() * 0.2, U(10))
+	holder.Paint = nil
 
 	SK.BuildPanel(holder)
-
-	local back = vgui.Create("DButton", ParentPanel)
-	back:SetText("<- Return")
-	back:SetFont("Rem_SkillTitle")
-	back:SetTextColor(color_white)
-	back:SizeToContents()
-	back:SetPos(ScrW() * 0.03, ScrH() * 0.9)
-	back.Paint = function(self, w, h)
-		self:SetTextColor(self:IsHovered() and colBar or color_white)
-	end
-	back.DoClick = function() ReturnToMenu(ParentPanel) end
 end
 
 net.Receive("rem_skills_open", function() SK.Open() end)
@@ -319,9 +292,5 @@ net.Receive("rem_skills_levelup", function()
 		if IsValid(chan) then chan:Play() end
 	end)
 
-	if hg.CreateNotification then hg.CreateNotification("Level up! You are now level " .. level .. ". Spend your skill point (!skills or ESC - Skills).", 4, Color(230, 190, 0)) end
-end)
-
-hook.Add("radialOptions", "rem_skills", function()
-	hg.radialOptions[#hg.radialOptions + 1] = {function() SK.Open() end, "Skills"}
+	if hg.CreateNotification then hg.CreateNotification("Level up! You are now level " .. level .. ". Spend your skill point (ESC - Skills).", 4, Color(225, 225, 225)) end
 end)

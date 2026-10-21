@@ -4,8 +4,6 @@ local SK = hg.Skills
 
 local hint_dist = 75
 
-local colPerk = Color(230, 190, 0)
-local colBack = Color(0, 0, 0, 200)
 
 local stealFinish = 0
 local stealStart = 0
@@ -29,20 +27,26 @@ local function HintTarget(ply)
 end
 
 hook.Add("HUDPaint", "rem_pickpocket", function()
+	local UI = hg.RemUI
+	if not UI then return end
+
+	local U = UI.U
 	local ply = LocalPlayer()
 	local x, y = ScrW() / 2, ScrH() * 0.6
 
 	if stealFinish > CurTime() then
-		local w, h = ScrW() * 0.15, ScrH() * 0.012
+		local w = ScrW() * 0.15
 		local frac = math.Clamp((CurTime() - stealStart) / math.max(stealFinish - stealStart, 0.01), 0, 1)
 
-		draw.SimpleText("Stealing...", "Rem_SkillDesc", x, y - h * 1.5, colPerk, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-		draw.RoundedBox(0, x - w / 2, y, w, h, colBack)
-		draw.RoundedBox(0, x - w / 2, y, w * frac, h, colPerk)
+		draw.SimpleTextOutlined("stealing...", "RemUI_Small", x, y - U(16), UI.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER, 1, color_black)
+		surface.SetDrawColor(UI.Dim)
+		surface.DrawRect(x - w / 2, y, w, math.max(2, U(3)))
+		surface.SetDrawColor(UI.White)
+		surface.DrawRect(x - w / 2, y, w * frac, math.max(2, U(3)))
 		return
 	end
 
 	if HintTarget(ply) then
-		draw.SimpleText("[E] Pickpocket", "Rem_SkillDesc", x, y, colPerk, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		draw.SimpleTextOutlined("[E] pickpocket", "RemUI_Small", x, y, UI.TextDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER, 1, color_black)
 	end
 end)

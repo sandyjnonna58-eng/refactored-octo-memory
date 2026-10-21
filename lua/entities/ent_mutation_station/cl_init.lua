@@ -10,6 +10,6 @@ function ENT:Draw()
 
 	-- надпись всегда повёрнута к игроку
 	cam.Start3D2D(self:GetPos() + labelOffset, Angle(0, LocalPlayer():EyeAngles().y - 90, 90), 0.1)
-		draw.SimpleTextOutlined("MUTATION STATION", "DermaLarge", 0, 0, labelColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER, 1, color_black)
+		draw.SimpleTextOutlined("MUTATION STATION", "RemUI_Title", 0, 0, labelColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER, 1, color_black)
 	cam.End3D2D()
 end

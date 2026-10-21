@@ -99,8 +99,9 @@ end
 
 if CLIENT then
 	local tubeMat = Material("cable/cable2")
-	local colText = Color(150, 220, 255)
-	local colLow = Color(255, 120, 120)
+	local colText = Color(225, 225, 225)
+	local colLow = Color(192, 57, 43)
+	local colDim = Color(160, 160, 160)
 
 	local function Chest(ply)
 		local char = hg.GetCurrentCharacter(ply)
@@ -144,7 +145,7 @@ if CLIENT then
 		local patient = self:GetPatient()
 		local status = IsValid(patient) and ("Connected: " .. (patient == LocalPlayer() and "you" or patient:Nick())) or "Disconnected"
 
-		draw.SimpleText("Battery: " .. charge .. "%", "HomigradFont", ScrW() * 0.5, ScrH() * 0.85, charge <= 15 and colLow or colText, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-		draw.SimpleText(status, "HomigradFont", ScrW() * 0.5, ScrH() * 0.88, colText, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		draw.SimpleTextOutlined("battery  " .. charge .. "%", "RemUI_Small", ScrW() * 0.5, ScrH() * 0.85, charge <= 15 and colLow or colText, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER, 1, color_black)
+		draw.SimpleTextOutlined(status, "RemUI_Tiny", ScrW() * 0.5, ScrH() * 0.88, colDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER, 1, color_black)
 	end
 end

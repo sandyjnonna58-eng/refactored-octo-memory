@@ -3,15 +3,6 @@ hg.Mutations = hg.Mutations or {}
 local M = hg.Mutations
 
 local colYellow = Color(230, 190, 0)
-local colRed = Color(255, 120, 120)
-local colOwned = Color(120, 120, 120)
-local colBack = Color(15, 15, 15, 240)
-local colRow = Color(30, 30, 30, 255)
-local colRowHover = Color(60, 50, 0, 255)
-
-surface.CreateFont("Rem_MutationTitle", {font = "Lora", size = ScreenScale(12), weight = 800, antialias = true, extended = true})
-surface.CreateFont("Rem_MutationName", {font = "Lora", size = ScreenScale(9), weight = 700, antialias = true, extended = true})
-surface.CreateFont("Rem_MutationDesc", {font = "Lora", size = ScreenScale(6.5), weight = 400, antialias = true, extended = true})
 
 local menu
 
@@ -19,6 +10,8 @@ local menu
 local function OpenMenu(station, implantOnly)
 	if IsValid(menu) then menu:Remove() end
 
+	local UI = hg.RemUI
+	local U = UI.U
 	local ply = LocalPlayer()
 	local owned = M.Get(ply)
 	local list, subtitle
@@ -33,33 +26,42 @@ local function OpenMenu(station, implantOnly)
 	end
 
 	local slotsFull = not implantOnly and table.Count(owned) >= M.MaxSlots
-	local w, rowH = ScrW() * 0.42, ScrH() * 0.075
-	menu = vgui.Create("DFrame")
-	menu:SetTitle("")
-	menu:SetSize(w, ScrH() * 0.1 + rowH * #list)
-	menu:Center()
-	menu:MakePopup()
-	menu.Paint = function(self, pw, ph)
-		draw.RoundedBox(0, 0, 0, pw, ph, colBack)
-		draw.SimpleText("MUTATION STATION", "Rem_MutationTitle", pw / 2, ScrH() * 0.025, colYellow, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-		draw.SimpleText(subtitle, "Rem_MutationDesc", pw / 2, ScrH() * 0.06, color_white, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-	end
+	local rowH = U(64)
+	menu = UI.Frame(ScrW() * 0.42, math.min(U(64) + U(28) + (rowH + U(6)) * #list, ScrH() * 0.85), "MUTATION STATION", subtitle)
 
-	for i, mutation in ipairs(list) do
+	local scroll = vgui.Create("DScrollPanel", menu)
+	scroll:Dock(FILL)
+	UI.StyleScroll(scroll)
+
+	for _, mutation in ipairs(list) do
 		local has = owned[mutation.id]
 		local available = not has and not slotsFull
 
-		local button = vgui.Create("DButton", menu)
-		button:SetText("")
-		button:SetPos(ScrW() * 0.01, ScrH() * 0.08 + (i - 1) * rowH)
-		button:SetSize(w - ScrW() * 0.02, rowH - ScrH() * 0.008)
-		button:SetEnabled(available)
-		button.Paint = function(self, bw, bh)
-			draw.RoundedBox(0, 0, 0, bw, bh, available and self:IsHovered() and colRowHover or colRow)
-			draw.SimpleText(mutation.name .. (has and "  (installed)" or ""), "Rem_MutationName", bw * 0.03, bh * 0.3, has and colOwned or colYellow, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-			draw.SimpleText(mutation.desc, "Rem_MutationDesc", bw * 0.03, bh * 0.72, has and colOwned or color_white, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+		local row = scroll:Add("DButton")
+		row:SetText("")
+		row:Dock(TOP)
+		row:DockMargin(0, 0, U(6), U(6))
+		row:SetTall(rowH)
+		row.Paint = function(self, w, h)
+			UI.PaintCard(w, h, available and self:IsHovered() and UI.CardHover or UI.Card)
+
+			local nameCol = has and UI.TextDim or (available and colYellow or UI.TextDim)
+			draw.SimpleText(mutation.name .. (has and "  (installed)" or ""), "RemUI_Small", U(14), h * 0.34, nameCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+			draw.SimpleText(mutation.desc, "RemUI_Tiny", U(14), h * 0.7, UI.TextDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+			if self:IsHovered() and available then
+				surface.SetDrawColor(colYellow)
+				surface.DrawRect(0, 0, U(2), h)
+			end
+			return true
 		end
-		button.DoClick = function()
+		row.OnCursorEntered = function()
+			if available then surface.PlaySound(UI.SoundHover) end
+		end
+		row.DoClick = function()
+			if not available then return end
+			surface.PlaySound(UI.SoundClick)
+
 			net.Start("rem_mutation_install")
 				net.WriteEntity(station)
 				net.WriteString(mutation.id)
@@ -132,21 +134,22 @@ net.Receive("rem_control_locate", function()
 	surface.PlaySound("buttons/blip1.wav")
 end)
 
-hook.Add("HUDPaint", "rem_control_locate", function()
-	if CurTime() > markersUntil then return end
+local colMarker = Color(192, 57, 43)
 
-	colRed.a = math.Clamp((markersUntil - CurTime()) / 2, 0, 1) * 255
+hook.Add("HUDPaint", "rem_control_locate", function()
+	if CurTime() > markersUntil or not hg.RemUI then return end
+
+	local U = hg.RemUI.U
+	colMarker.a = math.Clamp((markersUntil - CurTime()) / 2, 0, 1) * 255
 
 	for _, marker in ipairs(markers) do
 		local screen = marker.pos:ToScreen()
 		if screen.visible then
 			local dist = math.Round(LocalPlayer():GetPos():Distance(marker.pos) / 52.5)
-			draw.SimpleText("+", "Rem_MutationName", screen.x, screen.y, colRed, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-			draw.SimpleText(marker.name .. " - " .. dist .. "m", "Rem_MutationDesc", screen.x, screen.y + ScreenScale(8), colRed, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			draw.SimpleTextOutlined("+", "RemUI_Medium", screen.x, screen.y, colMarker, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER, 1, color_black)
+			draw.SimpleTextOutlined(marker.name .. "  " .. dist .. "m", "RemUI_Tiny", screen.x, screen.y + U(18), colMarker, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER, 1, color_black)
 		end
 	end
-
-	colRed.a = 255
 end)
 
 -- Heightened Senses: живые люди рядом подсвечиваются сквозь стены

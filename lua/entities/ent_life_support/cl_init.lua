@@ -1,7 +1,7 @@
 include("shared.lua")
 
 local tubeMat = Material("cable/cable2")
-local labelColor = Color(150, 220, 255)
+local labelColor = Color(225, 225, 225)
 local labelOffset = Vector(0, 0, 60)
 
 local function PatientChest(ply)
@@ -22,7 +22,7 @@ function ENT:Draw()
 	local text = IsValid(patient) and ("LIFE SUPPORT: " .. patient:Nick()) or "LIFE SUPPORT - press E to connect"
 
 	cam.Start3D2D(self:GetPos() + labelOffset, Angle(0, LocalPlayer():EyeAngles().y - 90, 90), 0.08)
-		draw.SimpleTextOutlined(text, "DermaLarge", 0, 0, labelColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER, 1, color_black)
+		draw.SimpleTextOutlined(text, "RemUI_Title", 0, 0, labelColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER, 1, color_black)
 	cam.End3D2D()
 end
 
