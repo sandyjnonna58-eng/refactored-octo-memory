@@ -1,5 +1,5 @@
 -- Шейдеры из Simple Custom Shaders:
--- радиальное размытие - попадания (от игроков сильнее), взрывы, адреналин, старт последнего боя;
+-- радиальное размытие - попадания (от игроков сильнее), взрывы, адреналин и боль (постоянно), старт последнего боя;
 -- серость по глубине - кровопотеря, таймер смерти, депрессия;
 -- размытие по глубине - урон мозгу, дезориентация.
 hg.RemFX = hg.RemFX or {}
@@ -23,6 +23,13 @@ local adrenaline_max = 1.1
 local adrenaline_pulse_speed = 7
 local adrenaline_pulse = 0.35
 
+-- боль: тоже постоянное, медленно ноет; складывается с адреналином
+local pain_start = 15
+local pain_full = 100
+local pain_max = 1
+local pain_pulse_speed = 2
+local pain_pulse = 0.2
+
 local blood_gray_start = 4200
 local blood_gray_full = 2600
 local depression_gray_start = 0.3
@@ -37,6 +44,7 @@ local kickX, kickY = 0.5, 0.5
 local gray = 0
 local blur = 0
 local adrenalineBlur = 0
+local painBlur = 0
 
 local function EffectMul()
 	return hg_reduce_screeneffects:GetBool() and 0.5 or 1
@@ -105,6 +113,9 @@ hook.Add("Think", "rem_fx", function()
 
 	local adrenaline = org and Remap01(org.adrenaline or 0, adrenaline_start, adrenaline_full) * adrenaline_max * EffectMul() or 0
 	adrenalineBlur = Lerp(math.min(dt * 3, 1), adrenalineBlur, adrenaline)
+
+	local pain = org and not org.otrub and Remap01(org.pain or 0, pain_start, pain_full) * pain_max * EffectMul() or 0
+	painBlur = Lerp(math.min(dt * 2, 1), painBlur, pain)
 end)
 
 hook.Add("NeedsDepthPass", "rem_fx", function()
@@ -132,8 +143,11 @@ hook.Add("Post Processing", "rem_fx", function()
 		DrawShader(mat_depthblur)
 	end
 
-	-- адреналин всегда из центра; удар перекрывает его, если сильнее
-	local pulse = adrenalineBlur * (1 - adrenaline_pulse + adrenaline_pulse * math.abs(math.sin(CurTime() * adrenaline_pulse_speed)))
+	-- адреналин и боль всегда из центра; удар перекрывает их, если сильнее
+	local time = CurTime()
+	local pulse = adrenalineBlur * (1 - adrenaline_pulse + adrenaline_pulse * math.abs(math.sin(time * adrenaline_pulse_speed)))
+		+ painBlur * (1 - pain_pulse + pain_pulse * math.abs(math.sin(time * pain_pulse_speed)))
+	pulse = math.min(pulse, kick_max)
 	local radial = math.max(kick, pulse)
 
 	if radial > 0.01 and not mat_radialblur:IsError() then
