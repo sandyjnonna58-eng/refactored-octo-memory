@@ -42,17 +42,26 @@ end
 function SK.Apply(ply)
 	if not IsValid(ply) then return end
 
-	ply.SkillMeleeMul = 1 + SK.Bonus(ply, "strength")
-	ply.SkillStaminaMul = 1 - SK.Bonus(ply, "endurance")
-	ply:SetNWFloat("SkillJumpMul", 1 + SK.Bonus(ply, "agility"))
-	ply:SetNWFloat("SkillRecoilMul", 1 - SK.Bonus(ply, "marksman"))
-	ply:SetNWFloat("SkillSpeedMul", 1 + SK.Bonus(ply, "runner"))
-	ply.SkillReloadMul = 1 - SK.Bonus(ply, "quickhands")
-	ply.SkillMedicMul = 1 + SK.Bonus(ply, "medic")
+	local mul = SK.PerkMul
 
-	if ply.organism then
-		ply.organism.skillPainResist = SK.Bonus(ply, "toughness")
-		ply.organism.skillBleedMul = 1 - SK.Bonus(ply, "vitality")
+	ply.SkillMeleeMul = (1 + SK.Bonus(ply, "strength")) * mul(ply, "melee")
+	ply.SkillStaminaMul = (1 - SK.Bonus(ply, "endurance")) * mul(ply, "stamina")
+	ply:SetNWFloat("SkillJumpMul", (1 + SK.Bonus(ply, "agility")) * mul(ply, "jump"))
+	ply:SetNWFloat("SkillRecoilMul", (1 - SK.Bonus(ply, "marksman")) * mul(ply, "recoil"))
+	ply:SetNWFloat("SkillSpeedMul", (1 + SK.Bonus(ply, "runner")) * mul(ply, "speed"))
+	ply:SetNWFloat("SkillWeightMul", mul(ply, "weight"))
+	ply.SkillReloadMul = (1 - SK.Bonus(ply, "quickhands")) * mul(ply, "reload")
+	ply.SkillMedicMul = (1 + SK.Bonus(ply, "medic")) * mul(ply, "medic")
+	ply.SkillXPMul = mul(ply, "xp")
+	ply.SkillLastStandAdd = SK.PerkLastStand(ply)
+
+	local org = ply.organism
+	if org then
+		-- боль: (1 - resist) = (1 - toughness) * множитель перков, Sensitive даёт отрицательный resist
+		org.skillPainResist = 1 - (1 - SK.Bonus(ply, "toughness")) * mul(ply, "pain")
+		org.skillBleedMul = (1 - SK.Bonus(ply, "vitality")) * mul(ply, "bleed")
+		org.perkOxygenMul = mul(ply, "oxygen")
+		org.perkHungerMul = mul(ply, "hunger")
 	end
 end
 
@@ -77,7 +86,7 @@ function SK.GiveXP(ply, amount)
 	if not IsValid(ply) or not ply:IsPlayer() or amount <= 0 then return end
 
 	local data = Data(ply)
-	data.xp = data.xp + amount
+	data.xp = data.xp + math.max(math.Round(amount * (ply.SkillXPMul or 1)), 1)
 
 	local leveled = false
 	while data.xp >= SK.XPForLevel(data.level) do
@@ -112,19 +121,43 @@ net.Receive("rem_skills_upgrade", function(len, ply)
 	Save(ply)
 end)
 
+local colPerk = Color(230, 190, 0)
+local colBadPerk = Color(255, 120, 120)
+
+-- хороший перк - купить; плохой - взять (+очки) или снять (remove, -очки)
 net.Receive("rem_skills_perk", function(len, ply)
 	local perk = SK.PerkByID[net.ReadString()]
+	local remove = net.ReadBool()
 	if not perk then return end
 
 	local data = Data(ply)
-	if data.perks[perk.id] or data.points < perk.cost then return end
+	local owned = data.perks[perk.id] == true
 
-	data.points = data.points - perk.cost
+	if remove then
+		if not perk.bad or not owned or data.points < perk.gain then return end
+
+		data.points = data.points - perk.gain
+		data.perks[perk.id] = nil
+		Sync(ply)
+		Save(ply)
+		ply:Notify("You got rid of " .. perk.name .. ".", 0, "skills_perk", 3, nil, colPerk)
+		return
+	end
+
+	if owned or (perk.conflicts and data.perks[perk.conflicts]) then return end
+
+	if perk.bad then
+		if SK.CountBadPerks(ply) >= SK.MaxBadPerks then return end
+		data.points = data.points + perk.gain
+	else
+		if data.points < perk.cost then return end
+		data.points = data.points - perk.cost
+	end
+
 	data.perks[perk.id] = true
-
 	Sync(ply)
 	Save(ply)
-	ply:Notify("New perk: " .. perk.name .. ".", 0, "skills_perk", 3, nil, Color(230, 190, 0))
+	ply:Notify((perk.bad and "New flaw: " or "New perk: ") .. perk.name .. ".", 0, "skills_perk", 3, nil, perk.bad and colBadPerk or colPerk)
 end)
 
 hook.Add("PlayerInitialSpawn", "rem_skills", function(ply)

@@ -77,6 +77,26 @@ local function SkillRow(scroll, ply, skill, rowH)
 	plus:SetWide(rowH * 0.7)
 end
 
+local colBad = Color(255, 120, 120)
+local colBadButton = Color(90, 35, 35, 235)
+local colBadButtonHover = Color(120, 50, 50, 235)
+
+local function PerkState(ply, perk)
+	local owned = SK.HasPerk(ply, perk.id)
+	local points = ply:GetNWInt("skill_points", 0)
+	local conflict = perk.conflicts and SK.HasPerk(ply, perk.conflicts) and SK.PerkByID[perk.conflicts]
+
+	if perk.bad then
+		if owned then return "Remove (-" .. perk.gain .. ")", points >= perk.gain end
+		if conflict then return "Conflict", false end
+		return "+" .. perk.gain .. " pts", SK.CountBadPerks(ply) < SK.MaxBadPerks
+	end
+
+	if owned then return "Owned", false end
+	if conflict then return "Conflict", false end
+	return perk.cost .. " pts", points >= perk.cost
+end
+
 local function PerkRow(scroll, ply, perk, rowH)
 	local row = scroll:Add("DPanel")
 	row:Dock(TOP)
@@ -86,24 +106,50 @@ local function PerkRow(scroll, ply, perk, rowH)
 		local owned = SK.HasPerk(ply, perk.id)
 		PaintBox(self, rw, rh, colRow)
 
-		draw.SimpleText(perk.name .. (owned and "  (owned)" or ""), "Rem_SkillName", 10, rh * 0.3, owned and colPip or color_white, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-		draw.SimpleText(perk.desc, "Rem_SkillDesc", 10, rh * 0.72, colOutline, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+		local nameCol = perk.bad and colBad or (owned and colPip or color_white)
+		local desc = perk.desc
+		if perk.conflicts and SK.PerkByID[perk.conflicts] then desc = desc .. "  Not with " .. SK.PerkByID[perk.conflicts].name .. "." end
+
+		draw.SimpleText(perk.name .. (owned and "  (yours)" or ""), "Rem_SkillName", 10, rh * 0.3, nameCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+		draw.SimpleText(desc, "Rem_SkillDesc", 10, rh * 0.72, colOutline, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 	end
 
-	local buy = MakeButton(row, perk.cost .. " pts", function()
-		return not SK.HasPerk(ply, perk.id) and ply:GetNWInt("skill_points", 0) >= perk.cost
-	end, function()
-		net.Start("rem_skills_perk")
-			net.WriteString(perk.id)
-		net.SendToServer()
-	end)
-	buy:Dock(RIGHT)
-	buy:DockMargin(0, rowH * 0.2, rowH * 0.15, rowH * 0.2)
-	buy:SetWide(rowH * 1.4)
-	buy.Think = function(self)
-		local text = SK.HasPerk(ply, perk.id) and "Owned" or perk.cost .. " pts"
+	local btn = vgui.Create("DButton", row)
+	btn:SetFont("Rem_SkillName")
+	btn:SetTextColor(color_white)
+	btn:Dock(RIGHT)
+	btn:DockMargin(0, rowH * 0.2, rowH * 0.15, rowH * 0.2)
+	btn:SetWide(rowH * 2)
+	btn.Think = function(self)
+		local text = PerkState(ply, perk)
 		if self:GetText() ~= text then self:SetText(text) end
 	end
+	btn.Paint = function(self, w, h)
+		local _, can = PerkState(ply, perk)
+		local on, hover = colButton, colButtonHover
+		if perk.bad then on, hover = colBadButton, colBadButtonHover end
+		PaintBox(self, w, h, can and (self:IsHovered() and hover or on) or colButtonOff)
+	end
+	btn.DoClick = function()
+		local _, can = PerkState(ply, perk)
+		if not can then return end
+
+		net.Start("rem_skills_perk")
+			net.WriteString(perk.id)
+			net.WriteBool(perk.bad and SK.HasPerk(ply, perk.id) or false)
+		net.SendToServer()
+	end
+end
+
+local function PerkHeader(scroll, text, col)
+	local label = scroll:Add("DLabel")
+	label:Dock(TOP)
+	label:DockMargin(4, ScrH() * 0.006, 0, ScrH() * 0.004)
+	label:SetFont("Rem_SkillName")
+	label:SetTextColor(col)
+	label:SetText(text)
+	label:SizeToContents()
+	return label
 end
 
 -- общая начинка: окно на Q / !skills и вкладка Skills в главном меню
@@ -141,7 +187,19 @@ function SK.BuildPanel(parent)
 		scroll:Clear()
 
 		if tab == "perks" then
-			for _, perk in ipairs(SK.Perks) do PerkRow(scroll, ply, perk, rowH) end
+			PerkHeader(scroll, "Perks - cost skill points", colPip)
+			for _, perk in ipairs(SK.Perks) do
+				if not perk.bad then PerkRow(scroll, ply, perk, rowH) end
+			end
+
+			local badHeader = PerkHeader(scroll, "", colBad)
+			badHeader.Think = function(self)
+				local text = "Flaws - give skill points (" .. SK.CountBadPerks(ply) .. " / " .. SK.MaxBadPerks .. ")"
+				if self:GetText() ~= text then self:SetText(text) self:SizeToContents() end
+			end
+			for _, perk in ipairs(SK.Perks) do
+				if perk.bad then PerkRow(scroll, ply, perk, rowH) end
+			end
 		else
 			for _, skill in ipairs(SK.List) do SkillRow(scroll, ply, skill, rowH) end
 		end

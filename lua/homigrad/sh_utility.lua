@@ -944,6 +944,7 @@ local IsValid = IsValid
 			end
 		end
 
+		weight = weight * ply:GetNWFloat("SkillWeightMul", 1)
 		local weightmul = (1 / (weight / maxweight + 1))
 		ply.hg_weight_cache = { maxweight = maxweight, no_loadout_weight = no_loadout_weight, time = time + weight_cache_lifetime, value = weightmul }
 		return weightmul

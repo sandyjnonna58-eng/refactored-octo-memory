@@ -317,11 +317,11 @@ function LB.GetChance(org)
 	org.lastBattleSpawn = org.lastBattleSpawn or CurTime()
 	local minutes = math.floor((CurTime() - org.lastBattleSpawn) / 60)
 
-	-- перк Last Breath
+	-- перки Last Breath / Unlucky
 	local owner = org.owner
-	local perk = IsValid(owner) and owner:IsPlayer() and hg.Skills and hg.Skills.HasPerk and hg.Skills.HasPerk(owner, "lastbreath") and 15 or 0
+	local perk = IsValid(owner) and owner.SkillLastStandAdd or 0
 
-	return math.min(lastbattle_chance:GetFloat() + minutes * lastbattle_chance_add:GetFloat() + perk, 100)
+	return math.Clamp(lastbattle_chance:GetFloat() + minutes * lastbattle_chance_add:GetFloat() + perk, 0, 100)
 end
 
 -- шанс бросается один раз на каждый таймер смерти
