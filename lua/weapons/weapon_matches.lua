@@ -2,6 +2,8 @@ if SERVER then
     AddCSLuaFile()
 end
 
+SWEP.NoInfiniteAmmo = true
+
 if CLIENT then
     SWEP.PrintName = "Match Box"
     SWEP.Slot = 3

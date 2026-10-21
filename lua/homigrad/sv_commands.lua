@@ -251,6 +251,12 @@ if SERVER then
 		end
 	end, 0}
 
+	COMMANDS.infiniteammo = {function(ply, args)
+		local enable = args[1] and tobool(args[1]) or not GetConVar("hg_infiniteammo"):GetBool()
+		RunConsoleCommand("hg_infiniteammo", enable and "1" or "0")
+		ply:ChatPrint("Infinite ammo: " .. (enable and "ON" or "OFF"))
+	end, 1, "1/0"}
+
 	--// Aliases
 	COMMANDS.setsize = COMMANDS.setscale
 	COMMANDS.scale = COMMANDS.setscale
