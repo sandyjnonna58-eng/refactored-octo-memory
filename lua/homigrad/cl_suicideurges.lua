@@ -307,7 +307,7 @@ hook.Add("HUDPaint", "REM_SuicideWhispers", function()
 	if not active or ply:GetNWFloat("rem_suicide_hold", 0) <= now or ply:GetNWFloat("rem_urges_end", 0) > now then return end
 
 	local wep = ply:GetActiveWeapon()
-	local melee = IsValid(wep) and (wep.ismelee2 or wep.Base == "weapon_melee")
+	local melee = IsValid(wep) and (wep.ismelee2 or wep.Base == "weapon_melee" or wep.ClawSuicide)
 	local left = math.ceil(ply:GetNWFloat("rem_suicide_hold", 0) - now)
 	drawResistText((melee and "DO IT" or "PULL THE TRIGGER") .. " " .. left, ScrW() / 2 + math.random(-4, 4), ScrH() / 2 + ScrH() * 0.12 + math.random(-3, 3))
 end)

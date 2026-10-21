@@ -223,6 +223,8 @@ end
 
 SWEP.supportTPIK = true
 SWEP.ismelee = true
+-- эксперименты могут перерезать себе горло когтями
+SWEP.SuicideSound = "npc/zombie/claw_strike1.wav"
 function SWEP:Camera(eyePos, eyeAng, view, vellen)
 	//self:SetHandPos()
 	self:DrawWorldModel()
@@ -1285,6 +1287,9 @@ local blockvp = Angle(-1,-1,0.5)
 function SWEP:Think()
 	local owner = self:GetOwner()
 
+	self.ClawSuicide = IsValid(owner) and owner.PlayerClassName == "experiment" or nil
+	self.CanSuicide = self.ClawSuicide
+
 	self.handsDesc = "default"
 	local classInfo = customClassInfo[owner.PlayerClassName]
 	if classInfo and self.handsDesc != classInfo.handsDesc then
@@ -1392,6 +1397,11 @@ function SWEP:PrimaryAttack(forcespecial)
 	local owner = self:GetOwner()
 	if not IsValid(owner) or owner:InVehicle() then return end
 	if (self.attacked or 0) > CurTime() then return end
+
+	if self.ClawSuicide and owner.suiciding then
+		if SERVER and owner:GetNWFloat("rem_urges_end", 0) < CurTime() and hg.SuicideCut then hg.SuicideCut(owner) end
+		return
+	end
 	local side = "fists_left"
 	local rand = math.Round(util.SharedRandom( "fist_Punching", 1, 2 ), 0) == 1
 	local twohands = (owner:GetNetVar("carrymass",0) ~= 0 and owner:GetNetVar("carrymass",0) or owner:GetNetVar("carrymass2",0)) > 15

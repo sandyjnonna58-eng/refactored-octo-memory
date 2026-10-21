@@ -21,7 +21,7 @@ local function findSuicideWeapon(ply)
 	for _, wep in ipairs(ply:GetWeapons()) do
 		if not IsValid(wep) or not wep.CanSuicide then continue end
 
-		if wep.ismelee2 or wep.Base == "weapon_melee" then return wep end
+		if wep.ismelee2 or wep.Base == "weapon_melee" or wep.ClawSuicide then return wep end
 		if ishgweapon(wep) and not melee then melee = wep end
 	end
 
@@ -120,6 +120,15 @@ local function endHold(ply)
 
 	ply:SetNWFloat("rem_suicide_hold", 0)
 	ply.suiciding = false
+end
+
+-- когти эксперимента: удар по горлу сам игрок наносит ЛКМ (weapon_hands_sh)
+function hg.SuicideCut(ply)
+	if not IsValid(ply) or not ply:Alive() or not ply.suiciding then return end
+
+	doUrgeCut(ply)
+	ply.suiciding = false
+	endHold(ply)
 end
 
 -- позыв не побороли: оружие остаётся у головы, выстрелить или ударить игрок должен сам,

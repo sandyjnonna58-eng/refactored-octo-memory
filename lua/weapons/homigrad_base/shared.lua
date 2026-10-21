@@ -483,7 +483,7 @@ end
 if SERVER then
 	hook.Add("Player Think","huyhuy",function(ply)
 		local wep = ply:GetActiveWeapon()
-		if (not IsValid(wep) or (!wep.ishgweapon and !wep.ismelee2) or !wep.CanSuicide) and ply.suiciding then ply.suiciding = false end
+		if (not IsValid(wep) or (!wep.ishgweapon and !wep.ismelee2 and !wep.ClawSuicide) or !wep.CanSuicide) and ply.suiciding then ply.suiciding = false end
 	end)
 end
 
