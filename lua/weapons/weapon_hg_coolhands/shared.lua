@@ -44,7 +44,7 @@ local function UseDefaultHands(ply)
 
         local className = string_lower(ply.PlayerClassName or "")
 
-        if className == "furry" then
+        if className == "furry" or className == "experiment" then
                 return false
         end
 

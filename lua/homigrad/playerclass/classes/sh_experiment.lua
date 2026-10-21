@@ -31,8 +31,25 @@ function hg.HasYellowBlood(ent)
 	return false
 end
 
+local function GiveHands(ply)
+	if not ply:Alive() then return end
+
+	local class = hg.GetHandsWeaponClass(ply)
+	for _, other in ipairs({"weapon_hands_sh", "weapon_hg_coolhands"}) do
+		if other ~= class and ply:HasWeapon(other) then ply:StripWeapon(other) end
+	end
+
+	if not ply:HasWeapon(class) then ply:Give(class) end
+	ply:SelectWeapon(class)
+end
+
 function CLASS.Off(self)
 	if CLIENT then return end
+
+	-- класс уже сменился - вернуть руки нового класса
+	timer.Simple(0, function()
+		if IsValid(self) then GiveHands(self) end
+	end)
 
 	self:SetNWBool("hg_yellowblood", false)
 	self.bloodColorHitFix = BLOOD_COLOR_RED
@@ -46,6 +63,7 @@ function CLASS.On(self)
 	self.bloodColorHitFix = BLOOD_COLOR_YELLOW
 
 	if zb.GiveRole then zb.GiveRole(self, "Experiment", role_color) end
+	GiveHands(self)
 
 	local valid = {}
 	for _, model in ipairs(models) do
@@ -64,6 +82,8 @@ function CLASS.On(self)
 	Appearance.AColthes = ""
 	self:SetModel(valid[math.random(#valid)])
 	self:SetSkin(math.random(0, math.max(self:SkinCount() - 1, 0)))
+	local claws = self:FindBodygroupByName("Claws")
+	if claws >= 0 then self:SetBodygroup(claws, 1) end
 	self:SetSubMaterial()
 	self:SetNetVar("Accessories", "")
 	self.CurAppearance = Appearance

@@ -40,7 +40,8 @@ SWEP.blockinganim = 0
 
 local clawClasses = {
 	["furry"] = 0.5,
-	["headcrabzombie"] = 1.5
+	["headcrabzombie"] = 1.5,
+	["experiment"] = 0.5
 }
 
 local function qerp(delta, a, b)
@@ -1271,6 +1272,12 @@ local customClassInfo = {
 		WepSelectIcon = Material("vgui/wep_jack_hmcd_zombhands"),
 		handsDesc = "zombie",
 		Instructions = "LMB - strike\nRMB - block/grab player\n\n<color=150,0,0>These are your zombified hands. They're no energy sword, but they still pack a wallop."
+	},
+	["experiment"] = {
+		PrintName = "Claws",
+		WepSelectIcon = Material("vgui/wep_jack_hmcd_zombhands"),
+		handsDesc = "experiment",
+		Instructions = "LMB - raise claws\nRELOAD - lower claws\n\nIn the raised state:\nLMB - slash\nRMB - block/grab player\n\n<color=230,190,0>Your claws tear flesh and can rip doors apart."
 	}
 }
 
