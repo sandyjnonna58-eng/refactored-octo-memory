@@ -31,6 +31,10 @@ util.AddNetworkString("DeathEffect_Cause")
 -- причина смерти: от неё зависит цвет экрана смерти и звук
 local KILLER_MEMORY = 60
 local KILLING_BLOW_TIME = 3
+-- смерть мозга: урон мозгу на момент смерти (с 0.6 встаёт сердце)
+local BRAIN_DEATH = 0.5
+-- шокер остановил сердце: сколько секунд такая смерть считается смертью от электричества
+local ELECTRO_MEMORY = 180
 
 local function DeathEffect_DamageOwner(ent)
     if not IsValid(ent) then return end
@@ -70,7 +74,16 @@ end)
 local function DeathEffect_GetCause(ply, attacker)
     local now = CurTime()
 
+    -- шокер остановил сердце, или добило электричество
+    if ply.DeathEffect_ElectroHeart and now - ply.DeathEffect_ElectroHeart <= ELECTRO_MEMORY then return "shock" end
+    local last = ply.DeathEffect_LastDamage
+    if last and now - last.time <= KILLING_BLOW_TIME and bit.band(last.type, DMG_SHOCK + DMG_DISSOLVE + DMG_ENERGYBEAM) ~= 0 then return "shock" end
+
     if IsValid(attacker) and attacker:IsPlayer() and attacker ~= ply then return "player" end
+
+    -- умер мозг (добили по голове, кровоизлияние, без кислорода)
+    local org = ply.organism
+    if org and (org.brain or 0) >= BRAIN_DEATH then return "brain" end
 
     local selfHit = ply.DeathEffect_LastSelfHit
     if selfHit and now - selfHit <= KILLING_BLOW_TIME then return "suicide" end
@@ -175,6 +188,7 @@ hook.Add("PlayerDeath", "DeathEffect_OnDeath", function(ply, inflictor, attacker
     ply.DeathEffect_LastDamage = nil
     ply.DeathEffect_LastKiller = nil
     ply.DeathEffect_LastSelfHit = nil
+    ply.DeathEffect_ElectroHeart = nil
 
     if not ply:IsBot() then
         net.Start("DeathEffect_Cause")
@@ -230,6 +244,7 @@ hook.Add("PlayerSpawn", "DeathEffect_OnSpawn", function(ply)
     ply.DeathEffect_LastDamage = nil
     ply.DeathEffect_LastKiller = nil
     ply.DeathEffect_LastSelfHit = nil
+    ply.DeathEffect_ElectroHeart = nil
 end)
 
 hook.Add("PlayerDisconnected", "DeathEffect_Cleanup", function(ply)

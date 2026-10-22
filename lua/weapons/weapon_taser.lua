@@ -105,6 +105,9 @@ SWEP.RHAng = Angle(-2,-2,90)
 SWEP.LHPos = Vector(-1.2,-1.4,-2.8)
 SWEP.LHAng = Angle(5,9,-100)
 
+-- шанс (%) за один разряд, что сердце остановится
+local hg_taser_death_chance = ConVarExists("hg_taser_death_chance") and GetConVar("hg_taser_death_chance") or CreateConVar("hg_taser_death_chance", 4, FCVAR_ARCHIVE + FCVAR_REPLICATED, "Chance (%) that a taser shock stops the heart", 0, 100)
+
 local finger1 = Angle(0,0,0)
 local finger2 = Angle(-15,45,-5)
 
@@ -300,11 +303,14 @@ function SWEP:Shoot(override)
 					--ent:SelectWeapon("weapon_hands_sh")
                 end
 
-				if math.random(10000) == 1 then
-					ent.organism.heartstop = !ent.organism.heartstop
-				end
-
                 if i == max then
+                    -- редко разряд останавливает сердце: без СЛР/дефибриллятора человек умрёт
+                    local org = IsValid(ply) and ply:IsPlayer() and ply:Alive() and ply.organism
+                    if org and math.Rand(0, 100) < hg_taser_death_chance:GetFloat() then
+                        org.heartstop = true
+                        ply.DeathEffect_ElectroHeart = CurTime()
+                    end
+
                     if IsValid(ragdoll) then
                         ragdoll:StopSound("tazer.wav")
                     end

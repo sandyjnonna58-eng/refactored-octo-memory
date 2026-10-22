@@ -28,9 +28,10 @@ local DEATH_CAUSES = {
     suicide   = {color = Color(230, 230, 230), sound = "rem_deathost.mp3"},
     fire      = {color = Color(255, 190, 0),   sound = "rem_deathost.mp3"},
     fall      = {color = Color(140, 140, 140), sound = "rem_deathost.mp3"},
-    drown     = {color = Color(0, 70, 220),    sound = "rem_deathost.mp3"},
+    drown     = {color = Color(0, 70, 220),    sound = "rem_braindeath.mp3"},
     poison    = {color = Color(40, 190, 40),   sound = "rem_deathost.mp3"},
-    shock     = {color = Color(0, 200, 230),   sound = "rem_deathost.mp3"},
+    shock     = {color = Color(0, 200, 230),   sound = "rem_braindeath.mp3"},
+    brain     = {color = Color(235, 150, 200), sound = "rem_braindeath.mp3"},
 }
 local DEFAULT_CAUSE = DEATH_CAUSES.player
 
