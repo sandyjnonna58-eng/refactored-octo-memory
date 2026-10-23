@@ -1,6 +1,7 @@
 ENT.Type = "anim"
 ENT.Base = "base_gmodentity"
 ENT.PrintName = "Life Support Machine"
+ENT.Instructions = "E on the machine - connect / disconnect. Alt+E nearby - connect the closest person."
 ENT.Category = "ZCity Other"
 ENT.Spawnable = true
 ENT.Model = "models/props_lab/reciever_cart.mdl"

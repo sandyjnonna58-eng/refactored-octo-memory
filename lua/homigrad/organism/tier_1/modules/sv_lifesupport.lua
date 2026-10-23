@@ -78,3 +78,62 @@ timer.Create("rem_lifesupport_portable", portable_drain_interval, 0, function()
 		end
 	end
 end)
+
+-- Alt+E: подключить ближайшего к себе человека (не себя) к ближайшему свободному стационарному аппарату
+local quick_machine_range = 200
+local colNotify = Color(150, 220, 255)
+
+-- второе значение: есть ли рядом хоть один аппарат (пусть и занятый)
+local function NearestFreeMachine(ply)
+	local best, bestDist, any
+	for _, machine in ipairs(ents.FindByClass("ent_life_support")) do
+		local dist = machine:WorldSpaceCenter():Distance(ply:WorldSpaceCenter())
+		if dist <= quick_machine_range then
+			any = true
+			if not IsValid(machine:GetPatient()) and (not bestDist or dist < bestDist) then best, bestDist = machine, dist end
+		end
+	end
+	return best, any
+end
+
+local function NearestPatient(ply, machine)
+	local best, bestDist
+	local from = PatientPos(ply)
+
+	for _, other in player.Iterator() do
+		-- трубка должна дотянуться, иначе аппарат сразу отключится
+		if other ~= ply and other:Alive() and not IsValid(other.LifeSupportMachine)
+			and PatientPos(other):Distance(machine:WorldSpaceCenter()) <= machine.TubeLength * 0.9 then
+			local dist = PatientPos(other):Distance(from)
+			if not bestDist or dist < bestDist then best, bestDist = other, dist end
+		end
+	end
+	return best
+end
+
+hook.Add("KeyPress", "rem_lifesupport_quick", function(ply, key)
+	if key ~= IN_USE or not ply:KeyDown(IN_WALK) or not ply:Alive() then return end
+	if ply.organism and ply.organism.otrub then return end
+
+	-- смотрит прямо на аппарат - сработает обычное E; у Draco на Alt+E своё действие
+	local tr = ply:GetEyeTrace()
+	if IsValid(tr.Entity) and tr.Entity:GetClass() == "ent_life_support" then return end
+	local wep = ply:GetActiveWeapon()
+	if IsValid(wep) and wep:GetClass() == "weapon_draco" then return end
+
+	local machine, anyNearby = NearestFreeMachine(ply)
+	if not machine then
+		-- аппаратов рядом нет совсем - молчим, чтобы не мешать другим действиям на Alt+E
+		if anyNearby then ply:Notify("Every life support machine nearby is busy.", 0, "lifesupport_quick", 2, nil, colNotify) end
+		return
+	end
+
+	local patient = NearestPatient(ply, machine)
+	if not patient then
+		ply:Notify("Nobody close enough to connect.", 0, "lifesupport_quick", 2, nil, colNotify)
+		return
+	end
+
+	LS.Connect(machine, patient)
+	ply:Notify("You connected " .. patient:Nick() .. " to life support.", 0, "lifesupport_quick", 3, nil, colNotify)
+end)
