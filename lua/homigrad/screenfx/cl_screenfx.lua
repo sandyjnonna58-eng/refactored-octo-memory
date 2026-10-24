@@ -159,8 +159,7 @@ hook.Add("Think", "rem_fx", function()
 	local ply = LocalPlayer()
 	local traumaTarget = 0
 	if org and IsValid(ply) then
-		-- эпизод лоботомии сборки (cl_screeneffects.lua, глобальный brain_motionblur) - вместе с его блюром весь набор
-		if ply:GetNWBool("rem_braintrauma", false) or (brain_motionblur and not org.otrub) then
+		if ply:GetNWBool("rem_braintrauma", false) then
 			traumaTarget = 1
 		else
 			local left = ply:GetNWFloat("rem_braintrauma_until", 0) - CurTime()
