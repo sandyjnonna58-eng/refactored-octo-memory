@@ -9,6 +9,10 @@ local mat_radialblur = Material("effects/shaders/merc_radialblur")
 local mat_grayscale = Material("effects/shaders/merc_grayscale")
 local mat_depthblur = Material("effects/shaders/merc_depthblur2")
 
+-- вспышка удара: тёмный пиксельный взрыв из лучей на выцветшей картинке
+local mat_bursts = {}
+for i = 1, 3 do mat_bursts[i] = Material("rem_fx/burst" .. i .. ".png", "smooth") end
+
 local hg_reduce_screeneffects = ConVarExists("hg_reduce_screeneffects") and GetConVar("hg_reduce_screeneffects") or CreateClientConVar("hg_reduce_screeneffects", "0", true, false, "Reduce screen shader effects by 50%", 0, 1)
 local hg_potatopc = ConVarExists("hg_potatopc") and GetConVar("hg_potatopc")
 
@@ -44,6 +48,13 @@ local kickX, kickY = 0.5, 0.5
 local gray = 0
 local blur = 0
 local adrenalineBlur = 0
+
+local burst_time_min = 0.45
+local burst_time_add = 0.75
+
+local burst = 0
+local burstStart, burstLength = 0, 1
+local burstMat, burstRot, burstScale = mat_bursts[1], 0, 1
 local painBlur = 0
 
 local function EffectMul()
@@ -73,6 +84,22 @@ function FX.Kick(strength, pos)
 		end
 	end
 end
+
+function FX.Burst(strength)
+	strength = strength * EffectMul()
+	if strength < burst then return end
+
+	burst = strength
+	burstStart = CurTime()
+	burstLength = burst_time_min + burst_time_add * strength
+	burstMat = mat_bursts[math.random(#mat_bursts)]
+	burstRot = math.Rand(0, 360)
+	burstScale = math.Rand(0.9, 1.25)
+end
+
+net.Receive("rem_fx_burst", function()
+	FX.Burst(net.ReadFloat())
+end)
 
 net.Receive("rem_fx_kick", function()
 	local strength = net.ReadFloat()
@@ -149,6 +176,35 @@ hook.Add("Post Processing", "rem_fx", function()
 		+ painBlur * (1 - pain_pulse + pain_pulse * math.abs(math.sin(time * pain_pulse_speed)))
 	pulse = math.min(pulse, kick_max)
 	local radial = math.max(kick, pulse)
+
+	-- вспышка удара поверх всего: картинка выцветает в серый, по центру тёмные лучи
+	local burstFrac = 1 - (CurTime() - burstStart) / burstLength
+	if burst > 0 and burstFrac > 0 and LocalPlayer():Alive() then
+		local a = burst * burstFrac ^ 1.5
+
+		DrawColorModify({
+			["$pp_colour_addr"] = 0.06 * a,
+			["$pp_colour_addg"] = 0.06 * a,
+			["$pp_colour_addb"] = 0.06 * a,
+			["$pp_colour_brightness"] = 0.04 * a,
+			["$pp_colour_contrast"] = 1 - 0.3 * a,
+			["$pp_colour_colour"] = 1 - 0.95 * a,
+			["$pp_colour_mulr"] = 0,
+			["$pp_colour_mulg"] = 0,
+			["$pp_colour_mulb"] = 0,
+		})
+
+		if not burstMat:IsError() then
+			local size = math.max(ScrW(), ScrH()) * 0.75 * burstScale * (1 + (1 - burstFrac) * 0.15)
+			cam.Start2D()
+				surface.SetMaterial(burstMat)
+				surface.SetDrawColor(255, 255, 255, 255 * math.min(a * 1.3, 1))
+				surface.DrawTexturedRectRotated(ScrW() / 2, ScrH() / 2, size, size, burstRot)
+			cam.End2D()
+		end
+	elseif burst > 0 then
+		burst = 0
+	end
 
 	if radial > 0.01 and not mat_radialblur:IsError() then
 		local fromKick = kick >= pulse

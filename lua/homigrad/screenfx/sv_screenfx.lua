@@ -1,5 +1,22 @@
--- Радиальное размытие при попаданиях и взрывах (рисует cl_screenfx.lua)
+-- Радиальное размытие при попаданиях и взрывах, вспышка-удар (серый экран с тёмными лучами)
+-- при любом попадании и на полную при ударе себя во время суицида. Рисует cl_screenfx.lua.
 util.AddNetworkString("rem_fx_kick")
+util.AddNetworkString("rem_fx_burst")
+
+local burst_cooldown = 0.15
+local burst_min_damage = 2
+local burst_damage_full = 30
+
+for i = 1, 3 do resource.AddSingleFile("materials/rem_fx/burst" .. i .. ".png") end
+
+local function SendBurst(ply, strength)
+	if (ply.remFxNextBurst or 0) > CurTime() then return end
+	ply.remFxNextBurst = CurTime() + burst_cooldown
+
+	net.Start("rem_fx_burst", true)
+		net.WriteFloat(strength)
+	net.Send(ply)
+end
 
 local kick_cooldown = 0.1
 local hit_damage_full = 40
@@ -25,6 +42,13 @@ hook.Add("HomigradDamage", "rem_fx_kick", function(ply, dmgInfo)
 
 	local strength = math.Clamp(dmgInfo:GetDamage() / hit_damage_full, 0.2, 1)
 	local attacker = dmgInfo:GetAttacker()
+
+	-- ударил себя сам (суицид) - вспышка на полную, иначе по силе удара
+	if attacker == ply then
+		SendBurst(ply, 1)
+	elseif dmgInfo:GetDamage() >= burst_min_damage then
+		SendBurst(ply, math.Clamp(dmgInfo:GetDamage() / burst_damage_full, 0.35, 1))
+	end
 
 	-- размытие идёт от того, кто ударил
 	if IsValid(attacker) and attacker:IsPlayer() and attacker ~= ply then
