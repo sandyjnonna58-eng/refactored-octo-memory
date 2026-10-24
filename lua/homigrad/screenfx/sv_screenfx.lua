@@ -125,3 +125,32 @@ hook.Add("HomigradDamage", "rem_fx_braintrauma", function(ply, dmgInfo, hitgroup
 
 	ply:SetNWFloat("rem_braintrauma_until", CurTime() + trauma_hit_time)
 end)
+
+-- проверка: !braintrauma [секунды] [ник] - сразу эффект мозговой травмы; !breakskull [ник] - сломать череп
+local function FindTarget(ply, name)
+	if not name or name == "" then return ply end
+
+	for _, other in player.Iterator() do
+		if string.find(string.lower(other:Nick()), string.lower(name), 1, true) then return other end
+	end
+end
+
+COMMANDS = COMMANDS or {}
+
+COMMANDS.braintrauma = {function(ply, args)
+	local seconds = math.Clamp(tonumber(args[1]) or trauma_hit_time, 1, 120)
+	local target = FindTarget(ply, args[2])
+	if not IsValid(target) then ply:ChatPrint("Player not found.") return end
+
+	target:SetNWFloat("rem_braintrauma_until", CurTime() + seconds)
+	ply:ChatPrint("Brain trauma effect for " .. target:Nick() .. ": " .. seconds .. "s")
+end, 1, "seconds; player"}
+
+COMMANDS.breakskull = {function(ply, args)
+	local target = FindTarget(ply, args[1])
+	local org = IsValid(target) and target.organism
+	if not org then ply:ChatPrint("Player not found.") return end
+
+	org.skull = 1
+	ply:ChatPrint(target:Nick() .. "'s skull is broken (with brain damage over 10% the trauma effect stays on).")
+end, 1, "player"}
