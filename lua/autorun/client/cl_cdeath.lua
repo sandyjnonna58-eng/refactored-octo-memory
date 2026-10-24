@@ -19,7 +19,7 @@ local DOUBLE_CLICK_WINDOW = 0.5
 local SKIP_MIN_TIME       = 0.3
 local CAUSE_WAIT_TIME     = 0.3
 
--- цвет вспышки и звук зависят от того, от чего умер игрок (причину присылает сервер)
+-- причины смерти (присылает сервер): надпись при суициде; цвета и звуки отсюда - пул для рандома (DEATH_SOUNDS ниже)
 local DEATH_CAUSES = {
     player    = {color = Color(200, 0, 0),     sound = "rem_brutaldeath.mp3"},
     npc       = {color = Color(220, 0, 110),   sound = "rem_brutaldeath.mp3"},
@@ -34,6 +34,21 @@ local DEATH_CAUSES = {
     brain     = {color = Color(235, 150, 200), sound = "rem_braindeath.mp3"},
 }
 local DEFAULT_CAUSE = DEATH_CAUSES.player
+
+-- цвет вспышки и звук выбираются на рандом при каждой смерти (причина влияет только на надпись)
+local DEATH_SOUNDS = {}
+do
+    local seen = {}
+    for _, cause in SortedPairs(DEATH_CAUSES) do
+        if not seen[cause.sound] then
+            seen[cause.sound] = true
+            DEATH_SOUNDS[#DEATH_SOUNDS + 1] = cause.sound
+        end
+    end
+end
+
+local deathRandomColor = DEFAULT_CAUSE.color
+local deathRandomSound = DEFAULT_CAUSE.sound
 
 local DEATH_TEXT = {"Deceased.", "You are no longer a witness to the world."}
 
@@ -320,6 +335,9 @@ local function InitDeathSequence(ply)
     deathCamAng = (plyPos + Vector(0, 0, STAGE_1_LOOK_HEIGHT) - deathCamPos):Angle()
 
     deathSoundChannels = {}
+
+    deathRandomColor = HSVToColor(math.Rand(0, 360), math.Rand(0.6, 1), math.Rand(0.75, 1))
+    deathRandomSound = DEATH_SOUNDS[math.random(#DEATH_SOUNDS)]
 end
 
 -- причина могла прийти чуть раньше или чуть позже, чем клиент увидел смерть
@@ -335,7 +353,7 @@ end
 
 local function StartDeathSound(cause)
     deathSoundPending = false
-    sound.PlayFile("sound/" .. (cause or DEFAULT_CAUSE).sound, "noplay", function(station)
+    sound.PlayFile("sound/" .. deathRandomSound, "noplay", function(station)
         if not IsValid(station) then return end
         if not isDead then station:Stop() return end
         deathSoundChannels[#deathSoundChannels + 1] = station
@@ -760,8 +778,7 @@ local function CinematicDeathBackground()
         local fadeProgress = math.Clamp(stageElapsed / fadeDuration, 0, 1)
         local fadeOutProgress = math.Clamp((stageElapsed - fadeDuration) / fadeOutDuration, 0, 1)
 		local overlayAlpha = realish and math.floor((fadeOutProgress > 0 and 1 - fadeOutProgress or fadeProgress) * 255) or math.floor((1 - fadeOutProgress) * 255)
-        local causeColor = GetDeathCause() or DEFAULT_CAUSE
-        causeColor = causeColor.color
+        local causeColor = deathRandomColor
         local flash = realish and 0 or (1 - fadeProgress)
         surface.SetDrawColor(math.floor(causeColor.r * flash), math.floor(causeColor.g * flash), math.floor(causeColor.b * flash), overlayAlpha)
         surface.DrawRect(0, 0, sw, sh)
