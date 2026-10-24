@@ -16,40 +16,7 @@ local volume = 0
 local startTime = 0
 local visible = 0
 
--- пока идут последние моменты, звучит только их песня: вся остальная музыка (каналы sound.PlayFile/PlayURL
--- любых модулей) плавно глушится, потом возвращается к своей громкости
-local mute_fade = 1.5
-local muteFactor = 1
-local channels = setmetatable({}, {__mode = "k"}) -- канал -> громкость, которую он себе просил
-
-local meta = FindMetaTable("IGModAudioChannel")
-meta.RemRawSetVolume = meta.RemRawSetVolume or meta.SetVolume
-local rawSetVolume = meta.RemRawSetVolume
-
-function meta:SetVolume(vol)
-	channels[self] = vol
-	rawSetVolume(self, (self == station or muteFactor >= 1) and vol or vol * muteFactor)
-end
-
-local function Track(play)
-	return function(path, flags, callback, ...)
-		return play(path, flags, function(chan, ...)
-			if IsValid(chan) and channels[chan] == nil then channels[chan] = 1 end
-			if callback then return callback(chan, ...) end
-		end, ...)
-	end
-end
-
-sound.RemRawPlayFile = sound.RemRawPlayFile or sound.PlayFile
-sound.RemRawPlayURL = sound.RemRawPlayURL or sound.PlayURL
-sound.PlayFile = Track(sound.RemRawPlayFile)
-sound.PlayURL = Track(sound.RemRawPlayURL)
-
-local function ApplyMute()
-	for chan, vol in pairs(channels) do
-		if chan ~= station and IsValid(chan) then rawSetVolume(chan, vol * muteFactor) end
-	end
-end
+-- пока идут последние моменты, звучит только их песня: остальную музыку глушит hg.RemAudio (remaudio/cl_remaudio.lua)
 
 local function Active()
 	local ply = LocalPlayer()
@@ -69,6 +36,7 @@ hook.Add("Think", "rem_lastmoments", function()
 			if not Active() then chan:Stop() return end
 
 			station = chan
+			if hg.RemAudio then hg.RemAudio.SetExempt(chan) end
 			volume = 0
 			chan:SetVolume(0)
 			chan:Play()
@@ -77,9 +45,7 @@ hook.Add("Think", "rem_lastmoments", function()
 
 	visible = math.Approach(visible, active and 1 or 0, dt / (active and fade_in or fade_out))
 
-	local oldMute = muteFactor
-	muteFactor = math.Approach(muteFactor, active and 0 or 1, dt / mute_fade)
-	if muteFactor < 1 or oldMute < 1 then ApplyMute() end
+	if hg.RemAudio then hg.RemAudio.Duck("lastmoments", active and 0 or nil) end
 
 	if not IsValid(station) then return end
 

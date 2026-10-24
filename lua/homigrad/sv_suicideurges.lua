@@ -168,6 +168,7 @@ function hg.ForceSuicide(ply)
 
 	if ply.selfharming and hg.organism.EndSelfHarm then hg.organism.EndSelfHarm(ply) end
 
+	if hg.Voices and hg.Voices.Play then hg.Voices.Play(ply) end
 	startHold(ply)
 	return ply.suiciding == true
 end
@@ -219,6 +220,9 @@ local function startUrge(ply, manual)
 	end
 
 	autoEquipSuicideWeapon(ply)
+
+	-- голоса толкают (voices/sv_voices.lua)
+	if hg.Voices and hg.Voices.Play then hg.Voices.Play(ply) end
 
 	ply.suiciding = true
 	ply.remUrgeManual = manual or nil
