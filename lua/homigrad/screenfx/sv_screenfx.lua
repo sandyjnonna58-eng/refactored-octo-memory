@@ -93,3 +93,35 @@ timer.Create("rem_fx_skull", skull_check_interval, 0, function()
 		ply.remFxLastSkull = skull
 	end
 end)
+
+-- Мозговая травма (рисует cl_screenfx.lua): blur, хроматическая аберрация, depth blur 1 и 2, серость по глубине,
+-- зерно, постеризация, VHS. Пока сломан череп и идёт лоботомия (урон мозгу > 10%) - держится постоянно;
+-- если лоботомия уже 33% и прилетает удар по голове - приступ на trauma_hit_time секунд.
+-- "Лоботомия" = org.brain, как у админской кнопки Lobotomize.
+local trauma_lobotomy = 0.1
+local trauma_hit_brain = 0.33
+local trauma_hit_min_damage = 5
+local trauma_hit_time = 10
+
+for _, name in ipairs({"blur", "depthblur", "filmgrain", "posterize", "vhs1"}) do
+	resource.AddSingleFile("materials/effects/shaders/merc_" .. name .. ".vmt")
+	resource.AddSingleFile("shaders/fxc/merc_" .. name .. "_ps20b.vcs")
+end
+
+timer.Create("rem_fx_braintrauma", 0.25, 0, function()
+	for _, ply in player.Iterator() do
+		local org = ply.organism
+		local active = ply:Alive() and org and (org.skull or 0) >= 1 and (org.brain or 0) > trauma_lobotomy or false
+		if ply:GetNWBool("rem_braintrauma", false) ~= active then ply:SetNWBool("rem_braintrauma", active) end
+	end
+end)
+
+hook.Add("HomigradDamage", "rem_fx_braintrauma", function(ply, dmgInfo, hitgroup)
+	if hitgroup ~= HITGROUP_HEAD or not IsValid(ply) or not ply:IsPlayer() or not ply:Alive() then return end
+	if dmgInfo:GetDamage() < trauma_hit_min_damage then return end
+
+	local org = ply.organism
+	if not org or (org.brain or 0) < trauma_hit_brain then return end
+
+	ply:SetNWFloat("rem_braintrauma_until", CurTime() + trauma_hit_time)
+end)

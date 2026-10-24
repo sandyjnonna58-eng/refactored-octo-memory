@@ -9,6 +9,14 @@ local mat_radialblur = Material("effects/shaders/merc_radialblur")
 local mat_grayscale = Material("effects/shaders/merc_grayscale")
 local mat_depthblur = Material("effects/shaders/merc_depthblur2")
 
+-- мозговая травма (sv_screenfx.lua): весь набор шейдеров разом
+local mat_tr_blur = Material("effects/shaders/merc_blur")
+local mat_tr_depthblur = Material("effects/shaders/merc_depthblur")
+local mat_tr_grain = Material("effects/shaders/merc_filmgrain")
+local mat_tr_posterize = Material("effects/shaders/merc_posterize")
+local mat_tr_vhs = Material("effects/shaders/merc_vhs1")
+local mat_tr_caber = Material("effects/shaders/merc_chromaticaberration")
+
 -- вспышка удара: тёмный взрыв из лучей поверх экрана (картинка-референс без фона)
 local mat_burst = Material("rem_fx/hit_burst.png", "smooth")
 local burst_aspect = 1370 / 768
@@ -57,6 +65,12 @@ local burst_time_add = 0.75
 -- радужный контур: оборотов радуги в секунду и насколько ярче основной вспышки
 local burst_hue_speed = 1.5
 local burst_glow_mul = 1.2
+
+-- мозговая травма: как быстро накрывает и отпускает, сколько гаснет приступ после удара
+local trauma_rise = 1.5
+local trauma_fall = 0.35
+local trauma_hit_fade = 3
+local trauma = 0
 
 local burst = 0
 local burstStart, burstLength = 0, 1
@@ -142,6 +156,19 @@ hook.Add("Think", "rem_fx", function()
 	gray = Lerp(math.min(dt * 2, 1), gray, (org and allowed) and GrayTarget(org) or 0)
 	blur = Lerp(math.min(dt * 2, 1), blur, (org and allowed) and BlurTarget(org) or 0)
 
+	local ply = LocalPlayer()
+	local traumaTarget = 0
+	if org and IsValid(ply) then
+		if ply:GetNWBool("rem_braintrauma", false) then
+			traumaTarget = 1
+		else
+			local left = ply:GetNWFloat("rem_braintrauma_until", 0) - CurTime()
+			if left > 0 then traumaTarget = math.min(left / trauma_hit_fade, 1) end
+		end
+	end
+	traumaTarget = traumaTarget * EffectMul()
+	trauma = math.Approach(trauma, traumaTarget, dt * (traumaTarget > trauma and trauma_rise or trauma_fall))
+
 	local adrenaline = org and Remap01(org.adrenaline or 0, adrenaline_start, adrenaline_full) * adrenaline_max * EffectMul() or 0
 	adrenalineBlur = Lerp(math.min(dt * 3, 1), adrenalineBlur, adrenaline)
 
@@ -150,13 +177,71 @@ hook.Add("Think", "rem_fx", function()
 end)
 
 hook.Add("NeedsDepthPass", "rem_fx", function()
-	if gray > 0.01 or blur > 0.01 then return true end
+	if gray > 0.01 or blur > 0.01 or trauma > 0.01 then return true end
 end)
+
 
 local function DrawShader(mat)
 	render.UpdateScreenEffectTexture()
 	render.SetMaterial(mat)
 	render.DrawScreenQuad()
+end
+
+-- кислотная каша: серость и размытие по глубине, блюр, разъезд цветов, постеризация, VHS, зерно
+local function DrawTrauma(a)
+	if not DepthEffectsAllowed() then a = a * 0.6 end
+
+	if not mat_grayscale:IsError() then
+		mat_grayscale:SetFloat("$c0_x", 1 - a * 0.7)
+		mat_grayscale:SetFloat("$c0_y", 1)
+		DrawShader(mat_grayscale)
+	end
+
+	if not mat_tr_depthblur:IsError() then
+		mat_tr_depthblur:SetFloat("$c0_x", 0)
+		mat_tr_depthblur:SetFloat("$c0_y", 1)
+		mat_tr_depthblur:SetFloat("$c0_z", a * 0.25)
+		DrawShader(mat_tr_depthblur)
+	end
+
+	if not mat_depthblur:IsError() then
+		mat_depthblur:SetFloat("$c0_x", a * 0.5)
+		mat_depthblur:SetFloat("$c0_y", Lerp(a, 0.5, 0))
+		mat_depthblur:SetFloat("$c0_z", 1)
+		DrawShader(mat_depthblur)
+	end
+
+	if not mat_tr_blur:IsError() then
+		mat_tr_blur:SetFloat("$c0_x", a * 0.5)
+		DrawShader(mat_tr_blur)
+	end
+
+	if not mat_tr_caber:IsError() then
+		mat_tr_caber:SetFloat("$c0_x", a * 0.9)
+		mat_tr_caber:SetInt("$c0_y", 0)
+		DrawShader(mat_tr_caber)
+	end
+
+	if not mat_tr_posterize:IsError() then
+		mat_tr_posterize:SetInt("$c0_x", math.Round(Lerp(a, 24, 4)))
+		mat_tr_posterize:SetFloat("$c0_y", 3)
+		DrawShader(mat_tr_posterize)
+	end
+
+	if not mat_tr_vhs:IsError() then
+		mat_tr_vhs:SetFloat("$c0_y", a * 0.02)
+		mat_tr_vhs:SetFloat("$c0_z", a * 0.012)
+		DrawShader(mat_tr_vhs)
+	end
+
+	if not mat_tr_grain:IsError() then
+		mat_tr_grain:SetInt("$c0_y", 0)
+		mat_tr_grain:SetFloat("$c0_z", 2)
+		mat_tr_grain:SetFloat("$c0_w", a * 0.3)
+		mat_tr_grain:SetFloat("$c1_x", 0)
+		mat_tr_grain:SetFloat("$c1_y", 0.5)
+		DrawShader(mat_tr_grain)
+	end
 end
 
 -- первым слоем, до виньетки и зерна
@@ -220,4 +305,7 @@ hook.Add("Post Processing", "rem_fx", function()
 		mat_radialblur:SetFloat("$c0_z", radial * kick_width)
 		DrawShader(mat_radialblur)
 	end
+
+	-- мозговая травма последней - поверх всего остального
+	if trauma > 0.01 and LocalPlayer():Alive() then DrawTrauma(trauma) end
 end)
