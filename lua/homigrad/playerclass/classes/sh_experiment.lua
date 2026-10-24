@@ -2,7 +2,7 @@
 local CLASS = player.RegClass("experiment")
 
 -- Expie лежит в сборке (models/akittu/stylizedexpie), Milky - только если стоит его аддон.
--- Модель и скин игрок выбирает в меню (открывается, когда становишься экспериментом, и по !skin)
+-- Модель, скин и аксессуары игрок выбирает в меню (открывается, когда становишься экспериментом, и по !skin)
 local models = {
 	{model = "models/akittu/stylizedexpie/akittuexpie.mdl", name = "Expie"},
 	{model = "models/akittu/stylizedexpie/akittuexpiev3.mdl", name = "Expie V3"},
@@ -58,13 +58,45 @@ function CLASS.Off(self)
 	if hg.Mutations and hg.Mutations.Clear then hg.Mutations.Clear(self) end
 end
 
-local function SetExperimentModel(ply, index, skin)
+-- аксессуары: те же правила, что в меню внешности - до 3 штук, по одной на слот
+CLASS.MaxAccessories = 3
+CLASS.AccessorySlots = {"head", "face", "ears", "spine", "torso"}
+
+-- можно ли надеть: есть в списке, не запрещён во внешности, платный - только если куплен
+function CLASS.CanUseAccessory(ply, uid)
+	local data = hg.Accessories and hg.Accessories[uid]
+	if not data or uid == "none" or not data.model or data.disallowinappearance then return false end
+
+	local shopItem = hg.PointShop and hg.PointShop.Items and hg.PointShop.Items[uid]
+	if not shopItem then return true end
+	if hg.Appearance and hg.Appearance.GetAccessToAll and hg.Appearance.GetAccessToAll(ply) then return true end
+
+	local ok, has = pcall(ply.PS_HasItem, ply, uid)
+	return ok and has and true or false
+end
+
+local function FilterAccessories(ply, list)
+	local out, used = {}, {}
+	for _, uid in ipairs(istable(list) and list or {}) do
+		local data = hg.Accessories and hg.Accessories[uid]
+		if #out < CLASS.MaxAccessories and CLASS.CanUseAccessory(ply, uid) and not used[data.placement or uid] then
+			used[data.placement or uid] = true
+			out[#out + 1] = uid
+		end
+	end
+	return out
+end
+
+local function SetExperimentModel(ply, index, skin, accessories)
 	ply:SetModel(models[index].model)
 	ply:SetSkin(math.Clamp(skin, 0, math.max(ply:SkinCount() - 1, 0)))
 	local claws = ply:FindBodygroupByName("Claws")
 	if claws >= 0 then ply:SetBodygroup(claws, 1) end
 	ply:SetSubMaterial()
-	ply:SetNetVar("Accessories", "")
+
+	local list = FilterAccessories(ply, accessories)
+	ply:SetNetVar("Accessories", #list > 0 and list or "")
+	return list
 end
 
 function CLASS.On(self)
@@ -95,7 +127,7 @@ function CLASS.On(self)
 	-- прошлый выбор игрока, иначе случайно; потом меню, чтобы поменять
 	local choice = self.experimentSkinChoice
 	if choice and util.IsValidModel(models[choice.index] and models[choice.index].model or "") then
-		SetExperimentModel(self, choice.index, choice.skin)
+		SetExperimentModel(self, choice.index, choice.skin, choice.accessories)
 	else
 		SetExperimentModel(self, valid[math.random(#valid)], 0)
 		self:SetSkin(math.random(0, math.max(self:SkinCount() - 1, 0)))
@@ -144,6 +176,8 @@ if SERVER then
 	net.Receive("rem_experiment_skin", function(len, ply)
 		local index = net.ReadUInt(4)
 		local skin = net.ReadUInt(8)
+		local accessories = {}
+		for i = 1, math.min(net.ReadUInt(3), CLASS.MaxAccessories) do accessories[i] = net.ReadString() end
 
 		if not ply:Alive() or ply.PlayerClassName ~= "experiment" then return end
 		if (ply.experimentSkinNext or 0) > CurTime() then return end
@@ -157,8 +191,8 @@ if SERVER then
 			return
 		end
 
-		SetExperimentModel(ply, index, skin)
-		ply.experimentSkinChoice = {index = index, skin = ply:GetSkin()}
+		local worn = SetExperimentModel(ply, index, skin, accessories)
+		ply.experimentSkinChoice = {index = index, skin = ply:GetSkin(), accessories = worn}
 	end)
 
 	COMMANDS = COMMANDS or {}
@@ -243,7 +277,19 @@ local function OpenSkinMenu()
 		if models[i].model == ply:GetModel() then index = i end
 	end
 
-	local frame = UI.Frame(ScrW() * 0.5, ScrH() * 0.62, "EXPERIMENT", "Choose your body")
+	-- надетые сейчас аксессуары
+	local worn = {}
+	local current = ply:GetNetVar("Accessories", "")
+	for _, uid in ipairs(istable(current) and current or {}) do
+		if hg.Accessories and hg.Accessories[uid] then worn[#worn + 1] = uid end
+	end
+
+	local function IsWorn(uid)
+		for _, v in ipairs(worn) do if v == uid then return true end end
+		return false
+	end
+
+	local frame = UI.Frame(ScrW() * 0.72, ScrH() * 0.7, "EXPERIMENT", "Choose your body and accessories")
 	skinMenu = frame
 
 	local preview = vgui.Create("DModelPanel", frame)
@@ -267,6 +313,109 @@ local function OpenSkinMenu()
 		preview:SetCamPos(center + Vector(maxs.z * 1.9, 0, maxs.z * 0.1))
 	end
 	preview.LayoutEntity = function(self, ent) ent:SetAngles(Angle(0, CurTime() * 30 % 360, 0)) end
+
+	-- аксессуары на превью: тот же рисовальщик, что у превью внешности в главном меню
+	preview.PostDrawModel = function(self, ent)
+		if not DrawAccesories then return end
+		for _, uid in ipairs(worn) do
+			local data = hg.Accessories[uid]
+			if data then DrawAccesories(ent, ent, uid, data, false, true) end
+		end
+		ent:SetupBones()
+	end
+	-- свой OnRemove заменяет стандартный, поэтому модель превью удаляем сами
+	preview.OnRemove = function(self)
+		local ent = self.Entity
+		if not IsValid(ent) then return end
+		for k, v in pairs(ent.modelAccess or {}) do
+			if IsValid(v) then v:Remove() end
+			ent.modelAccess[k] = nil
+		end
+		ent:Remove()
+	end
+
+	-- колонка аксессуаров: по слотам, до 3 штук, по одному на слот
+	local accCol = vgui.Create("DPanel", frame)
+	accCol:Dock(RIGHT)
+	accCol:SetWide(ScrW() * 0.22)
+	accCol:DockMargin(U(14), 0, 0, 0)
+	accCol.Paint = nil
+
+	local accHeader = vgui.Create("DPanel", accCol)
+	accHeader:Dock(TOP)
+	accHeader:SetTall(U(30))
+	accHeader.Paint = function(self, w, h)
+		draw.SimpleText("Accessories  " .. #worn .. " / " .. CLASS.MaxAccessories, "RemUI_Small", 0, h / 2, UI.White, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+	end
+
+	local clear = UI.TextButton(accCol, "remove all", {
+		font = "RemUI_Tiny",
+		canClick = function() return #worn > 0 end,
+		onClick = function() worn = {} end,
+	})
+	clear:Dock(TOP)
+
+	local accScroll = vgui.Create("DScrollPanel", accCol)
+	accScroll:Dock(FILL)
+	UI.StyleScroll(accScroll)
+
+	local function Toggle(uid)
+		if IsWorn(uid) then
+			for k, v in ipairs(worn) do if v == uid then table.remove(worn, k) break end end
+			return
+		end
+
+		-- тот же слот - заменяем, иначе добавляем, если есть место
+		local placement = hg.Accessories[uid].placement
+		for k, v in ipairs(worn) do
+			if hg.Accessories[v].placement == placement then
+				worn[k] = uid
+				return
+			end
+		end
+
+		if #worn >= CLASS.MaxAccessories then
+			surface.PlaySound("buttons/button10.wav")
+			return
+		end
+		worn[#worn + 1] = uid
+	end
+
+	local slotNames = {head = "Head", face = "Face", ears = "Ears", spine = "Back", torso = "Torso"}
+	for _, slot in ipairs(CLASS.AccessorySlots) do
+		local list = {}
+		for uid, data in pairs(hg.Accessories or {}) do
+			if data.placement == slot and CLASS.CanUseAccessory(ply, uid) then list[#list + 1] = uid end
+		end
+		table.sort(list, function(a, b) return (hg.Accessories[a].name or a) < (hg.Accessories[b].name or b) end)
+
+		if #list > 0 then
+			local header = accScroll:Add("DPanel")
+			header:Dock(TOP)
+			header:DockMargin(0, U(8), 0, U(2))
+			header:SetTall(U(22))
+			header.Paint = function(self, w, h)
+				draw.SimpleText(slotNames[slot] or slot, "RemUI_Tiny", 0, h / 2, UI.TextDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+				surface.SetDrawColor(UI.Line)
+				surface.DrawRect(0, h - 1, w - U(8), 1)
+			end
+
+			for _, uid in ipairs(list) do
+				local btn = UI.TextButton(accScroll, hg.Accessories[uid].name or uid, {
+					font = "RemUI_Tiny",
+					color = function() return IsWorn(uid) and UI.White or UI.TextDim end,
+					onClick = function() Toggle(uid) end,
+				})
+				btn:Dock(TOP)
+				btn:DockMargin(U(6), 0, 0, 0)
+				btn.PaintOver = function(self, w, h)
+					if not IsWorn(uid) then return end
+					surface.SetDrawColor(UI.Accent)
+					surface.DrawRect(0, U(4), U(2), h - U(8))
+				end
+			end
+		end
+	end
 
 	local side = vgui.Create("DPanel", frame)
 	side:Dock(FILL)
@@ -330,6 +479,8 @@ local function OpenSkinMenu()
 		net.Start("rem_experiment_skin")
 			net.WriteUInt(index, 4)
 			net.WriteUInt(skin, 8)
+			net.WriteUInt(#worn, 3)
+			for _, uid in ipairs(worn) do net.WriteString(uid) end
 		net.SendToServer()
 		frame:Close()
 	end})
