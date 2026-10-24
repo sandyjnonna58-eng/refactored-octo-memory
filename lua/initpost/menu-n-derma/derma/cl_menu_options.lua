@@ -595,6 +595,32 @@ end
 -- тушканчик внизу настроек и таблицы рекордов
 local jerboa_mat = Material("rem_misc/jerboa.png", "smooth mips")
 
+-- кислотная радужная рамка: цвета бегут по кругу, снаружи свечение
+local jerboa_frame_segments = 48
+local jerboa_frame_speed = 160
+local jerboa_frame_hue_span = 720
+
+-- точка на периметре квадрата: frac 0..1 по часовой стрелке от левого верхнего угла
+local function FramePoint(x, y, size, frac)
+    local d = frac * 4
+    if d < 1 then return x + size * d, y end
+    if d < 2 then return x + size, y + size * (d - 1) end
+    if d < 3 then return x + size * (3 - d), y + size end
+    return x, y + size * (4 - d)
+end
+
+local function DrawRainbowFrame(x, y, size, thick, alpha, time)
+    for i = 0, jerboa_frame_segments - 1 do
+        local f1, f2 = i / jerboa_frame_segments, (i + 1) / jerboa_frame_segments
+        local x1, y1 = FramePoint(x, y, size, f1)
+        local x2, y2 = FramePoint(x, y, size, f2)
+
+        local col = HSVToColor((time * jerboa_frame_speed + f1 * jerboa_frame_hue_span) % 360, 1, 1)
+        surface.SetDrawColor(col.r, col.g, col.b, alpha)
+        surface.DrawRect(math.min(x1, x2) - thick / 2, math.min(y1, y2) - thick / 2, math.abs(x2 - x1) + thick, math.abs(y2 - y1) + thick)
+    end
+end
+
 local function AddJerboa(parent)
     local pic = vgui.Create("DPanel", parent)
     pic:Dock(TOP)
@@ -602,13 +628,21 @@ local function AddJerboa(parent)
     pic:SetTall(MenuUnit(240))
     pic.Paint = function(self, w, h)
         if jerboa_mat:IsError() then return end
-        local size = math.min(w, h)
-        local x = (w - size) / 2
+        local pad = MenuUnit(10)
+        local size = math.min(w, h) - pad * 2
+        local x, y = (w - size) / 2, pad
+        local time = RealTime()
+
+        -- свечение: несколько толстых полупрозрачных слоёв
+        for layer = 3, 1, -1 do
+            DrawRainbowFrame(x, y, size, MenuUnit(3) + layer * MenuUnit(4), 28, time)
+        end
+
         surface.SetMaterial(jerboa_mat)
         surface.SetDrawColor(255, 255, 255, 255)
-        surface.DrawTexturedRect(x, 0, size, size)
-        surface.SetDrawColor(255, 255, 255, 45)
-        surface.DrawOutlinedRect(x, 0, size, size, 1)
+        surface.DrawTexturedRect(x, y, size, size)
+
+        DrawRainbowFrame(x, y, size, MenuUnit(4), 255, time)
     end
     return pic
 end
