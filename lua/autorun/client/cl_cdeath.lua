@@ -19,17 +19,6 @@ local DOUBLE_CLICK_WINDOW = 0.5
 local SKIP_MIN_TIME       = 0.3
 local CAUSE_WAIT_TIME     = 0.3
 
--- "последние моменты" (шанс решает сервер): песня и воспоминания - скриншоты жизни из data/dreams
--- (их раз в минуту делает cl_main.lua, лежат в hg.screens); экран смерти длится всю песню
-local LASTMOMENTS_SOUND    = "rem_theseareyourlastmoments.mp3"
-local LASTMOMENTS_DURATION = 72
-local LASTMOMENTS_INTRO    = 5
-local MEMORY_TIME_MIN      = 4
-local MEMORY_TIME_MAX      = 12
-local MEMORY_ZOOM          = 0.08
-local colMemory            = Color(225, 215, 200)
-local lastMomentsTime      = -math.huge
-
 -- причины смерти (присылает сервер): надпись при суициде; цвета и звуки отсюда - пул для рандома (DEATH_SOUNDS ниже)
 local DEATH_CAUSES = {
     player    = {color = Color(200, 0, 0),     sound = "rem_brutaldeath.mp3"},
@@ -94,7 +83,6 @@ net.Receive("DeathEffect_Config", function()
     cfg_compat        = net.ReadBool()
     cfg_options_delay = net.ReadFloat()
     cfg_realish       = net.ReadBool()
-    if net.ReadBool() then lastMomentsTime = CurTime() end
 
 
 
@@ -357,44 +345,6 @@ local function GetDeathCause()
     if deathCause and deathCauseTime >= deathTime - 2 then return deathCause end
 end
 
-local function LastMomentsActive()
-    return lastMomentsTime >= deathTime - 2 and not RealishDeathEffect()
-end
-
--- когда начинается выход из экрана смерти: обычно сразу после затемнения, в последние моменты - в конце песни
-local function DeathHoldEnd(fadeDuration, fadeOutDuration)
-    if LastMomentsActive() then return LASTMOMENTS_DURATION - fadeOutDuration end
-    return fadeDuration
-end
-
--- воспоминания по очереди, каждое плавно проявляется, медленно приближается и гаснет
-local function DrawLastMoments(t, window, alpha)
-    local sw, sh = ScrW(), ScrH()
-    local memories = {}
-    for _, mat in ipairs(hg and hg.screens or {}) do
-        if mat and not mat:IsError() then memories[#memories + 1] = mat end
-    end
-
-    if #memories > 0 then
-        local per = math.Clamp(window / #memories, MEMORY_TIME_MIN, MEMORY_TIME_MAX)
-        local index = math.floor(t / per) % #memories + 1
-        local frac = (t % per) / per
-        local a = math.ease.InOutSine(math.sin(frac * math.pi)) * alpha
-        local zoom = 1 + MEMORY_ZOOM * frac
-        local w, h = sw * zoom, sh * zoom
-
-        surface.SetMaterial(memories[index])
-        surface.SetDrawColor(colMemory.r, colMemory.g, colMemory.b, 200 * a)
-        surface.DrawTexturedRect((sw - w) / 2, (sh - h) / 2, w, h)
-    end
-
-    local introA = math.Clamp(1 - math.abs(t - LASTMOMENTS_INTRO / 2) / (LASTMOMENTS_INTRO / 2), 0, 1)
-    if #memories == 0 then introA = math.max(introA, 0.6 + 0.2 * math.sin(CurTime() * 1.5)) end
-    if introA > 0 then
-        draw.SimpleText("These are your last moments.", "DeathEffect_HG_Desc", sw / 2, sh / 2, Color(235, 235, 235, 255 * introA * alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-    end
-end
-
 local function GetDeathText()
     local cause = GetDeathCause()
     if cause == DEATH_CAUSES.suicide then return suicideText[1], suicideText[2] end
@@ -403,7 +353,7 @@ end
 
 local function StartDeathSound(cause)
     deathSoundPending = false
-    sound.PlayFile("sound/" .. (LastMomentsActive() and LASTMOMENTS_SOUND or deathRandomSound), "noplay", function(station)
+    sound.PlayFile("sound/" .. deathRandomSound, "noplay", function(station)
         if not IsValid(station) then return end
         if not isDead then station:Stop() return end
         deathSoundChannels[#deathSoundChannels + 1] = station
@@ -643,7 +593,7 @@ local function CinematicDeathTracker()
         local fadeDuration = RealishDeathEffect() and REALISH_BLACK_FADE_DURATION or BLACK_FADE_DURATION
         local fadeOutDuration = RealishDeathEffect() and REALISH_BLACK_FADE_OUT_DURATION or BLACK_FADE_OUT_DURATION
 
-        if (CurTime() - stage2Time) >= (DeathHoldEnd(fadeDuration, fadeOutDuration) + fadeOutDuration) then
+        if (CurTime() - stage2Time) >= (fadeDuration + fadeOutDuration) then
             autoCompatTriggered = true
             ActivateCompatMode()
         end
@@ -826,8 +776,7 @@ local function CinematicDeathBackground()
         local fadeDuration = realish and REALISH_BLACK_FADE_DURATION or BLACK_FADE_DURATION
         local fadeOutDuration = realish and REALISH_BLACK_FADE_OUT_DURATION or BLACK_FADE_OUT_DURATION
         local fadeProgress = math.Clamp(stageElapsed / fadeDuration, 0, 1)
-        local holdEnd = DeathHoldEnd(fadeDuration, fadeOutDuration)
-        local fadeOutProgress = math.Clamp((stageElapsed - holdEnd) / fadeOutDuration, 0, 1)
+        local fadeOutProgress = math.Clamp((stageElapsed - fadeDuration) / fadeOutDuration, 0, 1)
 		local overlayAlpha = realish and math.floor((fadeOutProgress > 0 and 1 - fadeOutProgress or fadeProgress) * 255) or math.floor((1 - fadeOutProgress) * 255)
         local causeColor = deathRandomColor
         local flash = realish and 0 or (1 - fadeProgress)
@@ -835,10 +784,6 @@ local function CinematicDeathBackground()
         surface.DrawRect(0, 0, sw, sh)
 
         if realish then return end
-
-        if LastMomentsActive() and stageElapsed > fadeDuration then
-            DrawLastMoments(stageElapsed - fadeDuration, holdEnd - fadeDuration, 1 - fadeOutProgress)
-        end
 
         if CanSkipDeathScreen() then
             local hint = "[" .. jumpKeyName .. "] skip"

@@ -898,6 +898,8 @@ hook.Add("Org Think", "Main", function(owner, org, timeValue)
 	end
 
 	if isPly and org.otrub and org.incapacitated then
+		-- таймер смерти только начался: с шансом он станет последними моментами (lastmoments/sv_lastmoments.lua)
+		if not org.deathStateEnd and hg.LastMoments and hg.LastMoments.OnDeathTimer then hg.LastMoments.OnDeathTimer(owner, org, curTime) end
 		org.deathStateEnd = org.deathStateEnd or curTime + 25
 		if (org.defibDeathGrace or 0) > curTime then org.deathStateEnd = org.defibDeathGrace end
 

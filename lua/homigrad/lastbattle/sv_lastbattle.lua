@@ -334,6 +334,9 @@ local function RollLastBattle(org)
 	if org.lastBattleRolled or org.lastBattleUsed or not lastbattle_auto:GetBool() then return false end
 	org.lastBattleRolled = true
 
+	-- этот таймер уже стал последними моментами (lastmoments/sv_lastmoments.lua)
+	if IsValid(org.owner) and org.owner:IsPlayer() and org.owner:GetNWFloat("rem_lastmoments_until", 0) > CurTime() then return false end
+
 	return math.Rand(0, 100) < LB.GetChance(org)
 end
 
