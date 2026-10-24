@@ -17,7 +17,7 @@ M.List = {
 }
 
 -- имплант для людей: управление экспериментами через меню на Q
-M.Implant = {id = "control", name = "Control Implant", desc = "A chip in your skull. Lets you shock, paralyze, locate and terminate experiments (Q menu)."}
+M.Implant = {id = "control", name = "Control Implant", desc = "A chip in your skull. Controls experiments from the Q menu: pain, paralysis, vomiting, heart, suicide, death."}
 
 M.ByID = {}
 for _, mutation in ipairs(M.List) do M.ByID[mutation.id] = mutation end
@@ -53,4 +53,10 @@ M.Commands = {
 	paralyze = {name = "Paralyze", cooldown = 20},
 	terminate = {name = "Terminate", cooldown = 90},
 	locate = {name = "Locate All", cooldown = 30},
+	vomit = {name = "Induce Vomiting", cooldown = 15},
+	heartstop = {name = "Stop Heart", cooldown = 120},
+	suicide = {name = "Force Suicide", cooldown = 120},
 }
+
+-- порядок в подменю цели
+M.TargetCommands = {"shock", "paralyze", "vomit", "heartstop", "suicide", "terminate"}

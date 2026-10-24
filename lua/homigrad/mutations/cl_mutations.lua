@@ -86,7 +86,7 @@ end
 
 local function OpenTargetMenu(target)
 	local options = {}
-	for _, cmd in ipairs({"shock", "paralyze", "terminate"}) do
+	for _, cmd in ipairs(M.TargetCommands) do
 		options[#options + 1] = {function() SendCommand(cmd, target) end, M.Commands[cmd].name}
 	end
 

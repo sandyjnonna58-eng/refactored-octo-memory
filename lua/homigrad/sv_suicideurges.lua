@@ -151,6 +151,27 @@ local function startHold(ply)
 	end)
 end
 
+-- имплант управления: сразу поза без борьбы с позывом
+function hg.ForceSuicide(ply)
+	if not IsValid(ply) or not ply:Alive() or not hasSuicideWeapon(ply) then return false end
+
+	local org = ply.organism
+	if not org or not org.alive or org.otrub or org.heartstop then return false end
+
+	if ply.remUrgeEnd then
+		timer.Remove("rem_urges_end_" .. ply:EntIndex())
+		ply.remUrgeEnd = nil
+		ply:SetNWFloat("rem_urges_end", 0)
+		net.Start("rem_urges_end")
+		net.Send(ply)
+	end
+
+	if ply.selfharming and hg.organism.EndSelfHarm then hg.organism.EndSelfHarm(ply) end
+
+	startHold(ply)
+	return ply.suiciding == true
+end
+
 local function endUrge(ply, cancel)
 	if not IsValid(ply) or not ply:IsPlayer() then return end
 

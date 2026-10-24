@@ -31,6 +31,9 @@ local infectStages = {
 	{0.7, "Your blood... it's turning yellow."},
 }
 
+local vomit_times = 3
+local vomit_interval = 1.6
+
 local colMutation = Color(230, 190, 0)
 local colControl = Color(255, 120, 120)
 
@@ -227,6 +230,34 @@ local runCommand = {
 		target:Kill()
 		ply:Notify(target:Nick() .. " has been terminated.", 0, "control_terminate", 3, nil, colControl)
 	end,
+	-- рвота несколько раз подряд
+	vomit = function(ply, target)
+		target:Notify("Your stomach turns inside out.", 0, "control_vomit", 3, nil, colControl)
+		for i = 0, vomit_times - 1 do
+			timer.Simple(i * vomit_interval, function()
+				if IsValid(target) and target:Alive() then hg.organism.Vomit(target) end
+			end)
+		end
+	end,
+	-- сердце встаёт: без СЛР/дефибриллятора эксперимент умрёт
+	heartstop = function(ply, target)
+		local org = target.organism
+		if not org then return false end
+
+		org.heartstop = true
+		target:EmitSound("ambient/energy/zap" .. math.random(1, 3) .. ".wav", 70)
+		target:Notify("Your chest goes still.", 0, "control_heartstop", 3, nil, colControl)
+		ply:Notify(target:Nick() .. "'s heart has stopped.", 0, "control_heartstop", 3, nil, colControl)
+	end,
+	-- сразу поза "оружие у горла/головы" без борьбы: 20 секунд, потом само
+	suicide = function(ply, target)
+		if not hg.ForceSuicide or not hg.ForceSuicide(target) then
+			ply:Notify(target:Nick() .. " has nothing to kill itself with.", 0, "control_suicide", 3, nil, colControl)
+			return false
+		end
+
+		target:Notify("Do it. Do it now.", 0, "control_suicide", 3, nil, colControl)
+	end,
 }
 
 net.Receive("rem_control_command", function(len, ply)
@@ -260,7 +291,8 @@ net.Receive("rem_control_command", function(len, ply)
 		if not M.IsExperiment(target) then return end
 		if ply:GetPos():Distance(target:GetPos()) > M.ControlRange then return end
 
-		runCommand[cmd](ply, target)
+		-- false - команда не сработала, кулдаун не тратим
+		if runCommand[cmd](ply, target) == false then return end
 	end
 
 	ply.controlCooldowns[cmd] = CurTime() + command.cooldown
