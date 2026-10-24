@@ -83,9 +83,10 @@ function ENT:Think()
 	if IsValid(station) then
 		station:SetPos(self:GetPos())
 		station:SetVolume(GetConVar("snd_musicvolume"):GetFloat() * 0.8 + 0.2)
+		if self.OnRadioPlaying then self:OnRadioPlaying(station) end
 	end
 
-	self:SetNextClientThink(CurTime() + 0.1)
+	self:SetNextClientThink(CurTime() + (self.ClientThinkInterval or 0.1))
 	return true
 end
 

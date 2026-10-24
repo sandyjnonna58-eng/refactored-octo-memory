@@ -34,6 +34,25 @@ function ENT:Initialize()
 	self:SetTrack(math.random(#self.Playlist))
 end
 
+-- музыка по умолчанию идёт по порядку (наследники могут перемешивать)
+function ENT:NextTrackIndex()
+	return self:GetTrack() + 1
+end
+
+-- что музыка делает с человеком рядом; frac - 1 у самого радио, 0 на краю радиуса
+function ENT:RadioEffect(ply, org, frac)
+	-- panicattack тянется к panicattackadd, поэтому гасим оба
+	org.panicattackadd = math.max((org.panicattackadd or 0) - panic_relief * tick_interval, 0)
+	org.panicattack = math.max((org.panicattack or 0) - panic_relief * tick_interval, 0)
+	org.depression = math.max((org.depression or 0) - depression_relief * tick_interval, 0)
+
+	local troubled = (org.panicattack or 0) > 0.1 or (org.depression or 0) > 0.1
+	if troubled and (ply.calmRadioNotify or 0) < CurTime() then
+		ply.calmRadioNotify = CurTime() + notify_cooldown
+		ply:Notify("The music slowly calms you down.", 0, "calm_radio", 3, nil, Color(180, 220, 255))
+	end
+end
+
 function ENT:StartTrack(index)
 	self:SetTrack((index - 1) % #self.Playlist + 1)
 	self:SetTrackStart(CurTime())
@@ -59,7 +78,7 @@ net.Receive("rem_radio_set", function(len, ply)
 	local radio = net.ReadEntity()
 	local action = net.ReadUInt(2)
 
-	if not IsValid(radio) or radio:GetClass() ~= "ent_calm_radio" or not ply:Alive() then return end
+	if not IsValid(radio) or not radio.IsRemRadio or not ply:Alive() then return end
 	if ply:EyePos():Distance(radio:WorldSpaceCenter()) > use_distance then return end
 	if (ply.radioSetNext or 0) > CurTime() then return end
 	ply.radioSetNext = CurTime() + set_cooldown
@@ -84,7 +103,7 @@ net.Receive("rem_radio_set", function(len, ply)
 	elseif action == ACTION_NEXT then
 		radio:SetURL("")
 		radio:SetOn(true)
-		radio:StartTrack(radio:GetTrack() + 1)
+		radio:StartTrack(radio:NextTrackIndex())
 	end
 
 	radio:EmitSound("buttons/lightswitch2.wav", 60)
@@ -95,25 +114,15 @@ function ENT:Think()
 		-- музыка по умолчанию: трек закончился - следующий
 		local track = self.Playlist[self:GetTrack()]
 		if self:GetURL() == "" and track and CurTime() >= self:GetTrackStart() + track.length then
-			self:StartTrack(self:GetTrack() + 1)
+			self:StartTrack(self:NextTrackIndex())
 		end
 
 		local center = self:WorldSpaceCenter()
 
 		for _, ply in player.Iterator() do
 			local org = ply.organism
-			if ply:Alive() and org and ply:WorldSpaceCenter():Distance(center) <= self.CalmRange then
-				-- panicattack тянется к panicattackadd, поэтому гасим оба
-				org.panicattackadd = math.max((org.panicattackadd or 0) - panic_relief * tick_interval, 0)
-				org.panicattack = math.max((org.panicattack or 0) - panic_relief * tick_interval, 0)
-				org.depression = math.max((org.depression or 0) - depression_relief * tick_interval, 0)
-
-				local troubled = (org.panicattack or 0) > 0.1 or (org.depression or 0) > 0.1
-				if troubled and (ply.calmRadioNotify or 0) < CurTime() then
-					ply.calmRadioNotify = CurTime() + notify_cooldown
-					ply:Notify("The music slowly calms you down.", 0, "calm_radio", 3, nil, Color(180, 220, 255))
-				end
-			end
+			local dist = ply:WorldSpaceCenter():Distance(center)
+			if ply:Alive() and org and dist <= self.CalmRange then self:RadioEffect(ply, org, 1 - dist / self.CalmRange) end
 		end
 	end
 

@@ -7,6 +7,9 @@ ENT.Spawnable = true
 ENT.Model = "models/props_lab/citizenradio.mdl"
 ENT.IconOverride = "entities/ent_calm_radio.png"
 
+-- признак радио (и наследников) для меню Alt+E
+ENT.IsRemRadio = true
+
 -- в этом радиусе музыка успокаивает
 ENT.CalmRange = 450
 
