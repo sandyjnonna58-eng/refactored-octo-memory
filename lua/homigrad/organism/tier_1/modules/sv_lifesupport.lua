@@ -117,7 +117,8 @@ hook.Add("KeyPress", "rem_lifesupport_quick", function(ply, key)
 
 	-- смотрит прямо на аппарат - сработает обычное E; у Draco на Alt+E своё действие
 	local tr = ply:GetEyeTrace()
-	if IsValid(tr.Entity) and tr.Entity:GetClass() == "ent_life_support" then return end
+	-- на радио Alt+E открывает его меню
+	if IsValid(tr.Entity) and (tr.Entity:GetClass() == "ent_life_support" or tr.Entity:GetClass() == "ent_calm_radio") then return end
 	local wep = ply:GetActiveWeapon()
 	if IsValid(wep) and wep:GetClass() == "weapon_draco" then return end
 
