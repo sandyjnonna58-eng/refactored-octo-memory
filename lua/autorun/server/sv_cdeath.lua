@@ -31,8 +31,8 @@ util.AddNetworkString("DeathEffect_Cause")
 -- причина смерти: от неё зависит цвет экрана смерти и звук
 local KILLER_MEMORY = 60
 local KILLING_BLOW_TIME = 3
--- смерть мозга: урон мозгу на момент смерти (с 0.6 встаёт сердце)
-local BRAIN_DEATH = 0.5
+-- смерть мозга: только если умер во время эпилептического припадка, который идёт уже столько секунд
+local BRAIN_DEATH_SEIZURE_TIME = 20
 -- шокер остановил сердце: сколько секунд такая смерть считается смертью от электричества
 local ELECTRO_MEMORY = 180
 
@@ -81,9 +81,9 @@ local function DeathEffect_GetCause(ply, attacker)
 
     if IsValid(attacker) and attacker:IsPlayer() and attacker ~= ply then return "player" end
 
-    -- умер мозг (добили по голове, кровоизлияние, без кислорода)
+    -- умер мозг: припадок шёл 20+ секунд
     local org = ply.organism
-    if org and (org.brain or 0) >= BRAIN_DEATH then return "brain" end
+    if org and org.seizureActive and now - (org.seizureStart or now) >= BRAIN_DEATH_SEIZURE_TIME then return "brain" end
 
     local selfHit = ply.DeathEffect_LastSelfHit
     if selfHit and now - selfHit <= KILLING_BLOW_TIME then return "suicide" end
