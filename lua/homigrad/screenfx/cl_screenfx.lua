@@ -12,6 +12,9 @@ local mat_depthblur = Material("effects/shaders/merc_depthblur2")
 -- вспышка удара: тёмный взрыв из лучей поверх экрана (картинка-референс без фона)
 local mat_burst = Material("rem_fx/hit_burst.png", "smooth")
 local burst_aspect = 1370 / 768
+-- светлый контур референса без лучей (белая маска), красится в радугу
+local mat_glow = Material("rem_fx/hit_glow.png", "smooth")
+local glow_aspect = 1024 / 512
 
 local hg_reduce_screeneffects = ConVarExists("hg_reduce_screeneffects") and GetConVar("hg_reduce_screeneffects") or CreateClientConVar("hg_reduce_screeneffects", "0", true, false, "Reduce screen shader effects by 50%", 0, 1)
 local hg_potatopc = ConVarExists("hg_potatopc") and GetConVar("hg_potatopc")
@@ -51,9 +54,13 @@ local adrenalineBlur = 0
 
 local burst_time_min = 0.45
 local burst_time_add = 0.75
+-- радужный контур: оборотов радуги в секунду и насколько ярче основной вспышки
+local burst_hue_speed = 1.5
+local burst_glow_mul = 1.2
 
 local burst = 0
 local burstStart, burstLength = 0, 1
+local burstHue = 0
 local painBlur = 0
 
 local function EffectMul()
@@ -91,6 +98,7 @@ function FX.Burst(strength)
 	burst = strength
 	burstStart = CurTime()
 	burstLength = burst_time_min + burst_time_add * strength
+	burstHue = math.Rand(0, 360)
 end
 
 net.Receive("rem_fx_burst", function()
@@ -183,6 +191,19 @@ hook.Add("Post Processing", "rem_fx", function()
 			local h = w / burst_aspect
 
 			cam.Start2D()
+				-- ядерно-радужный контур: аддитивно, переливается по радуге, пока вспышка гаснет
+				if not mat_glow:IsError() then
+					local gw = math.max(ScrW(), ScrH() * glow_aspect)
+					local gh = gw / glow_aspect
+					local col = HSVToColor((burstHue + (CurTime() - burstStart) * burst_hue_speed * 360) % 360, 1, 1)
+
+					render.OverrideBlend(true, BLEND_SRC_ALPHA, BLEND_ONE, BLENDFUNC_ADD)
+					surface.SetMaterial(mat_glow)
+					surface.SetDrawColor(col.r, col.g, col.b, 255 * math.min(burstA * burst_glow_mul, 1))
+					surface.DrawTexturedRect((ScrW() - gw) / 2, (ScrH() - gh) / 2, gw, gh)
+					render.OverrideBlend(false)
+				end
+
 				surface.SetMaterial(mat_burst)
 				surface.SetDrawColor(255, 255, 255, 255 * math.min(burstA, 1))
 				surface.DrawTexturedRect((ScrW() - w) / 2, (ScrH() - h) / 2, w, h)
