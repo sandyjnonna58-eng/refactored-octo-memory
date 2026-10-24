@@ -36,6 +36,13 @@ local BRAIN_DEATH_SEIZURE_TIME = 20
 -- шокер остановил сердце: сколько секунд такая смерть считается смертью от электричества
 local ELECTRO_MEMORY = 180
 
+-- "последние моменты": с шансом при смерти играет rem_theseareyourlastmoments.mp3 и идут воспоминания
+-- (скриншоты жизни из data/dreams), экран смерти держится 1:12 - длину песни
+local lastmoments_chance = CreateConVar("deatheffect_lastmoments_chance", "20", FCVAR_ARCHIVE, "Chance (%) that death shows your last moments: a song and memories for 1:12", 0, 100)
+local LASTMOMENTS_BLOCK = 72 + 3
+local DEFAULT_BLOCK = 12
+resource.AddSingleFile("sound/rem_theseareyourlastmoments.mp3")
+
 local function DeathEffect_DamageOwner(ent)
     if not IsValid(ent) then return end
     if ent:IsPlayer() then return ent end
@@ -153,10 +160,10 @@ hook.Add("PlayerDeathThink", "DeathEffect_BlockRespawn", function(ply)
         local dt = ply.DeathEffect_DeathTime
         if not dt then
 
-            ply.DeathEffect_DeathTime = CurTime() - 11
+            ply.DeathEffect_DeathTime = CurTime() - ((ply.DeathEffect_BlockDuration or DEFAULT_BLOCK) - 1)
             return false
         end
-        if (CurTime() - dt) > 12 then
+        if (CurTime() - dt) > (ply.DeathEffect_BlockDuration or DEFAULT_BLOCK) then
             DeathEffect_ClearBlock(ply, true)
             return
         end
@@ -175,8 +182,8 @@ timer.Create("DeathEffect_StuckSweep", 5, 0, function()
         if IsValid(ply) and ply:GetNWBool("DeathEffect_BlockRespawn", false) and not ply:Alive() then
             local dt = ply.DeathEffect_DeathTime
             if not dt then
-                ply.DeathEffect_DeathTime = CurTime() - 11
-            elseif (CurTime() - dt) > 12 then
+                ply.DeathEffect_DeathTime = CurTime() - ((ply.DeathEffect_BlockDuration or DEFAULT_BLOCK) - 1)
+            elseif (CurTime() - dt) > (ply.DeathEffect_BlockDuration or DEFAULT_BLOCK) then
                 DeathEffect_ClearBlock(ply, true)
             end
         end
@@ -215,13 +222,13 @@ hook.Add("PlayerDeath", "DeathEffect_OnDeath", function(ply, inflictor, attacker
 
     local realish = CurrentRound and CurrentRound().name == "realish"
 
+    local lastMoments = not realish and math.Rand(0, 100) < lastmoments_chance:GetFloat()
+    ply.DeathEffect_BlockDuration = lastMoments and LASTMOMENTS_BLOCK or DEFAULT_BLOCK
+
     ply:SetNWBool("DeathEffect_BlockRespawn", true)
     ply.DeathEffect_DeathTime = CurTime()
 
-
-
-
-    local failsafeDelay = realish and 3 or 12
+    local failsafeDelay = realish and 3 or ply.DeathEffect_BlockDuration
     local tname = DeathEffect_GetTimerName(ply)
     if tname then
         timer.Create(tname, failsafeDelay, 1, function()
@@ -236,11 +243,13 @@ hook.Add("PlayerDeath", "DeathEffect_OnDeath", function(ply, inflictor, attacker
         net.WriteBool(GetConVar("deatheffect_compat"):GetBool())
         net.WriteFloat(realish and 0 or GetConVar("deatheffect_options_delay"):GetFloat())
         net.WriteBool(realish)
+        net.WriteBool(lastMoments)
     net.Send(ply)
 end)
 
 hook.Add("PlayerSpawn", "DeathEffect_OnSpawn", function(ply)
     DeathEffect_ClearBlock(ply, true)
+    ply.DeathEffect_BlockDuration = nil
     ply.DeathEffect_LastDamage = nil
     ply.DeathEffect_LastKiller = nil
     ply.DeathEffect_LastSelfHit = nil
