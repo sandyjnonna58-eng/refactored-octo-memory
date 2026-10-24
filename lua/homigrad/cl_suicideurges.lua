@@ -311,3 +311,55 @@ hook.Add("HUDPaint", "REM_SuicideWhispers", function()
 	local left = math.ceil(ply:GetNWFloat("rem_suicide_hold", 0) - now)
 	drawResistText((melee and "DO IT" or "PULL THE TRIGGER") .. " " .. left, ScrW() / 2 + math.random(-4, 4), ScrH() / 2 + ScrH() * 0.12 + math.random(-3, 3))
 end)
+
+-- музыка суицида: пока оружие у головы/горла (своя поза после позыва и обычный суицид оружием);
+-- выжил - затихает, умер - обрывается быстро (дальше свой звук у экрана смерти)
+local suicideMusicPath = "sound/rem_aftermath.mp3"
+local suicideMusicFadeIn = 0.6
+local suicideMusicFadeOut = 2
+local suicideMusicFadeDeath = 0.5
+
+local suicideMusic
+local suicideMusicLoading = false
+local suicideMusicVol = 0
+local suicideMusicWanted = false
+local MusicVolume = GetConVar("snd_musicvolume")
+
+hook.Add("Think", "REM_SuicideMusic", function()
+	local ply = LocalPlayer()
+	if not IsValid(ply) then return end
+
+	local alive = ply:Alive()
+	suicideMusicWanted = alive and (ply:GetNWBool("suiciding", false) or ply:GetNWFloat("rem_suicide_hold", 0) > CurTime())
+
+	if suicideMusicWanted and not IsValid(suicideMusic) and not suicideMusicLoading then
+		suicideMusicLoading = true
+		sound.PlayFile(suicideMusicPath, "noblock noplay", function(station)
+			suicideMusicLoading = false
+			if not IsValid(station) then return end
+			if not suicideMusicWanted then station:Stop() return end
+
+			suicideMusic = station
+			suicideMusicVol = 0
+			station:EnableLooping(true)
+			station:SetVolume(0)
+			station:Play()
+		end)
+	end
+
+	if not IsValid(suicideMusic) then return end
+
+	local dt = FrameTime()
+	if suicideMusicWanted then
+		suicideMusicVol = math.min(suicideMusicVol + dt / suicideMusicFadeIn, 1)
+	else
+		suicideMusicVol = suicideMusicVol - dt / (alive and suicideMusicFadeOut or suicideMusicFadeDeath)
+		if suicideMusicVol <= 0 then
+			suicideMusic:Stop()
+			suicideMusic = nil
+			return
+		end
+	end
+
+	suicideMusic:SetVolume(suicideMusicVol * MusicVolume:GetFloat())
+end)
