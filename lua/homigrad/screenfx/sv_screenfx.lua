@@ -1,12 +1,15 @@
 -- Радиальное размытие при попаданиях и взрывах; вспышка-удар (тёмный взрыв из лучей, materials/rem_fx/hit_burst.png,
 -- и радужный светящийся контур вокруг него, materials/rem_fx/hit_glow.png)
--- при любом попадании и на полную при ударе себя во время суицида. Рисует cl_screenfx.lua.
+-- только при очень сильном ударе по голове или когда ломается череп. Рисует cl_screenfx.lua.
 util.AddNetworkString("rem_fx_kick")
 util.AddNetworkString("rem_fx_burst")
 
 local burst_cooldown = 0.15
-local burst_min_damage = 2
-local burst_damage_full = 30
+-- очень сильный удар по голове за одно попадание: тупой (бита, лом ~20-33) и любой другой
+local burst_head_blunt = 25
+local burst_head_other = 40
+local burst_damage_full = 60
+local skull_check_interval = 0.1
 
 resource.AddSingleFile("materials/rem_fx/hit_burst.png")
 resource.AddSingleFile("materials/rem_fx/hit_glow.png")
@@ -38,18 +41,18 @@ local function SendKick(ply, strength, pos)
 	net.Send(ply)
 end
 
-hook.Add("HomigradDamage", "rem_fx_kick", function(ply, dmgInfo)
+hook.Add("HomigradDamage", "rem_fx_kick", function(ply, dmgInfo, hitgroup)
 	if not IsValid(ply) or not ply:IsPlayer() or not ply:Alive() then return end
 	if dmgInfo:IsDamageType(DMG_BLAST) then return end
 
 	local strength = math.Clamp(dmgInfo:GetDamage() / hit_damage_full, 0.2, 1)
 	local attacker = dmgInfo:GetAttacker()
 
-	-- ударил себя сам (суицид) - вспышка на полную, иначе по силе удара
-	if attacker == ply then
-		SendBurst(ply, 1)
-	elseif dmgInfo:GetDamage() >= burst_min_damage then
-		SendBurst(ply, math.Clamp(dmgInfo:GetDamage() / burst_damage_full, 0.35, 1))
+	if hitgroup == HITGROUP_HEAD then
+		local blunt = dmgInfo:IsDamageType(DMG_CLUB) or dmgInfo:IsDamageType(DMG_CRUSH)
+		if dmgInfo:GetDamage() >= (blunt and burst_head_blunt or burst_head_other) then
+			SendBurst(ply, math.Clamp(dmgInfo:GetDamage() / burst_damage_full, 0.7, 1))
+		end
 	end
 
 	-- размытие идёт от того, кто ударил
@@ -73,5 +76,20 @@ hook.Add("EntityTakeDamage", "rem_fx_kick", function(ent, dmgInfo)
 	for _, ply in player.Iterator() do
 		local dist = ply:EyePos():Distance(pos)
 		if ply:Alive() and dist < blast_radius then SendKick(ply, 1.5 * (1 - dist / blast_radius) + 0.3, pos) end
+	end
+end)
+
+-- череп сломался (org.skull дошёл до 1) - вспышка на полную, мимо кулдауна
+timer.Create("rem_fx_skull", skull_check_interval, 0, function()
+	for _, ply in player.Iterator() do
+		local org = ply.organism
+		local skull = (ply:Alive() and org and org.skull) or 0
+
+		if skull >= 1 and (ply.remFxLastSkull or 0) < 1 then
+			ply.remFxNextBurst = 0
+			SendBurst(ply, 1)
+		end
+
+		ply.remFxLastSkull = skull
 	end
 end)
