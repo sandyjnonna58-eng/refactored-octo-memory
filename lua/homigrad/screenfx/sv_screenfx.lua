@@ -1,5 +1,5 @@
--- Радиальное размытие при попаданиях и взрывах, вспышка-удар (серый экран с тёмными лучами)
--- при любом попадании и на полную при ударе себя во время суицида. Рисует cl_screenfx.lua.
+-- Радиальное размытие при попаданиях и взрывах, вспышка-удар (серый выцветший экран, светлые края,
+-- сильное размытие из центра) при любом попадании и на полную при ударе себя во время суицида. Рисует cl_screenfx.lua.
 util.AddNetworkString("rem_fx_kick")
 util.AddNetworkString("rem_fx_burst")
 
@@ -7,7 +7,7 @@ local burst_cooldown = 0.15
 local burst_min_damage = 2
 local burst_damage_full = 30
 
-for i = 1, 3 do resource.AddSingleFile("materials/rem_fx/burst" .. i .. ".png") end
+resource.AddSingleFile("materials/rem_fx/vignette_light.png")
 
 local function SendBurst(ply, strength)
 	if (ply.remFxNextBurst or 0) > CurTime() then return end

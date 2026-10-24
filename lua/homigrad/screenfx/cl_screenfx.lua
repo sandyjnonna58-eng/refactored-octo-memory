@@ -9,9 +9,8 @@ local mat_radialblur = Material("effects/shaders/merc_radialblur")
 local mat_grayscale = Material("effects/shaders/merc_grayscale")
 local mat_depthblur = Material("effects/shaders/merc_depthblur2")
 
--- вспышка удара: тёмный пиксельный взрыв из лучей на выцветшей картинке
-local mat_bursts = {}
-for i = 1, 3 do mat_bursts[i] = Material("rem_fx/burst" .. i .. ".png", "smooth") end
+-- вспышка удара: картинка выцветает в серый, края светлеют, всё размывает из центра
+local mat_vignette = Material("rem_fx/vignette_light.png", "smooth")
 
 local hg_reduce_screeneffects = ConVarExists("hg_reduce_screeneffects") and GetConVar("hg_reduce_screeneffects") or CreateClientConVar("hg_reduce_screeneffects", "0", true, false, "Reduce screen shader effects by 50%", 0, 1)
 local hg_potatopc = ConVarExists("hg_potatopc") and GetConVar("hg_potatopc")
@@ -52,9 +51,11 @@ local adrenalineBlur = 0
 local burst_time_min = 0.45
 local burst_time_add = 0.75
 
+-- насколько сильно вспышка размывает из центра (в единицах kick)
+local burst_radial = 1.6
+
 local burst = 0
 local burstStart, burstLength = 0, 1
-local burstMat, burstRot, burstScale = mat_bursts[1], 0, 1
 local painBlur = 0
 
 local function EffectMul()
@@ -92,9 +93,6 @@ function FX.Burst(strength)
 	burst = strength
 	burstStart = CurTime()
 	burstLength = burst_time_min + burst_time_add * strength
-	burstMat = mat_bursts[math.random(#mat_bursts)]
-	burstRot = math.Rand(0, 360)
-	burstScale = math.Rand(0.9, 1.25)
 end
 
 net.Receive("rem_fx_burst", function()
@@ -177,10 +175,13 @@ hook.Add("Post Processing", "rem_fx", function()
 	pulse = math.min(pulse, kick_max)
 	local radial = math.max(kick, pulse)
 
-	-- вспышка удара поверх всего: картинка выцветает в серый, по центру тёмные лучи
 	local burstFrac = 1 - (CurTime() - burstStart) / burstLength
-	if burst > 0 and burstFrac > 0 and LocalPlayer():Alive() then
-		local a = burst * burstFrac ^ 1.5
+	local burstA = (burst > 0 and burstFrac > 0) and burst * burstFrac ^ 1.5 or 0
+	local burstRadial = burstA * burst_radial
+
+	-- вспышка удара поверх всего: серый, светлые края; размытие из центра - ниже, вместе с остальным
+	if burstA > 0 and LocalPlayer():Alive() then
+		local a = burstA
 
 		DrawColorModify({
 			["$pp_colour_addr"] = 0.06 * a,
@@ -194,16 +195,21 @@ hook.Add("Post Processing", "rem_fx", function()
 			["$pp_colour_mulb"] = 0,
 		})
 
-		if not burstMat:IsError() then
-			local size = math.max(ScrW(), ScrH()) * 0.75 * burstScale * (1 + (1 - burstFrac) * 0.15)
+		if not mat_vignette:IsError() then
 			cam.Start2D()
-				surface.SetMaterial(burstMat)
-				surface.SetDrawColor(255, 255, 255, 255 * math.min(a * 1.3, 1))
-				surface.DrawTexturedRectRotated(ScrW() / 2, ScrH() / 2, size, size, burstRot)
+				surface.SetMaterial(mat_vignette)
+				surface.SetDrawColor(255, 255, 255, 255 * math.min(a, 1))
+				surface.DrawTexturedRect(0, 0, ScrW(), ScrH())
 			cam.End2D()
 		end
 	elseif burst > 0 then
 		burst = 0
+	end
+
+	-- вспышка размывает из центра; удар из точки перекрывает, если сильнее
+	if burstRadial > math.max(kick, pulse) then
+		radial = burstRadial
+		pulse = burstRadial
 	end
 
 	if radial > 0.01 and not mat_radialblur:IsError() then
