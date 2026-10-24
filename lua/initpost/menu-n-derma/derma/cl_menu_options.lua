@@ -592,6 +592,27 @@ function SettingsRefreshCategoryButtons()
     end
 end
 
+-- тушканчик внизу настроек и таблицы рекордов
+local jerboa_mat = Material("rem_misc/jerboa.png", "smooth mips")
+
+local function AddJerboa(parent)
+    local pic = vgui.Create("DPanel", parent)
+    pic:Dock(TOP)
+    pic:DockMargin(MenuUnit(10), MenuUnit(12), MenuUnit(10), MenuUnit(12))
+    pic:SetTall(MenuUnit(240))
+    pic.Paint = function(self, w, h)
+        if jerboa_mat:IsError() then return end
+        local size = math.min(w, h)
+        local x = (w - size) / 2
+        surface.SetMaterial(jerboa_mat)
+        surface.SetDrawColor(255, 255, 255, 255)
+        surface.DrawTexturedRect(x, 0, size, size)
+        surface.SetDrawColor(255, 255, 255, 45)
+        surface.DrawOutlinedRect(x, 0, size, size, 1)
+    end
+    return pic
+end
+
 function SettingsRefreshContent()
     if not IsValid(settings_content_panel) then return end
     settings_content_panel:Clear()
@@ -810,6 +831,8 @@ function SettingsRefreshContent()
 
         yOffset = yOffset + row:GetTall() + MenuUnit(8)
     end
+
+    AddJerboa(scroll)
 end
 
 function hg.DrawSettings(ParentPanel)
@@ -1919,6 +1942,7 @@ function InfoRefreshContent()
                 empty:SetContentAlignment(5)
                 empty:SetText("NO SQL LEADERBOARD DATA")
                 rows[#rows + 1] = empty
+                rows[#rows + 1] = AddJerboa(scroll)
                 return
             end
 
@@ -1982,6 +2006,8 @@ function InfoRefreshContent()
 
                 rows[#rows + 1] = row
             end
+
+            rows[#rows + 1] = AddJerboa(scroll)
         end
 
         scroll.Think = function()
