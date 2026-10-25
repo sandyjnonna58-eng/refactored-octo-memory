@@ -1,0 +1,18 @@
+"VertexLitGeneric"
+{
+	"$basetexture" "hatedmekkr/boneworks/weapons/melee/blunts/misc/noodledog/bw_wpn_bnt_noodledog"
+	
+		"$bumpmap" "hatedmekkr/boneworks/weapons/melee/blunts/misc/noodledog/bw_wpn_bnt_noodledog_nrm"
+		
+		"$phong" "1"
+
+		"$phongexponent" "50"
+		"$phongboost"	"1"
+		"$phongfresnelranges" "[ 0.2 0.5 1 ]"
+		
+		"$envmap" "env_cubemap"
+
+        "$normalmapalphaenvmapmask" "1"
+		"$envmaptint" "[ .01 .01 .01 ]"
+		
+}
