@@ -66,6 +66,9 @@ SWEP.AmmoTypes2 = {
 		[2] = {".50 Action Express Copper Solid"},
 		[3] = {".50 Action Express JHP"}
 	},
+	[".500 S&W Magnum"] = {
+		[1] = {".500 S&W Magnum"}
+	},
 	["9mm PAK Blank"] = {
 		[1] = {"9mm PAK Blank"},
 		[2] = {"9mm PAK Flash Defense"},
@@ -2638,7 +2641,7 @@ hook.Add("HG_MovementCalc_2", "moveWithWeapon", function(mul, ply, cmd, mv)
         if wep:IsResting() then
             local restent = wep:GetNWEntity("RestEntity")
 
-			if not IsValid(restent) then
+            if !IsValid(restent) and !restent:IsWorld() then
                 wep:SetNWBool("IsResting", false)
 
                 return
