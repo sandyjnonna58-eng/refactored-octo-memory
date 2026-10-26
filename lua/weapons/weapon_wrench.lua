@@ -121,7 +121,8 @@ SWEP.ChargeSwingAng = -90
 SWEP.ChargeStamina = 40
 SWEP.ChargeDamageMul = 2.0
 SWEP.ChargeViewPunch = Angle(5, 0, 0)
-SWEP.ChargeHoldPos = Vector(-6, 2, 6.5)
+-- у нас ChargeHoldPos - сама позиция, а не добавка к HoldPos, как HeavyChargeHoldPos в MELEECITY; как у мачете на тех же NMRIH-анимациях
+SWEP.ChargeHoldPos = Vector(-12, 0, -6)
 
 function SWEP:CanPrimaryAttack()
 	return true
