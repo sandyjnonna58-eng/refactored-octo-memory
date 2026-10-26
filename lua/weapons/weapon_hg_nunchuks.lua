@@ -23,7 +23,8 @@ SWEP.DrawAnimTime = 1.8
 SWEP.BlockAnimTime = 2.25
 SWEP.BlockAnimFreezeCycle = 0.08
 SWEP.LoopAttackTime = 0.3
-SWEP.LoopAnimTime = 0.85
+-- длительность одного цикла анимации серии (в цикле два удара: влево и вправо)
+SWEP.LoopAnimTime = 1.2
 SWEP.LoopWaitTime = 0.1
 SWEP.LoopAttackTimeLength = 0.13
 SWEP.LoopAttackLen = 42
