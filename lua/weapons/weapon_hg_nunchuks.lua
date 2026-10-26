@@ -36,7 +36,9 @@ SWEP.LoopAttackSwingAngleLeft = nil
 SWEP.LoopAttackSwingAngleRight = nil
 SWEP.LoopAttackRadsLeft = nil
 SWEP.LoopAttackRadsRight = nil
-SWEP.LoopAttackMinStamina = 95
+-- выносливость (из 180): чтобы начать серию и чтобы её продолжать
+SWEP.LoopAttackMinStamina = 50
+SWEP.LoopAttackStayStamina = 20
 SWEP.LoopAttackStopCooldown = 1.55
 SWEP.LoopAttackGraceTime = 0.25
 SWEP.LoopAttackAnim = "misscenter3"
@@ -152,7 +154,7 @@ function SWEP:CanStartLoopAttack(requireAttackReady, checkCooldown)
     end
     if checkCooldown and (self.LoopAttackCooldownEnd or 0) > CurTime() then return false end
 
-    local staminaMin = self.LoopAttackMinStamina or 30
+    local staminaMin = self.LoopInputState and (self.LoopAttackStayStamina or 20) or (self.LoopAttackMinStamina or 30)
     if owner.organism and owner.organism.stamina and owner.organism.stamina[1] and owner.organism.stamina[1] < staminaMin then
         return false
     end
@@ -326,7 +328,7 @@ function SWEP:ThinkAdd()
     end
 
     local staminaReady = true
-    local staminaMin = self.LoopAttackMinStamina or 30
+    local staminaMin = self.LoopInputState and (self.LoopAttackStayStamina or 20) or (self.LoopAttackMinStamina or 30)
     if owner.organism and owner.organism.stamina and owner.organism.stamina[1] then
         staminaReady = owner.organism.stamina[1] >= staminaMin
     end
