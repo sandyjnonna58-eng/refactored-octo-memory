@@ -340,6 +340,13 @@ local radialIconPatterns = {
 	{"reload ", RemRadialIcon("refresh")},
 	{"pump ", RemRadialIcon("refresh")},
 	{"drop ", radialIconMaterials["drop equipment"]},
+	-- сдача в плен (cl_surrender.lua)
+	{"surrender", RemRadialIcon("flag")},
+	{"kneel", RemRadialIcon("flag")},
+	{"hands up", RemRadialIcon("flag")},
+	{"hands behind head", RemRadialIcon("flag")},
+	{"stand up", RemRadialIcon("flag")},
+	{"getting up", RemRadialIcon("flag")},
 }
 
 local function NormalizeRadialText(txt)
