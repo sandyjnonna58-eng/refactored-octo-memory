@@ -22,8 +22,9 @@ SWEP.ViewPunch1 = Angle(0,2,-2)
 SWEP.DrawAnimTime = 1.8
 SWEP.BlockAnimTime = 2.25
 SWEP.BlockAnimFreezeCycle = 0.08
-SWEP.LoopAttackTime = 0.3
-SWEP.LoopWaitTime = 0.1
+-- темп серии подогнан под взмах LoopStrikeAnimTime: удар через 0.4 с, следующий ещё через 0.45 с
+SWEP.LoopAttackTime = 0.4
+SWEP.LoopWaitTime = 0.45
 SWEP.LoopAttackTimeLength = 0.13
 SWEP.LoopAttackLen = 42
 SWEP.LoopAttackDamage = 11
@@ -42,7 +43,7 @@ SWEP.LoopAttackGraceTime = 0.25
 SWEP.LoopAttackAnim = "misscenter3"
 -- в серии каждый удар - полный взмах, по очереди в две стороны (misscenter3 по кругу почти стоит на месте)
 SWEP.LoopStrikeAnims = {"misscenter1", "misscenter2"}
-SWEP.LoopStrikeAnimTime = 0.6
+SWEP.LoopStrikeAnimTime = 0.9
 
 SWEP.Attack2Time = 0.3
 SWEP.AnimTime2 = 1
@@ -214,6 +215,14 @@ function SWEP:SetLoopAttackOverrides(enable, direction)
     self.LoopAttackOldValues = nil
 end
 
+-- уставший бьёт медленнее (как в базе): и удары, и взмах растягиваются одинаково
+function SWEP:GetLoopStaminaMul()
+    local owner = self:GetOwner()
+    local stamina = IsValid(owner) and owner.organism and owner.organism.stamina and owner.organism.stamina[1]
+    if not stamina then return 1 end
+    return 1 / math.Clamp((180 - stamina) / 90, 1, 2)
+end
+
 function SWEP:GetLoopStrikeAnim(strike)
     local anims = self.LoopStrikeAnims
     return anims[(strike % #anims) + 1]
@@ -228,15 +237,12 @@ function SWEP:StartLoopAttack()
     self.LoopAttackDirection = direction == 1 and -1 or 1
     self:SetLoopAttackOverrides(true, direction)
 
+    local mul = self:GetLoopStaminaMul()
+
     -- взмах: своему игроку его включает клиент по счётчику, остальным - сообщение melee_attack
     local strike = self:GetNWInt("RemNunStrike", 0) + 1
     self:SetNWInt("RemNunStrike", strike)
-    self:PlayAnim(self:GetLoopStrikeAnim(strike), self.LoopStrikeAnimTime, false, nil, false, false)
-
-    local mul = 1
-    if owner.organism and owner.organism.stamina and owner.organism.stamina[1] then
-        mul = 1 / math.Clamp((180 - owner.organism.stamina[1]) / 90, 1, 2)
-    end
+    self:PlayAnim(self:GetLoopStrikeAnim(strike), self.LoopStrikeAnimTime / mul, false, nil, false, false)
 
     self.HitEnts = nil
     self.FirstAttackTick = false
@@ -292,7 +298,7 @@ function SWEP:ThinkAdd()
         elseif strike ~= self.ClientStrike then
             self.ClientStrike = strike
             if self:IsLocal() then
-                self:PlayAnim(self:GetLoopStrikeAnim(strike), self.LoopStrikeAnimTime, false, nil, false)
+                self:PlayAnim(self:GetLoopStrikeAnim(strike), self.LoopStrikeAnimTime / self:GetLoopStaminaMul(), false, nil, false)
             end
         end
 
