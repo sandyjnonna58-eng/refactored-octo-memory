@@ -23,8 +23,8 @@ SWEP.DrawAnimTime = 1.8
 SWEP.BlockAnimTime = 2.25
 SWEP.BlockAnimFreezeCycle = 0.08
 SWEP.LoopAttackTime = 0.3
--- длительность одного цикла анимации серии (в цикле два удара: влево и вправо)
-SWEP.LoopAnimTime = 1.2
+-- цикл анимации серии (misscenter3) - её родная длина в модели: 41 кадр при 30 к/с
+SWEP.LoopAnimTime = 1.33
 SWEP.LoopWaitTime = 0.1
 SWEP.LoopAttackTimeLength = 0.13
 SWEP.LoopAttackLen = 42
