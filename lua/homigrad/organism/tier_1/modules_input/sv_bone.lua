@@ -408,6 +408,8 @@ input_list.skull = function(org, bone, dmg, dmgInfo, boneindex, dir, hit, ricoch
 
 	org.shock = org.shock + dmg * 3
 
+	hg.organism.AddConcussion(org, dmg * 6)
+
 	if dmgInfo:IsDamageType(DMG_BULLET + DMG_BUCKSHOT) then
 		org.shock = org.shock + dmg * 15
 		org.avgpain = org.avgpain + dmg * 7

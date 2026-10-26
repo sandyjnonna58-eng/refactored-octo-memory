@@ -133,6 +133,7 @@ local list = {
 	{{"stamina.sub", "stamina", "sub"}, 1, true}, 
 	0, 
 	{"brain", 1, true},
+	{"concussion", 10, true},
 	{"brainFrontal", 1, true},
 	{"brainParietal", 1, true},
 	{"brainTemporal", 1, true},
