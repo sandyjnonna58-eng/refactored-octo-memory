@@ -27,9 +27,9 @@ local MIDAIR_KICK_MIN_STAMINA = 85
 local MIDAIR_KICK_MAX_DAMAGE = 21
 local MIDAIR_KICK_FAKE_CHANCE = 0.7
 -- куда отлетает жертва: вперёд MIDAIR_KICK_LAUNCH + доля скорости пинающего, вверх MIDAIR_KICK_LAUNCH_UP
-local MIDAIR_KICK_LAUNCH = 220
-local MIDAIR_KICK_LAUNCH_SPEED_MUL = 0.4
-local MIDAIR_KICK_LAUNCH_UP = 120
+local MIDAIR_KICK_LAUNCH = 110
+local MIDAIR_KICK_LAUNCH_SPEED_MUL = 0.2
+local MIDAIR_KICK_LAUNCH_UP = 70
 local MIDAIR_KICK_STAND_PUSH_MUL = 0.5 -- не упал - просто сильно отталкивает
 local MIDAIR_KICK_TRACE_RANGE = 82
 local MIDAIR_KICK_TRACE_SIZE = Vector(7, 7, 7)
