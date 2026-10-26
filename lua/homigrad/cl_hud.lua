@@ -277,6 +277,8 @@ local matPosture = radialIconMaterials["change posture rmb menu"]
 
 for text, icon in pairs({
 	["choose attachments"] = "adjustments-horizontal",
+	["afflictions"] = "activity-heartbeat",
+	["hide afflictions"] = "activity-heartbeat",
 	["experiment control"] = "radar-2",
 	["pain shock"] = "bolt",
 	["paralyze"] = "hand-off",

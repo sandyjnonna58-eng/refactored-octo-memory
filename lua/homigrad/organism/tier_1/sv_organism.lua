@@ -225,6 +225,7 @@ local function send_organism(org, ply)
 	sendtable.pelvis = org.pelvis
 	sendtable.disorientation = org.disorientation
 	sendtable.concussion = org.concussion
+	sendtable.skull = org.skull
 	sendtable.brain = org.brain
 	sendtable.brainFrontal = org.brainFrontal
 	sendtable.brainParietal = org.brainParietal
