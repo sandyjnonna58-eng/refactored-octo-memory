@@ -271,6 +271,16 @@ end
 
 function SWEP:ThinkAdd()
     if CLIENT then
+        -- серию (R + ЛКМ) запускает сервер; своему игроку анимацию включаем тут по флагу,
+        -- остальные получают её обычным сообщением melee_attack
+        local looping = self:GetNWBool("RemNunLoop", false)
+        if looping ~= (self.ClientLoopState or false) then
+            self.ClientLoopState = looping
+            if self:IsLocal() then
+                self:PlayAnim(self.LoopAttackAnim or "attack_loop", self.LoopAnimTime or self.AnimTime1, looping, nil, false)
+            end
+        end
+
         local blocking = self:GetBlocking()
         local blockAnimTime = self.BlockAnimTime or self.DrawAnimTime or 1.25
 
@@ -336,7 +346,8 @@ function SWEP:ThinkAdd()
             self.LoopAttackPendingUntil = nil
             if canStartLoopState then
                 self.LoopInputState = true
-                self:PlayAnim(self.LoopAttackAnim or "attack_loop", self.LoopAnimTime or self.AnimTime1, true, nil, false, true)
+                self:SetNWBool("RemNunLoop", true)
+                self:PlayAnim(self.LoopAttackAnim or "attack_loop", self.LoopAnimTime or self.AnimTime1, true, nil, false, false)
             end
         end
     end
@@ -347,12 +358,23 @@ function SWEP:ThinkAdd()
         self.LoopInputState = false
         self.LoopAttackPendingUntil = nil
         self.LoopAttackCooldownEnd = CurTime() + (self.LoopAttackStopCooldown or 1)
-        self:PlayAnim(self.LoopAttackAnim or "attack_loop", self.LoopAnimTime or self.AnimTime1, false, nil, false, true)
+        self:SetNWBool("RemNunLoop", false)
+        self:PlayAnim(self.LoopAttackAnim or "attack_loop", self.LoopAnimTime or self.AnimTime1, false, nil, false, false)
     end
 
     if self.LoopInputState and self:CanStartLoopAttack(true, false) then
         self:StartLoopAttack()
     end
+end
+
+-- убрал нунчаки посреди серии - серия кончилась
+function SWEP:Holster(wep)
+    if SERVER then
+        self.LoopInputState = false
+        self.LoopAttackPendingUntil = nil
+        self:SetNWBool("RemNunLoop", false)
+    end
+    return self.BaseClass.Holster(self, wep)
 end
 
 function SWEP:CustomBlockAnim()
