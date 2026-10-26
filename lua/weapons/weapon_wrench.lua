@@ -1,9 +1,9 @@
 if SERVER then AddCSLuaFile() end
 -- Гаечный ключ (из MELEECITY): модель Boneworks на анимациях топорика.
--- Заряженный удар (R + ЛКМ) вместо их "тяжёлого удара", ПКМ + ЛКМ - бросок.
+-- Заряженный удар (E + ЛКМ) вместо их "тяжёлого удара", ПКМ + ЛКМ - бросок.
 SWEP.Base = "weapon_melee"
 SWEP.PrintName = "Wrench"
-SWEP.Instructions = "A heavy-duty wrench built for gripping and twisting. Its solid metal frame makes it effective for blocking paths or slowing down anyone trying to push through.\n\nLMB to attack.\nRMB to block.\nR + LMB (hold) for a charged swing.\nRMB + LMB to throw."
+SWEP.Instructions = "A heavy-duty wrench built for gripping and twisting. Its solid metal frame makes it effective for blocking paths or slowing down anyone trying to push through.\n\nLMB to attack.\nRMB to block.\nE + LMB (hold) for a charged swing.\nRMB + LMB to throw."
 SWEP.Category = "Weapons - Melee"
 SWEP.Spawnable = true
 SWEP.AdminOnly = false
