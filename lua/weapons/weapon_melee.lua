@@ -3933,7 +3933,8 @@ elseif CLIENT then
         local ent = net.ReadEntity()
         local sendtoclient = net.ReadBool()
 
-        if ent.IsLocal and !ent:IsLocal() then
+        -- sendtoclient: анимацию с сервера показываем и самому владельцу (серийный удар нунчаков)
+        if ent.IsLocal and (!ent:IsLocal() or sendtoclient) then
             if IsValid(ent) and ent.PlayAnim then
                 ent:PlayAnim(tbl.anim,tbl.time,tbl.cycling,tbl.callback,tbl.reverse)
                 
