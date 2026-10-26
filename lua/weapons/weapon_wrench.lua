@@ -121,8 +121,9 @@ SWEP.ChargeSwingAng = -90
 SWEP.ChargeStamina = 40
 SWEP.ChargeDamageMul = 2.0
 SWEP.ChargeViewPunch = Angle(5, 0, 0)
--- у нас ChargeHoldPos - сама позиция, а не добавка к HoldPos, как HeavyChargeHoldPos в MELEECITY; как у мачете на тех же NMRIH-анимациях
-SWEP.ChargeHoldPos = Vector(-12, 0, -6)
+-- у нас ChargeHoldPos - сама позиция, а в MELEECITY HeavyChargeHoldPos (-6, 2, 6.5) добавлялся к HoldPos:
+-- HoldPos (-15, 2, -4) + (-6, 2, 6.5) - ключ отведён назад и вверх, локоть согнут
+SWEP.ChargeHoldPos = Vector(-21, 4, 2.5)
 
 function SWEP:CanPrimaryAttack()
 	return true
