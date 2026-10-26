@@ -23,8 +23,11 @@ SWEP.DrawAnimTime = 1.8
 SWEP.BlockAnimTime = 2.25
 SWEP.BlockAnimFreezeCycle = 0.08
 SWEP.LoopAttackTime = 0.3
--- цикл анимации серии (misscenter3) - её родная длина в модели: 41 кадр при 30 к/с
-SWEP.LoopAnimTime = 1.33
+-- цикл анимации серии (misscenter3), секунды; родная длина в модели 1.33 с, но это слишком быстро.
+-- У себя можно подобрать командой rem_nunchucks_loop_time <секунды>
+SWEP.LoopAnimTime = 2.2
+
+local cv_loop_time = CLIENT and CreateClientConVar("rem_nunchucks_loop_time", "2.2", true, false, "Nunchucks rapid strike animation cycle length, seconds", 0.3, 6)
 SWEP.LoopWaitTime = 0.1
 SWEP.LoopAttackTimeLength = 0.13
 SWEP.LoopAttackLen = 42
@@ -280,7 +283,7 @@ function SWEP:ThinkAdd()
         if looping ~= (self.ClientLoopState or false) then
             self.ClientLoopState = looping
             if self:IsLocal() then
-                self:PlayAnim(self.LoopAttackAnim or "attack_loop", self.LoopAnimTime or self.AnimTime1, looping, nil, false)
+                self:PlayAnim(self.LoopAttackAnim or "attack_loop", cv_loop_time and cv_loop_time:GetFloat() or self.LoopAnimTime, looping, nil, false)
             end
         end
 
