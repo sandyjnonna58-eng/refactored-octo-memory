@@ -312,26 +312,7 @@ function SWEP:InUse()
 		return false
 	end
 
-	local inuse = ( ((not ply.InVehicle || !ply:InVehicle()) and !hg.RagdollCombatInUse(ply)) && self:KeyDown(IN_USE)) || ((ply.InVehicle && ply:InVehicle() or hg.RagdollCombatInUse(ply) or ent == ply) && not self:KeyDown(IN_USE)) || (IsValid(ply.OldRagdoll))
-
-	-- на ногах E обычно опускает оружие, но E + ЛКМ - это замах
-	if not inuse and self.canchargeattack and self:ChargeUsesE() and (self.Charging or self:KeyDown(IN_ATTACK)) then
-		return true
-	end
-
-	return inuse
-end
-
--- замах (заряженный удар): на ногах E + ЛКМ; в рэгдолле и машине R + ЛКМ, там E нужна, чтобы вообще бить
-function SWEP:ChargeUsesE()
-	local ply = self:GetOwner()
-	if not IsValid(ply) or IsValid(ply.FakeRagdoll) or IsValid(ply.OldRagdoll) then return false end
-	if ply.InVehicle and ply:InVehicle() then return false end
-	return not hg.RagdollCombatInUse(ply)
-end
-
-function SWEP:ChargeKeyDown()
-	return self:KeyDown(self:ChargeUsesE() and IN_USE or IN_RELOAD)
+	return ( ((not ply.InVehicle || !ply:InVehicle()) and !hg.RagdollCombatInUse(ply)) && self:KeyDown(IN_USE)) || ((ply.InVehicle && ply:InVehicle() or hg.RagdollCombatInUse(ply) or ent == ply) && not self:KeyDown(IN_USE)) || (IsValid(ply.OldRagdoll))
 end
 
 SWEP.modelscale = 1
@@ -2910,7 +2891,7 @@ function SWEP:CustomThink()
         if hg.KeyDown(owner, IN_ATTACK) then
             holdInputs = holdInputs + 1
         end
-        if self:ChargeKeyDown() then
+        if hg.KeyDown(owner, IN_RELOAD) then
             holdInputs = holdInputs + 1
         end
 
@@ -3475,7 +3456,7 @@ function SWEP:PrimaryAttack()
     if (self:GetLastAttack() + self:GetAttackWait()) > CurTime() then return end
     if self.lastattack and (self.lastattack + self.attackwait) > CurTime() then return end
 
-    if self.canchargeattack and self:ChargeKeyDown() then
+    if self.canchargeattack and hg.KeyDown(ply, IN_RELOAD) then
         if not self:CanChargeAttack() then return end
         self:StartChargeAttack()
         return
