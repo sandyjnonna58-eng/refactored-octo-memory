@@ -3,6 +3,7 @@ if SERVER then
 	resource.AddFile("models/hatedmekkr/boneworks/weapons/melee/blunts/misc/bw_wpn_bnt_noodledog.mdl")
 	resource.AddFile("materials/hatedmekkr/boneworks/weapons/melee/blunts/misc/noodledog/bw_wpn_bnt_noodledog.vmt")
 	resource.AddSingleFile("materials/hatedmekkr/boneworks/weapons/melee/blunts/misc/noodledog/bw_wpn_bnt_noodledog_nrm.vtf")
+	resource.AddSingleFile("materials/entities/weapon_noodledog.png")
 end
 
 -- Noodle Dog: fun toy from Boneworks. Bat animations, no sounds at all,
@@ -14,6 +15,13 @@ SWEP.Category = "Weapons - Melee"
 SWEP.Spawnable = true
 SWEP.AdminOnly = false
 SWEP.HoldType = "slam"
+
+-- иконка - рендер самой модели (materials/entities/weapon_noodledog.png)
+if CLIENT then
+	SWEP.WepSelectIcon = Material("entities/weapon_noodledog.png")
+	SWEP.IconOverride = "entities/weapon_noodledog.png"
+	SWEP.BounceWeaponIcon = false
+end
 
 local MODEL = "models/hatedmekkr/boneworks/weapons/melee/blunts/misc/bw_wpn_bnt_noodledog.mdl"
 local SILENT = "common/null.wav"
