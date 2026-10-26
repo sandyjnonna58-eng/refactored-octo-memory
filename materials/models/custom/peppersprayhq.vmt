@@ -1,0 +1,21 @@
+VertexLitGeneric
+{
+	$basetexture "models/custom/pepperspray"
+	$bumpmap "models/custom/pepperspray_nm"
+	$surfaceprop Plastic_Box
+
+	$envmap "env_cubemap"
+	$envmaptint "[0.02 0.02 0.02]"
+	$envmapsaturation 0.97
+
+	$phong 1
+	$phongfresnelranges "[4 0.7 5]"
+	$phongexponent 6
+	$phongboost 0.05
+
+	$rimlight 1
+	$rimlightexponent 3
+	$rimlightboost 3
+
+	$model 1
+}

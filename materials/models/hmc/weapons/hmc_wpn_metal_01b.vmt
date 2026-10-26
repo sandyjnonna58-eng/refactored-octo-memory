@@ -1,0 +1,8 @@
+"VertexLitGeneric"
+{
+	"$basetexture" "models/HMC/Weapons/HMC_WPN_Metal_01a"
+			"$envmap" "models/HMC/Weapons/HMC_FX_Glow_03b"
+		"$envmapcontrast" 0
+		"$envmapsaturation" 1
+		"$envmaptint" "[0.1 0.1 0.1]"
+"$halflambert" "1" "$nocull" "1"  }

@@ -1,0 +1,28 @@
+
+
+"vertexlitgeneric"
+{
+"$basetexture" "models\tfre\weapons\nunchucks\bo3_nunchucks_d"
+"$bumpmap" "models\tfre\weapons\nunchucks\bo3_nunchucks_n"
+"$PhongExponentTexture" "models\tfre\weapons\nunchucks\bo3_nunchucks_s"
+"$envmap"                        "env_cubemap"      
+"$envmaptint"                    "[.03 .03 .03]" 
+"$normalmapalphaenvmapmask"      "1"  
+
+"$phong"                         "1"                      
+"$phongboost"                    "4"          
+
+"$phongfresnelranges" "[2.6 4 4.6]"           
+"$phongalbedotint"			"1"
+//"$phongalbedoboost"			"15"
+"$envmapfresnel"		"0.7"
+"$phongexponent" "7"
+"$envmapFresnelMinMaxExp""[0.9 1 2]"  
+
+"$halflambert" 	   "1" 
+
+//$phongtint "[0 0 0]"
+
+
+
+}

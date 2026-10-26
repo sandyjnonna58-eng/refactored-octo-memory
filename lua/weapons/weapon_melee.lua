@@ -3676,6 +3676,7 @@ function SWEP:Initialize()
         self:Activate()
     end
     self:SetHold(self.HoldType)
+    self:ConvertLegacyMeleeFields()
     
     util.PrecacheSound(self.AttackSwing)
     util.PrecacheSound(self.AttackHit)
@@ -3702,6 +3703,34 @@ function SWEP:Initialize()
     self:PrecacheConfiguredHitSoundLayer(self:GetDefaultBlockSound("wood", "break"))
 
     self:InitAdd()
+end
+
+-- оружие из MELEECITY задаёт звуки старыми полями (SwingSound, HitFleshExtra, HitFleshPlus,
+-- MeleeMaterial, BlockImpactSound): переводим их в наши, если своих нет
+function SWEP:ConvertLegacyMeleeFields()
+    if self.SwingSound and self.swingsoundextra == nil then
+        self.swingsoundextra = {self.SwingSound, 50, self.SwingSoundPitch or {95, 105}}
+    end
+
+    if istable(self.HitFleshExtra) and #self.HitFleshExtra > 0 and self.hitsoundextra == nil then
+        local layer = {}
+        for i, snd in ipairs(self.HitFleshExtra) do
+            layer[i] = {snd, 75, self.HitFleshExtraPitch or 100}
+        end
+        self.hitsoundextra = layer
+    end
+
+    if self.HitFleshPlus and self.hitsoundplus == nil then
+        self.hitsoundplus = {self.HitFleshPlus, 75, 100}
+    end
+
+    if self.MeleeMaterial and self.MeleeMaterial ~= "none" and self.BlockMaterial == nil then
+        self.BlockMaterial = self.MeleeMaterial
+    end
+
+    if self.BlockImpactSound and self.BlockSound == nil then
+        self.BlockSound = {self.BlockImpactSound, 60, 100}
+    end
 end
 
 function SWEP:IsLocal()
