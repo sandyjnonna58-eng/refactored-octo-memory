@@ -23,6 +23,8 @@ SWEP.DrawAnimTime = 1.8
 SWEP.BlockAnimTime = 2.25
 SWEP.BlockAnimFreezeCycle = 0.08
 SWEP.LoopAttackTime = 0.3
+-- длительность одного цикла анимации серии (в цикле два удара: влево и вправо)
+SWEP.LoopAnimTime = 1.2
 SWEP.LoopWaitTime = 0.1
 SWEP.LoopAttackTimeLength = 0.13
 SWEP.LoopAttackLen = 42
@@ -40,9 +42,6 @@ SWEP.LoopAttackStayStamina = 20
 SWEP.LoopAttackStopCooldown = 1.55
 SWEP.LoopAttackGraceTime = 0.25
 SWEP.LoopAttackAnim = "misscenter3"
--- в серии каждый удар - полный взмах, по очереди в две стороны (misscenter3 по кругу почти стоит на месте)
-SWEP.LoopStrikeAnims = {"misscenter1", "misscenter2"}
-SWEP.LoopStrikeAnimTime = 0.6
 
 SWEP.Attack2Time = 0.3
 SWEP.AnimTime2 = 1
@@ -214,11 +213,6 @@ function SWEP:SetLoopAttackOverrides(enable, direction)
     self.LoopAttackOldValues = nil
 end
 
-function SWEP:GetLoopStrikeAnim(strike)
-    local anims = self.LoopStrikeAnims
-    return anims[(strike % #anims) + 1]
-end
-
 function SWEP:StartLoopAttack()
     local owner = self:GetOwner()
     if not IsValid(owner) then return end
@@ -227,11 +221,6 @@ function SWEP:StartLoopAttack()
     local direction = self.LoopAttackDirection or 1
     self.LoopAttackDirection = direction == 1 and -1 or 1
     self:SetLoopAttackOverrides(true, direction)
-
-    -- взмах: своему игроку его включает клиент по счётчику, остальным - сообщение melee_attack
-    local strike = self:GetNWInt("RemNunStrike", 0) + 1
-    self:SetNWInt("RemNunStrike", strike)
-    self:PlayAnim(self:GetLoopStrikeAnim(strike), self.LoopStrikeAnimTime, false, nil, false, false)
 
     local mul = 1
     if owner.organism and owner.organism.stamina and owner.organism.stamina[1] then
@@ -285,14 +274,13 @@ end
 
 function SWEP:ThinkAdd()
     if CLIENT then
-        -- удары серии (R + ЛКМ) запускает сервер: на каждый новый удар играем взмах у себя
-        local strike = self:GetNWInt("RemNunStrike", 0)
-        if self.ClientStrike == nil then
-            self.ClientStrike = strike
-        elseif strike ~= self.ClientStrike then
-            self.ClientStrike = strike
+        -- серию (R + ЛКМ) запускает сервер; своему игроку анимацию включаем тут по флагу,
+        -- остальные получают её обычным сообщением melee_attack
+        local looping = self:GetNWBool("RemNunLoop", false)
+        if looping ~= (self.ClientLoopState or false) then
+            self.ClientLoopState = looping
             if self:IsLocal() then
-                self:PlayAnim(self:GetLoopStrikeAnim(strike), self.LoopStrikeAnimTime, false, nil, false)
+                self:PlayAnim(self.LoopAttackAnim or "attack_loop", self.LoopAnimTime or self.AnimTime1, looping, nil, false)
             end
         end
 
@@ -361,6 +349,8 @@ function SWEP:ThinkAdd()
             self.LoopAttackPendingUntil = nil
             if canStartLoopState then
                 self.LoopInputState = true
+                self:SetNWBool("RemNunLoop", true)
+                self:PlayAnim(self.LoopAttackAnim or "attack_loop", self.LoopAnimTime or self.AnimTime1, true, nil, false, false)
             end
         end
     end
@@ -371,6 +361,8 @@ function SWEP:ThinkAdd()
         self.LoopInputState = false
         self.LoopAttackPendingUntil = nil
         self.LoopAttackCooldownEnd = CurTime() + (self.LoopAttackStopCooldown or 1)
+        self:SetNWBool("RemNunLoop", false)
+        self:PlayAnim(self.LoopAttackAnim or "attack_loop", self.LoopAnimTime or self.AnimTime1, false, nil, false, false)
     end
 
     if self.LoopInputState and self:CanStartLoopAttack(true, false) then
@@ -383,6 +375,7 @@ function SWEP:Holster(wep)
     if SERVER then
         self.LoopInputState = false
         self.LoopAttackPendingUntil = nil
+        self:SetNWBool("RemNunLoop", false)
     end
     return self.BaseClass.Holster(self, wep)
 end
