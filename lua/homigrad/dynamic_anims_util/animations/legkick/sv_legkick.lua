@@ -218,15 +218,23 @@ function PLAYER:LegAttack()
 
     local anim = "kick_pistol_base"
     anim = (self:KeyDown(IN_DUCK) or self:Crouching()) and "kick_pistol_base_crouch" or self:EyeAngles()[1] > 60 and "curbstomp_base" or self:EyeAngles()[1] > 35 and "kick_pistol_25_base" or self:EyeAngles()[1] > 20 and "kick_pistol_45_base" or anim
+    local isCurbstomp = anim == "curbstomp_base"
+
+    -- в прыжке - воздушные анимации из MELEECITY (zcity_extension_meleecity_dropkicking),
+    -- если они есть у модели (приходят с аддоном анимаций пинка); иначе остаётся наземная
+    if isMidAir then
+        local pitch = self:EyeAngles()[1]
+        local airAnim = pitch > 60 and "curbstomp_midair" or pitch > 35 and "kick_midair_25" or pitch > 20 and "kick_midair_45" or "kick_midair"
+        if self:LookupSequence(airAnim) ~= -1 then anim = airAnim end
+    end
 
     self:EmitSound("player/clothes_generic_foley_0" .. math.random(1,5) .. ".wav",65)
 
     local org = self.organism
-    org.stamina.subadd = org.stamina.subadd + (anim == "curbstomp_base" and 12 or 20) / (org.superfighter and 2 or 1)
+    org.stamina.subadd = org.stamina.subadd + (isCurbstomp and 12 or 20) / (org.superfighter and 2 or 1)
     local speedmul = (2 - (org.stamina[1] / org.stamina.max))
     local speed = 1.5 * speedmul
     local animstopAdjust = 0.3 * speedmul
-    local isCurbstomp = anim == "curbstomp_base"
     local dmg = isCurbstomp and 22 or 10 * (2 - speedmul)
     dmg = dmg * (self:IsBerserk() and org.berserk * 5 or 1)
     dmg = dmg * (org.legstrength or 1)
