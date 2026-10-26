@@ -1,7 +1,7 @@
 if SERVER then AddCSLuaFile() end
 SWEP.Base = "weapon_melee"
 SWEP.PrintName = "Nunchucks"
-SWEP.Instructions = "A pair of traditional nunchucks—two short sticks connected by a chain—designed for fast, fluid strikes and defensive control. Lightweight and agile, they reward timing and precision over brute force.\n\nLMB to attack.\nRMB to block.\nE + LMB to special attack."
+SWEP.Instructions = "A pair of traditional nunchucks—two short sticks connected by a chain—designed for fast, fluid strikes and defensive control. Lightweight and agile, they reward timing and precision over brute force.\n\nLMB to attack.\nRMB to block.\nR + LMB (hold) for rapid strikes."
 SWEP.Category = "Weapons - Melee"
 SWEP.Spawnable = true
 SWEP.AdminOnly = false
@@ -127,14 +127,8 @@ end
 
 function SWEP:PrimaryAttack()
     local owner = self:GetOwner()
-    if IsValid(owner) and hg.KeyDown(owner, IN_USE) then return end
+    if IsValid(owner) and hg.KeyDown(owner, IN_RELOAD) then return end
     return self.BaseClass.PrimaryAttack(self)
-end
-
--- особый удар идёт с зажатой E, а обычный InUse() с E выключает оружие: проверяем без E
-function SWEP:CanUseSpecial()
-    local owner = self:GetOwner()
-    return IsValid(owner) and owner:Alive() and not IsValid(owner.FakeRagdoll) and (owner:GetNWFloat("power", 1) >= 0.4)
 end
 
 function SWEP:IsEquipLocked()
@@ -149,7 +143,7 @@ function SWEP:CanStartLoopAttack(requireAttackReady, checkCooldown)
     if not IsValid(owner) then return false end
     if self:IsEquipLocked() then return false end
     if self:GetBlocking() then return false end
-    if not self:CanUseSpecial() then return false end
+    if not self:InUse() then return false end
     if requireAttackReady then
         if self:GetInAttack() then return false end
         if (self:GetLastAttack() + self:GetAttackWait()) > CurTime() then return false end
@@ -250,7 +244,7 @@ function SWEP:StartTapSecondaryAttack()
     if not IsValid(owner) then return end
     if self:IsEquipLocked() then return end
     if self:GetBlocking() then return end
-    if not self:CanUseSpecial() then return end
+    if not self:InUse() then return end
     if (self:GetLastAttack() + self:GetAttackWait()) > CurTime() then return end
     if self.lastattack and (self.lastattack + self.attackwait) > CurTime() then return end
 
@@ -326,7 +320,8 @@ function SWEP:ThinkAdd()
         staminaReady = owner.organism.stamina[1] >= staminaMin
     end
 
-    local inputDown = hg.KeyDown(owner, IN_USE) and hg.KeyDown(owner, IN_ATTACK) and not hg.KeyDown(owner, IN_ATTACK2)
+    -- серия быстрых ударов: R + ЛКМ
+    local inputDown = hg.KeyDown(owner, IN_RELOAD) and hg.KeyDown(owner, IN_ATTACK) and not hg.KeyDown(owner, IN_ATTACK2)
 
     local wantLoop = inputDown and staminaReady
     local canStartLoopState = self:CanStartLoopAttack(false, true)
