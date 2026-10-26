@@ -2601,6 +2601,8 @@ end
 
 local function QueueMeleeHitStop(self, speedMul, pause, reverse, stopanim)
     if not CLIENT then return end
+    -- зацикленную анимацию (серия ударов нунчаков) стоп-кадр ломает: подгонка под откат делает её то бешеной, то застывшей
+    if self.cycling then return end
 
     self.hitstopToken = (self.hitstopToken or 0) + 1
 
