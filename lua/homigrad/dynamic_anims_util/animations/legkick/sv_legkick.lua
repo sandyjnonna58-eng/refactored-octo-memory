@@ -25,8 +25,12 @@ local CURBSTOMP_HEAD_RESET = 8
 -- попал - сам падаешь рэгдоллом и летишь дальше, промахнулся - падаешь рэгдоллом при приземлении
 local MIDAIR_KICK_MIN_STAMINA = 85
 local MIDAIR_KICK_MAX_DAMAGE = 21
-local MIDAIR_KICK_FAKE_CHANCE = 0.3
-local MIDAIR_KICK_PUSH_MUL = 1.7
+local MIDAIR_KICK_FAKE_CHANCE = 0.7
+-- куда отлетает жертва: вперёд MIDAIR_KICK_LAUNCH + доля скорости пинающего, вверх MIDAIR_KICK_LAUNCH_UP
+local MIDAIR_KICK_LAUNCH = 420
+local MIDAIR_KICK_LAUNCH_SPEED_MUL = 0.7
+local MIDAIR_KICK_LAUNCH_UP = 200
+local MIDAIR_KICK_STAND_PUSH_MUL = 0.6 -- не упал - просто сильно отталкивает
 local MIDAIR_KICK_TRACE_RANGE = 82
 local MIDAIR_KICK_TRACE_SIZE = Vector(7, 7, 7)
 
@@ -405,15 +409,38 @@ function PLAYER:LegAttack()
 						ent:EmitSound("physics/body/body_medium_impact_hard"..math.random(6)..".wav", 60, math.random(85, 105), 0.6)
 					end
 
-                    if ent:IsPlayer() then
-                        local fakeChance = isMidAir and MIDAIR_KICK_FAKE_CHANCE or isCurbstomp and CURBSTOMP_FAKE_CHANCE or LEG_KICK_FAKE_CHANCE
+                    if ent:IsPlayer() and isMidAir then
+                        -- пинок в прыжке: жертву уносит, тем дальше, чем быстрее летел пинающий
+                        local dir = Vector(normal.x, normal.y, 0)
+                        if dir:LengthSqr() < 0.001 then dir = self:GetForward() end
+                        dir:Normalize()
+                        local kickerVel = self:GetVelocity()
+                        local launch = dir * (MIDAIR_KICK_LAUNCH + Vector(kickerVel.x, kickerVel.y, 0):Length() * MIDAIR_KICK_LAUNCH_SPEED_MUL)
+                        launch.z = MIDAIR_KICK_LAUNCH_UP
+
+                        if math.Rand(0, 1) <= MIDAIR_KICK_FAKE_CHANCE then
+                            timer.Simple(0, function()
+                                if not IsValid(ent) or not ent:Alive() then return end
+                                if not IsValid(ent.FakeRagdoll) then hg.Fake(ent) end
+                                local rag = ent.FakeRagdoll
+                                if not IsValid(rag) then return end
+                                for i = 0, rag:GetPhysicsObjectCount() - 1 do
+                                    local phys = rag:GetPhysicsObjectNum(i)
+                                    if IsValid(phys) then phys:SetVelocity(phys:GetVelocity() + launch) end
+                                end
+                            end)
+                        else
+                            ent:SetVelocity(launch * MIDAIR_KICK_STAND_PUSH_MUL)
+                        end
+                    elseif ent:IsPlayer() then
+                        local fakeChance = isCurbstomp and CURBSTOMP_FAKE_CHANCE or LEG_KICK_FAKE_CHANCE
                         if math.Rand(0, 1) <= fakeChance then
                             timer.Simple(0,function()
                                 hg.Fake(ent)
                             end)
                         end
 
-                        ent:SetVelocity(normal * playerPush * (isMidAir and MIDAIR_KICK_PUSH_MUL or 1))
+                        ent:SetVelocity(normal * playerPush)
                     end
 
                     if isCurbstomp then
