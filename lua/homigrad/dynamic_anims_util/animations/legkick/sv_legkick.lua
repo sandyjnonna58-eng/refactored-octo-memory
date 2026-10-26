@@ -21,6 +21,14 @@ local CURBSTOMP_SEGMENT_SIZE = Vector(7, 7, 7)
 local CURBSTOMP_HEAD_RADIUS = 16
 local CURBSTOMP_HEAD_STOMPS_TO_POP = 7
 local CURBSTOMP_HEAD_RESET = 8
+-- пинок в прыжке (из MELEECITY): стоит много выносливости, урон растёт со скоростью полёта,
+-- попал - сам падаешь рэгдоллом и летишь дальше, промахнулся - падаешь рэгдоллом при приземлении
+local MIDAIR_KICK_MIN_STAMINA = 85
+local MIDAIR_KICK_MAX_DAMAGE = 21
+local MIDAIR_KICK_FAKE_CHANCE = 0.3
+local MIDAIR_KICK_PUSH_MUL = 1.7
+local MIDAIR_KICK_TRACE_RANGE = 82
+local MIDAIR_KICK_TRACE_SIZE = Vector(7, 7, 7)
 
 local function getBoneWorld(ent, boneName)
     if not IsValid(ent) then return end
@@ -188,7 +196,10 @@ local function handleCurbstompHead(ent, hitPos)
 end
 
 function PLAYER:LegAttack()
-    if not self:Alive() or hg.GetCurrentCharacter(self):IsRagdoll() or self:GetNWFloat("InLegKick",0) > CurTime() or not self:IsOnGround() or self:IsSprinting() then return end
+    if not self:Alive() or hg.GetCurrentCharacter(self):IsRagdoll() or self:GetNWFloat("InLegKick",0) > CurTime() then return end
+    local isMidAir = not self:IsOnGround() and self:WaterLevel() < 2 and self:GetMoveType() == MOVETYPE_WALK
+    if not isMidAir and (not self:IsOnGround() or self:IsSprinting()) then return end
+    if isMidAir and self.organism.stamina[1] < MIDAIR_KICK_MIN_STAMINA then return end
     if self.InLegKick and self.InLegKick > CurTime() then return end
     if self:GetNWBool("TauntStopMoving", false) then return end
     if hook.Run( "PlayerCanLegAttack", self ) == false then return end
@@ -220,13 +231,17 @@ function PLAYER:LegAttack()
     dmg = dmg * (self:IsBerserk() and org.berserk * 5 or 1)
     dmg = dmg * (org.legstrength or 1)
     dmg = dmg * (isCurbstomp and CURBSTOMP_DAMAGE_MUL or LEG_KICK_DAMAGE_MUL)
+    if isMidAir then
+        local mult = Lerp(math.Clamp(self:GetVelocity():Length() / 700, 0, 1), 1.25, 2.25)
+        dmg = math.min(dmg * mult * 0.5, MIDAIR_KICK_MAX_DAMAGE)
+    end
     --print(dmg)
     --print(speedmul)
     hook.Run("HomigradLegKick", self)
     self:PlayCustomAnims(anim, true, speed, true, animstopAdjust, {
         [0.12] = function(self)
             if hg.GetCurrentCharacter(self):IsRagdoll() then return end
-            if !self:IsOnGround() then self:PlayCustomAnims("") return end
+            if !self:IsOnGround() and !isMidAir then self:PlayCustomAnims("") return end
             local ang = self:EyeAngles()
             ang[1] = 0
 
@@ -237,13 +252,13 @@ function PLAYER:LegAttack()
                 endpos = reportPos + ang:Forward() * 32,
                 filter = {hg.GetCurrentCharacter(self),self}
             })
-            if tr.Hit and self:IsOnGround() then
-                self:SetVelocity(ang:Forward() * -300)
+            if tr.Hit and (self:IsOnGround() or isMidAir) then
+                self:SetVelocity(ang:Forward() * (isMidAir and -120 or -300))
             end
         end,
         [0.21] = function(self)
             if hg.GetCurrentCharacter(self):IsRagdoll() then return end
-            if !self:IsOnGround() then self:PlayCustomAnims("") return end
+            if !self:IsOnGround() and !isMidAir then self:PlayCustomAnims("") return end
             local ang = self:EyeAngles()
             if ang[1] > 55 and not (self:KeyDown(IN_DUCK) or self:Crouching()) then
 				self:ViewPunch(vpang)
@@ -258,14 +273,14 @@ function PLAYER:LegAttack()
                 endpos = reportPos + ang:Forward() * 72,
                 filter = {hg.GetCurrentCharacter(self),self}
             })
-            if tr.Hit and self:IsOnGround() then
+            if tr.Hit and (self:IsOnGround() or isMidAir) then
                 --self:EmitSound("weapons/melee/blunt_light" .. math.random(1,8) .. ".wav")
-                self:SetVelocity(ang:Forward() * -150)
+                self:SetVelocity(ang:Forward() * (isMidAir and -70 or -150))
             end
         end,
         [0.33] = function(self) -- kick moment
             if hg.GetCurrentCharacter(self):IsRagdoll() then return end
-            if !self:IsOnGround() then self:PlayCustomAnims("") return end
+            if !self:IsOnGround() and !isMidAir then self:PlayCustomAnims("") return end
             local ang = self:EyeAngles()
             ang[1] = 0
 
@@ -273,6 +288,36 @@ function PLAYER:LegAttack()
 
             local inDuck = (self:KeyDown(IN_DUCK) or self:Crouching())
             local tr, normal, footPos = getKickTrace(self, inDuck, isCurbstomp)
+            if isMidAir and not tr.Hit then
+                local eyeAng = self:EyeAngles()
+                eyeAng[1] = math.max(eyeAng[1], 10)
+                normal = eyeAng:Forward()
+                tr = util.TraceHull({
+                    start = self:EyePos(),
+                    endpos = self:EyePos() + normal * MIDAIR_KICK_TRACE_RANGE,
+                    filter = {hg.GetCurrentCharacter(self), self},
+                    maxs = MIDAIR_KICK_TRACE_SIZE,
+                    mins = -MIDAIR_KICK_TRACE_SIZE
+                })
+            end
+
+            if isMidAir and tr.Hit then
+                self.MidairKickHit = true
+                local velocity = self:GetVelocity()
+                timer.Simple(0, function()
+                    if not IsValid(self) or not self:Alive() then return end
+                    self:PlayCustomAnims("")
+                    self.InLegKick = 0
+                    self:SetNWFloat("InLegKick", 0)
+                    hg.Fake(self)
+                    local rag = self.FakeRagdoll
+                    if not IsValid(rag) then return end
+                    for i = 0, rag:GetPhysicsObjectCount() - 1 do
+                        local phys = rag:GetPhysicsObjectNum(i)
+                        if IsValid(phys) then phys:SetVelocity(velocity) end
+                    end
+                end)
+            end
 
             local org = self.organism
             if org.rleg == 1 or org.rlegdislocation then
@@ -353,14 +398,14 @@ function PLAYER:LegAttack()
 					end
 
                     if ent:IsPlayer() then
-                        local fakeChance = isCurbstomp and CURBSTOMP_FAKE_CHANCE or LEG_KICK_FAKE_CHANCE
+                        local fakeChance = isMidAir and MIDAIR_KICK_FAKE_CHANCE or isCurbstomp and CURBSTOMP_FAKE_CHANCE or LEG_KICK_FAKE_CHANCE
                         if math.Rand(0, 1) <= fakeChance then
                             timer.Simple(0,function()
                                 hg.Fake(ent)
                             end)
                         end
 
-                        ent:SetVelocity(normal * playerPush)
+                        ent:SetVelocity(normal * playerPush * (isMidAir and MIDAIR_KICK_PUSH_MUL or 1))
                     end
 
                     if isCurbstomp then
@@ -401,6 +446,27 @@ function PLAYER:LegAttack()
     })
     self.InLegKick = CurTime() + speed - animstopAdjust
     self:SetNWFloat("InLegKick",CurTime() + speed - animstopAdjust)
+
+    if isMidAir then
+        self.MidairKickHit = nil
+        local timerName = "rem_midair_kick_" .. self:EntIndex()
+        timer.Create(timerName, 0.05, 0, function()
+            if not IsValid(self) or not self:Alive() or IsValid(self.FakeRagdoll) or self.MidairKickHit then
+                timer.Remove(timerName)
+                return
+            end
+            if not self:IsOnGround() then return end
+
+            timer.Remove(timerName)
+            timer.Simple(0.1, function()
+                if not IsValid(self) or not self:Alive() or self.MidairKickHit or IsValid(self.FakeRagdoll) then return end
+                self:PlayCustomAnims("")
+                self.InLegKick = 0
+                self:SetNWFloat("InLegKick", 0)
+                hg.Fake(self)
+            end)
+        end)
+    end
 end
 
 hook.Add("HG_MovementCalc_2","HG-LegKickAnim",function(mul, ply, cmd, mv)
