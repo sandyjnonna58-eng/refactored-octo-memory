@@ -1,5 +1,7 @@
 if not SERVER then return end
 
+resource.AddSingleFile("sound/rem_death_cfyt.ogg") -- звук смерти (cl_cdeath.lua)
+
 
 CreateConVar(
     "deatheffect_spectator", "1",

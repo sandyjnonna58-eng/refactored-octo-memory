@@ -36,6 +36,9 @@ local DEATH_CAUSES = {
 local DEFAULT_CAUSE = DEATH_CAUSES.player
 
 -- цвет вспышки и звук выбираются на рандом при каждой смерти (причина влияет только на надпись)
+-- звуки смерти, которые не привязаны к причине
+local EXTRA_DEATH_SOUNDS = {"rem_death_cfyt.ogg"}
+
 local DEATH_SOUNDS = {}
 do
     local seen = {}
@@ -45,7 +48,16 @@ do
             DEATH_SOUNDS[#DEATH_SOUNDS + 1] = cause.sound
         end
     end
+    for _, snd in ipairs(EXTRA_DEATH_SOUNDS) do
+        if not seen[snd] then
+            seen[snd] = true
+            DEATH_SOUNDS[#DEATH_SOUNDS + 1] = snd
+        end
+    end
 end
+
+-- пока играет звук смерти, всё остальное затихает: игровые звуки (soundfade) и музыка (hg.RemAudio)
+local DEATH_SOUND_FADE = 1.5
 
 local deathRandomColor = DEFAULT_CAUSE.color
 local deathRandomSound = DEFAULT_CAUSE.sound
@@ -357,6 +369,11 @@ local function StartDeathSound(cause)
         if not IsValid(station) then return end
         if not isDead then station:Stop() return end
         deathSoundChannels[#deathSoundChannels + 1] = station
+        if hg.RemAudio then
+            hg.RemAudio.SetExempt(station)
+            hg.RemAudio.Duck("deathsound", 0)
+        end
+        LocalPlayer():ConCommand("soundfade 100 99999 " .. DEATH_SOUND_FADE .. " 0")
         station:Play()
     end)
 end
@@ -382,9 +399,20 @@ local function CanSkipDeathScreen()
 end
 
 
+-- музыка глушится, пока реально играет звук смерти (каналы останавливают в нескольких местах)
+local function UpdateDeathSoundDuck()
+    if not hg.RemAudio then return end
+    local playing = false
+    for _, station in ipairs(deathSoundChannels) do
+        if IsValid(station) and station:GetState() == GMOD_CHANNEL_PLAYING then playing = true break end
+    end
+    hg.RemAudio.Duck("deathsound", playing and 0 or nil)
+end
+
 local function CinematicDeathTracker()
     local ply = LocalPlayer()
     if not IsValid(ply) then return end
+    UpdateDeathSoundDuck()
 
     if not DeathEffectRoundActive() then
         hasSpawned = ply:Alive()
