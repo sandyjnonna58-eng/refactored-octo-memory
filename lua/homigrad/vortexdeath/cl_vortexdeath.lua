@@ -28,6 +28,7 @@ local function CreateFonts()
 	surface.CreateFont("DeathVortex_Marks", {font = "VT323", size = math.floor(sh * 0.17), weight = 400, antialias = false, extended = true})
 	surface.CreateFont("DeathVortex_GiveUp", {font = "VT323", size = math.floor(sh * 0.075), weight = 400, antialias = false, extended = true})
 	surface.CreateFont("DeathVortex_Key", {font = "VT323", size = math.floor(sh * 0.035), weight = 400, antialias = false, extended = true})
+	surface.CreateFont("DeathVortex_Desc", {font = "VT323", size = math.floor(sh * 0.05), weight = 400, antialias = false, extended = true})
 end
 CreateFonts()
 hook.Add("OnScreenSizeChanged", "DeathVortex_Fonts", CreateFonts)
@@ -102,6 +103,70 @@ function DV.Draw(t, alpha, skipKey)
 		if skipKey then
 			draw.SimpleText("[" .. skipKey .. "]", "DeathVortex_Key", sw / 2, sh * 0.78 + sh * 0.055, Color(170, 20, 20, math.floor(a * 0.7)), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 		end
+	end
+end
+
+-- Экран после смерти ("Deceased.", autorun/client/cl_cdeath.lua) в том же стиле, под rem_deathost.mp3:
+-- вспышка - красный пиксельный шум с закрученными рукавами вокруг тёмного центра, за ~7 с уходит в черноту;
+-- надпись печатается красным пиксельным шрифтом по буквам. Фон и надпись раздельно: между ними cl_cdeath рисует силуэт тела.
+local DECEASED_TYPE_START, DECEASED_TYPE_SPEED = 0.25, 12 -- букв в секунду
+
+-- flash 1..0 - сила вспышки, alpha 0..255 - общая прозрачность
+function DV.DrawDeceasedBackground(t, alpha, flash)
+	local sw, sh = ScrW(), ScrH()
+	local mul = alpha / 255
+	local k = flash * flash
+
+	surface.SetDrawColor(math.floor(150 * k), 0, 0, alpha)
+	surface.DrawRect(0, 0, sw, sh)
+	if k <= 0 then return end
+
+	surface.SetMaterial(matNoise[math.floor(t * NOISE_FPS) % 4 + 1])
+	surface.SetDrawColor(255, 25, 25, math.floor(255 * k * mul))
+	surface.DrawTexturedRect(0, 0, sw, sh)
+
+	local size = math.max(sw, sh) * 1.5
+	DrawSpun(matSwirl, sw / 2, sh / 2, size, size * 0.72, t * SWIRL_SPIN * 3, 230 * k * mul, 0.72)
+
+	local cw = sw * (0.75 + 0.5 * (1 - flash))
+	surface.SetMaterial(matCentre)
+	surface.SetDrawColor(255, 255, 255, math.floor(242 * k * mul))
+	surface.DrawTexturedRect(sw / 2 - cw / 2, sh / 2 - cw * 0.25, cw, cw * 0.5)
+end
+
+local function Typed(str, t)
+	return string.sub(str, 1, math.Clamp(math.floor(t * DECEASED_TYPE_SPEED), 0, #str))
+end
+
+function DV.DrawDeceasedText(t, alpha, flash, text, desc, skipKey)
+	local sw, sh = ScrW(), ScrH()
+	-- на яркой вспышке надпись тёмная, по мере ухода в черноту - красная
+	local k = flash * flash
+	local col = Color(Lerp(k, 225, 15), Lerp(k, 20, 0), Lerp(k, 20, 0), alpha)
+	local outline = Color(Lerp(k, 20, 90), 0, 0, alpha)
+
+	-- заголовок, потом подпись; мигающий курсор в конце печатаемой строки
+	local tt = t - DECEASED_TYPE_START
+	local title = Typed(text, tt)
+	local titleDone = #title == #text
+	local sub = titleDone and Typed(desc, tt - #text / DECEASED_TYPE_SPEED - 0.3) or ""
+	local blink = math.floor(CurTime() * 2.5) % 2 == 0
+
+	-- выравнивание по ширине полной строки, чтобы текст не прыгал, пока печатается
+	surface.SetFont("DeathVortex_Marks")
+	local titleW = surface.GetTextSize(text)
+	surface.SetFont("DeathVortex_Desc")
+	local descW = surface.GetTextSize(desc)
+
+	local cursorTitle = (not titleDone or (#sub == 0 and blink)) and "_" or ""
+	draw.SimpleTextOutlined(title .. cursorTitle, "DeathVortex_Marks", (sw - titleW) / 2, sh * 0.45, col, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 3, outline)
+	if #sub > 0 then
+		local cursorDesc = (#sub < #desc or blink) and "_" or ""
+		draw.SimpleTextOutlined(sub .. cursorDesc, "DeathVortex_Desc", (sw - descW) / 2, sh * 0.6, col, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 2, outline)
+	end
+
+	if skipKey then
+		draw.SimpleText("[" .. skipKey .. "] skip", "DeathVortex_Key", sw / 2, sh * 0.92, Color(Lerp(k, 170, 15), Lerp(k, 20, 0), Lerp(k, 20, 0), math.floor(alpha * 0.7)), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 	end
 end
 

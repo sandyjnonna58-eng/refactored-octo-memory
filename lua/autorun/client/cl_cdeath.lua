@@ -19,27 +19,26 @@ local DOUBLE_CLICK_WINDOW = 0.5
 local SKIP_MIN_TIME       = 0.3
 local CAUSE_WAIT_TIME     = 0.3
 
--- причины смерти (присылает сервер, sv_cdeath.lua): у каждой свой звук на экране смерти и надпись при суициде;
--- цвет вспышки - на рандом. Звук - файл из sound/, чтобы поменять, достаточно вписать другой
+-- причины смерти (присылает сервер, sv_cdeath.lua): от причины зависит надпись при суициде
 local DEATH_CAUSES = {
-    melee     = {color = Color(200, 0, 0),     sound = "rem_brutaldeath.mp3"},            -- ближнее оружие и кулаки
-    gun       = {color = Color(200, 0, 0),     sound = "rem_deathost.mp3"},               -- огнестрел
-    explosion = {color = Color(255, 120, 0),   sound = "rem_earsringaswounddeepens.ogg"}, -- взрыв
-    player    = {color = Color(200, 0, 0),     sound = "rem_brutaldeath.mp3"},            -- убил игрок чем-то другим
-    npc       = {color = Color(220, 0, 110),   sound = "rem_brutaldeath.mp3"},
-    organism  = {color = Color(110, 0, 190),   sound = "rem_heartstop.wav"},
-    suicide   = {color = Color(230, 230, 230), sound = "rem_deathost.mp3"},
-    fire      = {color = Color(255, 190, 0),   sound = "rem_deathost.mp3"},
-    fall      = {color = Color(140, 140, 140), sound = "rem_deathost.mp3"},
-    drown     = {color = Color(0, 70, 220),    sound = "rem_braindeath.mp3"},
-    poison    = {color = Color(40, 190, 40),   sound = "rem_deathost.mp3"},
-    shock     = {color = Color(0, 200, 230),   sound = "rem_braindeath.mp3"},
-    brain     = {color = Color(235, 150, 200), sound = "rem_braindeath.mp3"},
+    melee     = {color = Color(200, 0, 0)},     -- ближнее оружие и кулаки
+    gun       = {color = Color(200, 0, 0)},     -- огнестрел
+    explosion = {color = Color(255, 120, 0)},   -- взрыв
+    player    = {color = Color(200, 0, 0)},     -- убил игрок чем-то другим
+    npc       = {color = Color(220, 0, 110)},
+    organism  = {color = Color(110, 0, 190)},
+    suicide   = {color = Color(230, 230, 230)},
+    fire      = {color = Color(255, 190, 0)},
+    fall      = {color = Color(140, 140, 140)},
+    drown     = {color = Color(0, 70, 220)},
+    poison    = {color = Color(40, 190, 40)},
+    shock     = {color = Color(0, 200, 230)},
+    brain     = {color = Color(235, 150, 200)},
 }
 local DEFAULT_CAUSE = DEATH_CAUSES.player
 
--- если файла звука нет, играет этот
-local FALLBACK_DEATH_SOUND = "rem_deathost.mp3"
+-- звук экрана смерти - всегда этот (экран в стиле вихря, vortexdeath/cl_vortexdeath.lua)
+local DEATH_SOUND = "rem_deathost.mp3"
 
 -- пока играет звук смерти, всё остальное затихает: игровые звуки (soundfade) и музыка (hg.RemAudio)
 local DEATH_SOUND_FADE = 1.5
@@ -348,9 +347,7 @@ end
 
 local function StartDeathSound(cause)
     deathSoundPending = false
-    local path = "sound/" .. (cause or DEFAULT_CAUSE).sound
-    if not file.Exists(path, "GAME") then path = "sound/" .. FALLBACK_DEATH_SOUND end
-    sound.PlayFile(path, "noplay", function(station)
+    sound.PlayFile("sound/" .. DEATH_SOUND, "noplay", function(station)
         if not IsValid(station) then return end
         if not isDead then station:Stop() return end
         deathSoundChannels[#deathSoundChannels + 1] = station
@@ -794,12 +791,17 @@ local function CinematicDeathBackground()
 		local overlayAlpha = realish and math.floor((fadeOutProgress > 0 and 1 - fadeOutProgress or fadeProgress) * 255) or math.floor((1 - fadeOutProgress) * 255)
         local causeColor = deathRandomColor
         local flash = realish and 0 or (1 - fadeProgress)
-        surface.SetDrawColor(math.floor(causeColor.r * flash), math.floor(causeColor.g * flash), math.floor(causeColor.b * flash), overlayAlpha)
-        surface.DrawRect(0, 0, sw, sh)
+        local vortex = not realish and DeathScreenEnabled() and hg and hg.VortexDeath and hg.VortexDeath.DrawDeceasedBackground
+        if vortex then
+            hg.VortexDeath.DrawDeceasedBackground(stageElapsed, overlayAlpha, flash)
+        else
+            surface.SetDrawColor(math.floor(causeColor.r * flash), math.floor(causeColor.g * flash), math.floor(causeColor.b * flash), overlayAlpha)
+            surface.DrawRect(0, 0, sw, sh)
+        end
 
         if realish then return end
 
-        if CanSkipDeathScreen() then
+        if CanSkipDeathScreen() and not vortex then
             local hint = "[" .. jumpKeyName .. "] skip"
             surface.SetFont("DeathEffect_Hint")
             local hw, hh = surface.GetTextSize(hint)
@@ -831,6 +833,12 @@ local function CinematicDeathBackground()
                 render.SuppressEngineLighting(false)
                 cam.IgnoreZ(false)
             cam.End3D()
+        end
+
+        if vortex then
+            local text, desc = GetDeathText()
+            hg.VortexDeath.DrawDeceasedText(stageElapsed, overlayAlpha, flash, text, desc, CanSkipDeathScreen() and jumpKeyName or nil)
+            return
         end
 
         local textFadeIn = math.Clamp(stageElapsed / DEATH_TEXT_FADE_IN, 0, 1)

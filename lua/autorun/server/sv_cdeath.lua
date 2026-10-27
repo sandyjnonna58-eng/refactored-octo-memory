@@ -1,5 +1,7 @@
 if not SERVER then return end
 
+resource.AddSingleFile("sound/rem_deathost.mp3") -- звук экрана смерти (cl_cdeath.lua)
+
 
 
 CreateConVar(
