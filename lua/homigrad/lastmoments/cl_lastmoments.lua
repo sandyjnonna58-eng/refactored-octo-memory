@@ -1,12 +1,31 @@
 -- Последние моменты (sv_lastmoments.lua): песня и воспоминания - скриншоты жизни из data/dreams,
--- которые раз в минуту делает cl_main.lua (лежат в hg.screens)
+-- которые раз в минуту делает cl_main.lua (лежат в hg.screens).
+-- В стиле экрана умирания "вихрь" (vortexdeath/cl_vortexdeath.lua): чёрный экран, красный пиксельный шрифт VT323
+-- печатает надпись по буквам, воспоминания проступают красными сквозь пиксельный шум, края темнеют.
 local song_path = "sound/rem_theseareyourlastmoments.mp3"
 local fade_in, fade_out = 1.5, 2
 local intro_time = 5
 local memory_time_min, memory_time_max = 4, 12
 local memory_zoom = 0.08
-local colMemory = Color(225, 215, 200)
-local colText = Color(235, 235, 235)
+local colMemory = Color(255, 45, 40)
+local colText = Color(225, 20, 20)
+
+local INTRO_TEXT = "These are your last moments."
+local TYPE_START, TYPE_SPEED = 0.4, 14 -- когда начинает печататься и сколько букв в секунду
+local NOISE_FPS = 20
+local NOISE_ALPHA = 0.22               -- шум поверх воспоминаний
+
+local matNoise = {}
+for i = 1, 4 do
+	matNoise[i] = Material("rem_death/vortex_noise" .. i .. ".png") -- без smooth: крупные пиксели
+end
+local matVignette = Material("rem_death/vignette.png", "smooth")
+
+local function CreateFonts()
+	surface.CreateFont("RemLastMoments_Text", {font = "VT323", size = math.floor(ScrH() * 0.075), weight = 400, antialias = false, extended = true})
+end
+CreateFonts()
+hook.Add("OnScreenSizeChanged", "rem_lastmoments_fonts", CreateFonts)
 
 local MusicVolume = GetConVar("snd_musicvolume")
 
@@ -86,13 +105,30 @@ hook.Add("Post Post Pre Post Processing", "rem_lastmoments", function()
 		local w, h = sw * zoom, sh * zoom
 
 		surface.SetMaterial(memories[index])
-		surface.SetDrawColor(colMemory.r, colMemory.g, colMemory.b, 200 * a)
+		surface.SetDrawColor(colMemory.r, colMemory.g, colMemory.b, 210 * a)
 		surface.DrawTexturedRect((sw - w) / 2, (sh - h) / 2, w, h)
+
+		-- красный пиксельный шум, сильнее всего между воспоминаниями
+		surface.SetMaterial(matNoise[math.floor(CurTime() * NOISE_FPS) % 4 + 1])
+		surface.SetDrawColor(255, 25, 25, 255 * (NOISE_ALPHA + 0.12 * (1 - a)) * a * visible)
+		surface.DrawTexturedRect(0, 0, sw, sh)
 	end
 
-	local introA = math.Clamp(1 - math.abs(t - intro_time / 2) / (intro_time / 2), 0, 1)
-	if #memories == 0 then introA = math.max(introA, 0.6 + 0.2 * math.sin(CurTime() * 1.5)) end
+	-- края в темноту
+	surface.SetMaterial(matVignette)
+	surface.SetDrawColor(255, 255, 255, 255 * visible)
+	surface.DrawTexturedRect(0, 0, sw, sh)
+
+	-- надпись печатается по буквам, мигает курсор, потом гаснет перед воспоминаниями
+	local introA = math.Clamp((intro_time - t) / 1, 0, 1)
+	if #memories == 0 then introA = 1 end
 	if introA > 0 then
-		draw.SimpleText("These are your last moments.", "RemDeathStateFont", sw / 2, sh * 0.5, ColorAlpha(colText, 255 * introA * visible), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		local typed = math.Clamp(math.floor((t - TYPE_START) * TYPE_SPEED), 0, #INTRO_TEXT)
+		local text = string.sub(INTRO_TEXT, 1, typed)
+		if typed < #INTRO_TEXT or math.floor(CurTime() * 2) % 2 == 0 then text = text .. "_" end
+		-- без подчёркивания строка не прыгает: выравниваем по ширине полной надписи
+		surface.SetFont("RemLastMoments_Text")
+		local fullW = surface.GetTextSize(INTRO_TEXT)
+		draw.SimpleText(text, "RemLastMoments_Text", (sw - fullW) / 2, sh * 0.5, ColorAlpha(colText, 255 * introA * visible), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 	end
 end)

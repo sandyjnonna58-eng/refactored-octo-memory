@@ -3,10 +3,13 @@
 hg.LastMoments = hg.LastMoments or {}
 local LM = hg.LastMoments
 
-local chance = CreateConVar("zb_lastmoments_chance", "20", FCVAR_ARCHIVE, "Chance (%) that the death timer turns into your last moments: a song and memories for 1:12", 0, 100)
+-- вихрь проверяется раньше (zb_vortexdeath_chance 50), так что при 100 здесь выходит 50 на 50
+local chance = CreateConVar("zb_lastmoments_chance", "100", FCVAR_ARCHIVE, "Chance (%) that the death timer turns into your last moments: a song and memories for 1:12", 0, 100)
 local duration = 72
 
 resource.AddSingleFile("sound/rem_theseareyourlastmoments.mp3")
+resource.AddSingleFile("materials/rem_death/vignette.png")
+-- пиксельный шум и шрифт VT323 общие с вихрем: их раздаёт vortexdeath/sv_vortexdeath.lua
 
 -- вызывается из sv_organism.lua в момент, когда таймер смерти только начался
 function LM.OnDeathTimer(owner, org, now)
