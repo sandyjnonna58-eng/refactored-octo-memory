@@ -421,7 +421,8 @@ if CLIENT then
                     self.stopanim = nil
                 end
 
-                local timing = (1 - math.Clamp((self.animtime - CurTime()) / self.animspeed, 0, 1))
+                local animTime = hg.HitstopVisualTime and hg.HitstopVisualTime(self) or CurTime()
+                local timing = (1 - math.Clamp((self.animtime - animTime) / self.animspeed, 0, 1))
                 timing = self.reverseanim and (1 - timing) or timing
 				timing = self.CustomTiming and self:CustomTiming() or timing
                 
@@ -433,7 +434,8 @@ if CLIENT then
                     self.callback = nil
                 end
             else
-                local timing = ((CurTime() - (self.animtime - self.animspeed))%self.animspeed) / self.animspeed
+                local animTime = hg.HitstopVisualTime and hg.HitstopVisualTime(self) or CurTime()
+                local timing = ((animTime - (self.animtime - self.animspeed))%self.animspeed) / self.animspeed
                 WorldModel:SetCycle(timing)
             end
 
@@ -2974,6 +2976,9 @@ function SWEP:CustomThink()
             if CLIENT then goto meleeskip1 end
 
             if ent:IsWorld() and self:ShouldStopAttackOnWorldHit(1) then
+                if hg.Hitstop then
+                    hg.Hitstop(owner, ent, self.HitstopPrimary or 0.14, trace.HitPos)
+                end
                 self:PlayEffects(trace, false)
                 self:SendMeleeHitStop(1, trace.HitNormal)
                 self:AbortBlockedAttack()
@@ -3021,6 +3026,7 @@ function SWEP:CustomThink()
                 ent:TakeDamageInfo(dmginfo)
                 self.attackedOnce = true
                 self.slash = nil
+
                 if blockState == "none" or blockState == "break" then
                     self:PlaySoftHitSounds(owner, ent, trace, false)
                 end
@@ -3052,6 +3058,10 @@ function SWEP:CustomThink()
 
                 if hgIsDoor and hgIsDoor(ent) then ent.SDD_LastMeleeHit = CurTime() end
                 self:PrimaryAttackAdd(ent, trace)
+
+                if hg.Hitstop then
+                    hg.Hitstop(owner, ent, self.HitstopPrimary or 0.14, trace.HitPos)
+                end
             end
 
             if self:ShouldStopAttackOnBlockState(blockState) then
@@ -3114,6 +3124,9 @@ function SWEP:CustomThink()
             if CLIENT then goto meleeskip2 end
 
             if ent:IsWorld() and self:ShouldStopAttackOnWorldHit(2) then
+                if hg.Hitstop then
+                    hg.Hitstop(owner, ent, self.HitstopSecondary or 0.1, trace.HitPos)
+                end
                 self:PlayEffects(trace, true)
                 self:SendMeleeHitStop(2, trace.HitNormal)
                 self:AbortBlockedAttack()
@@ -3167,6 +3180,7 @@ function SWEP:CustomThink()
                 ent:TakeDamageInfo(dmginfo)
                 self.attackedOnce = true
                 self.slash = nil
+
                 if blockState == "none" or blockState == "break" then
                     self:PlaySoftHitSounds(owner, ent, trace, true)
                 end
@@ -3198,6 +3212,10 @@ function SWEP:CustomThink()
 
                 if hgIsDoor and hgIsDoor(ent) then ent.SDD_LastMeleeHit = CurTime() end
                 self:SecondaryAttackAdd(ent, trace)
+
+                if hg.Hitstop then
+                    hg.Hitstop(owner, ent, self.HitstopSecondary or 0.1, trace.HitPos)
+                end
             end
 
             if self:ShouldStopAttackOnBlockState(blockState) then
@@ -3409,6 +3427,9 @@ end
 
 SWEP.AttackTimeLength = 0.15
 SWEP.Attack2TimeLength = 0.1
+
+SWEP.HitstopPrimary = 0.14
+SWEP.HitstopSecondary = 0.1
 SWEP.HitStopWorldSpeedMul = 2.35
 SWEP.HitStopWorldResumeMul = 0.6
 SWEP.HitStopWorldPause = 0.12
