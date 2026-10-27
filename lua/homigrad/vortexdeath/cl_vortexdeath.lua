@@ -219,7 +219,7 @@ hook.Add("Think", "rem_vortexdeath", function()
 	station:SetVolume(volume * MusicVolume:GetFloat())
 end)
 
-hook.Add("Post Post Pre Post Processing", "rem_vortexdeath", function()
+hook.Add("Dying Screen Processing", "rem_vortexdeath", function()
 	if visible <= 0 then return end
 	local t = CurTime() - LocalPlayer():GetNWFloat("rem_vortex_start", CurTime())
 	DV.Draw(t, math.floor(255 * visible), DV.Active() and JumpKeyName() or nil)

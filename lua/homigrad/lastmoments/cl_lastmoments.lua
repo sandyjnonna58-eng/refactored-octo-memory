@@ -79,7 +79,7 @@ hook.Add("Think", "rem_lastmoments", function()
 end)
 
 -- воспоминания по очереди: плавно проявляются, медленно приближаются и гаснут
-hook.Add("Post Post Pre Post Processing", "rem_lastmoments", function()
+hook.Add("Dying Screen Processing", "rem_lastmoments", function()
 	if visible <= 0 then return end
 
 	local sw, sh = ScrW(), ScrH()

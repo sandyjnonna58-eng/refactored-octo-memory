@@ -87,6 +87,9 @@ hook.Add("RenderScreenspaceEffects", "homigrad", function()
 	hook_Run("Post Post Pre Post Processing")
 
 	hook_Run("Post Pain Processing")
+
+	-- экраны умирания (вихрь, последние моменты) - поверх всех эффектов, чтобы боль и отключка их не затемняли
+	hook_Run("Dying Screen Processing")
 end)
 
 local postprs = hg.postprocess
