@@ -125,6 +125,9 @@ local function MenuUnit(num)
     return math.floor(num * math.min(ScrW(), ScrH()) / 1000)
 end
 
+local menu_title_text = "Funkas"
+local menu_title_font_size = 120
+
 local function CreateMainMenuFonts()
     surface.CreateFont("ZCity_Menu_Tiny", {
         font = "Verily Serif Mono",
@@ -136,6 +139,15 @@ local function CreateMainMenuFonts()
         font = "Verily Serif Mono",
         size = ScreenScale(20),
         weight = 200
+    })
+
+    -- название меню: шрифт Finger Paint (resource/fonts/FingerPaint-Regular.ttf, OFL)
+    surface.CreateFont("Funkas_Title", {
+        font = "Finger Paint",
+        size = MenuUnit(menu_title_font_size),
+        weight = 400,
+        antialias = true,
+        extended = true
     })
 end
 
@@ -199,7 +211,7 @@ surface.CreateFont("ZC_MM_Title", {
 -- local Title = markup.Parse("error")
 
 local Pluv = Material("pluv/pluvkid.jpg")
-local LogoistMat = Material("vgui/logoist.png", "noclamp smooth")
+local menu_title_shadow = Color(0, 0, 0, 200)
 
 function PANEL:InitializeMarkup()
 	local mapname = game.GetMap()
@@ -269,8 +281,6 @@ local menu_profile = {
     medal_size = 50
 }
 local menu_title = {
-    width = 500,
-    offset_x = -11,
     spacing = 55
 }
 local menu_live = {
@@ -892,7 +902,6 @@ function PANEL:Init()
     end
 
     local logoPanel = vgui.Create("DPanel", lDock)
-    local logoAspect = math.max(1, LogoistMat:Height()) / math.max(1, LogoistMat:Width())
     self.logoPanel = logoPanel
     logoPanel:Dock(BOTTOM)
     logoPanel:SetTall(1)
@@ -905,27 +914,27 @@ function PANEL:Init()
         gui.OpenURL("https://github.com/kazoo43/remorseism")
     end
     logoPanel.Think = function(this)
-        local maxW = math.max(1, this:GetWide() - MenuUnit(12))
-        local drawW = math.min(MenuUnit(menu_title.width), maxW)
-        local drawH = drawW * logoAspect
-        this:SetTall(math.ceil(drawH * (1 + menu_live.title_hover_scale) + MenuUnit(8)))
+        surface.SetFont("Funkas_Title")
+        local _, textH = surface.GetTextSize(menu_title_text)
+        this:SetTall(math.ceil(textH * (1 + menu_live.title_hover_scale) + MenuUnit(8)))
     end
     logoPanel.Paint = function(this, w, h)
         local driftX, driftY = self:GetLiveOffset(MenuUnit(menu_live.logo_drift_x), MenuUnit(menu_live.logo_drift_y))
         local shakeX, shakeY = self:GetLiveShake(6.4, 7.2, MenuUnit(menu_live.shake_x), MenuUnit(menu_live.shake_y))
         local scale = 1 + (self.LogoHoverLerp or 0) * menu_live.title_hover_scale
-        local maxW = math.max(1, w - MenuUnit(12))
-        local baseW = math.min(MenuUnit(menu_title.width), maxW)
-        local baseH = baseW * logoAspect
-        local drawW = baseW * scale
-        local drawH = baseH * scale
-        local maxX = math.max(0, w - drawW)
-        local maxY = math.max(0, h - drawH)
-        local drawX = math.Clamp(MenuUnit(menu_title.offset_x) + driftX + shakeX, 0, maxX)
-        local drawY = math.Clamp((h - drawH) * 0.5 + driftY + shakeY, 0, maxY)
-        surface.SetDrawColor(255, 255, 255, 255)
-        surface.SetMaterial(LogoistMat)
-        surface.DrawTexturedRect(drawX, drawY, drawW, drawH)
+        surface.SetFont("Funkas_Title")
+        local textW, textH = surface.GetTextSize(menu_title_text)
+        local drawW, drawH = textW * scale, textH * scale
+        local drawX = math.Clamp(MenuUnit(15) + driftX + shakeX, 0, math.max(0, w - drawW))
+        local drawY = math.Clamp((h - drawH) * 0.5 + driftY + shakeY, 0, math.max(0, h - drawH))
+
+        local matrix = Matrix()
+        matrix:Translate(Vector(drawX, drawY, 0))
+        matrix:Scale(Vector(scale, scale, 1))
+        cam.PushModelMatrix(matrix, true)
+            draw.SimpleText(menu_title_text, "Funkas_Title", MenuUnit(3), MenuUnit(3), menu_title_shadow)
+            draw.SimpleText(menu_title_text, "Funkas_Title", 0, 0, color_white)
+        cam.PopModelMatrix()
     end
 
 
