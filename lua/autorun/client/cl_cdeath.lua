@@ -19,11 +19,14 @@ local DOUBLE_CLICK_WINDOW = 0.5
 local SKIP_MIN_TIME       = 0.3
 local CAUSE_WAIT_TIME     = 0.3
 
--- причины смерти (присылает сервер): надпись при суициде; цвета и звуки отсюда - пул для рандома (DEATH_SOUNDS ниже)
+-- причины смерти (присылает сервер, sv_cdeath.lua): у каждой свой звук на экране смерти и надпись при суициде;
+-- цвет вспышки - на рандом. Звук - файл из sound/, чтобы поменять, достаточно вписать другой
 local DEATH_CAUSES = {
-    player    = {color = Color(200, 0, 0),     sound = "rem_brutaldeath.mp3"},
+    melee     = {color = Color(200, 0, 0),     sound = "rem_brutaldeath.mp3"},            -- ближнее оружие и кулаки
+    gun       = {color = Color(200, 0, 0),     sound = "rem_deathost.mp3"},               -- огнестрел
+    explosion = {color = Color(255, 120, 0),   sound = "rem_earsringaswounddeepens.ogg"}, -- взрыв
+    player    = {color = Color(200, 0, 0),     sound = "rem_brutaldeath.mp3"},            -- убил игрок чем-то другим
     npc       = {color = Color(220, 0, 110),   sound = "rem_brutaldeath.mp3"},
-    explosion = {color = Color(255, 120, 0),   sound = "rem_brutaldeath.mp3"},
     organism  = {color = Color(110, 0, 190),   sound = "rem_heartstop.wav"},
     suicide   = {color = Color(230, 230, 230), sound = "rem_deathost.mp3"},
     fire      = {color = Color(255, 190, 0),   sound = "rem_deathost.mp3"},
@@ -35,23 +38,13 @@ local DEATH_CAUSES = {
 }
 local DEFAULT_CAUSE = DEATH_CAUSES.player
 
--- цвет вспышки и звук выбираются на рандом при каждой смерти (причина влияет только на надпись)
-local DEATH_SOUNDS = {}
-do
-    local seen = {}
-    for _, cause in SortedPairs(DEATH_CAUSES) do
-        if not seen[cause.sound] then
-            seen[cause.sound] = true
-            DEATH_SOUNDS[#DEATH_SOUNDS + 1] = cause.sound
-        end
-    end
-end
+-- если файла звука нет, играет этот
+local FALLBACK_DEATH_SOUND = "rem_deathost.mp3"
 
 -- пока играет звук смерти, всё остальное затихает: игровые звуки (soundfade) и музыка (hg.RemAudio)
 local DEATH_SOUND_FADE = 1.5
 
 local deathRandomColor = DEFAULT_CAUSE.color
-local deathRandomSound = DEFAULT_CAUSE.sound
 
 local DEATH_TEXT = {"Deceased.", "You are no longer a witness to the world."}
 
@@ -340,7 +333,6 @@ local function InitDeathSequence(ply)
     deathSoundChannels = {}
 
     deathRandomColor = HSVToColor(math.Rand(0, 360), math.Rand(0.6, 1), math.Rand(0.75, 1))
-    deathRandomSound = DEATH_SOUNDS[math.random(#DEATH_SOUNDS)]
 end
 
 -- причина могла прийти чуть раньше или чуть позже, чем клиент увидел смерть
@@ -356,7 +348,9 @@ end
 
 local function StartDeathSound(cause)
     deathSoundPending = false
-    sound.PlayFile("sound/" .. deathRandomSound, "noplay", function(station)
+    local path = "sound/" .. (cause or DEFAULT_CAUSE).sound
+    if not file.Exists(path, "GAME") then path = "sound/" .. FALLBACK_DEATH_SOUND end
+    sound.PlayFile(path, "noplay", function(station)
         if not IsValid(station) then return end
         if not isDead then station:Stop() return end
         deathSoundChannels[#deathSoundChannels + 1] = station

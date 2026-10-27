@@ -46,16 +46,32 @@ local function DeathEffect_DamageOwner(ent)
     end
 end
 
+-- чем убили: у взрыва, огнестрела и ближнего оружия свой звук на экране смерти
+local DMG_GUN = DMG_BULLET + DMG_BUCKSHOT + DMG_SNIPER + DMG_AIRBOAT
+local DMG_MELEE = DMG_CLUB + DMG_SLASH
+local DMG_EXPLOSION = DMG_BLAST + DMG_BLAST_SURFACE
+-- осколки гранат бьют как пули, поэтому взрыв помним отдельно
+local BLAST_MEMORY = 1
+
+local function DeathEffect_WeaponKind(ply, dmgType, now)
+    if bit.band(dmgType, DMG_EXPLOSION) ~= 0 then return "explosion" end
+    if ply.DeathEffect_LastBlast and now - ply.DeathEffect_LastBlast <= BLAST_MEMORY then return "explosion" end
+    if bit.band(dmgType, DMG_GUN) ~= 0 then return "gun" end
+    if bit.band(dmgType, DMG_MELEE) ~= 0 then return "melee" end
+end
+
 local function DeathEffect_RecordDamage(ent, dmgInfo)
     local ply = DeathEffect_DamageOwner(ent)
     if not ply or not ply:Alive() then return end
 
     local attacker = dmgInfo:GetAttacker()
     local now = CurTime()
-    ply.DeathEffect_LastDamage = {type = dmgInfo:GetDamageType(), attacker = attacker, time = now}
+    local dmgType = dmgInfo:GetDamageType()
+    ply.DeathEffect_LastDamage = {type = dmgType, attacker = attacker, time = now}
+    if bit.band(dmgType, DMG_EXPLOSION) ~= 0 then ply.DeathEffect_LastBlast = now end
 
     if IsValid(attacker) and attacker ~= ply and (attacker:IsPlayer() or attacker:IsNPC() or attacker:IsNextBot()) then
-        ply.DeathEffect_LastKiller = {ent = attacker, npc = not attacker:IsPlayer(), time = now}
+        ply.DeathEffect_LastKiller = {ent = attacker, npc = not attacker:IsPlayer(), time = now, weapon = DeathEffect_WeaponKind(ply, dmgType, now)}
     end
 
     -- самоубийство засчитывается, только если игрок сам себя ударил (падения не считаются)
@@ -80,7 +96,13 @@ local function DeathEffect_GetCause(ply, attacker)
     local last = ply.DeathEffect_LastDamage
     if last and now - last.time <= KILLING_BLOW_TIME and bit.band(last.type, DMG_SHOCK + DMG_DISSOLVE + DMG_ENERGYBEAM) ~= 0 then return "shock" end
 
-    if IsValid(attacker) and attacker:IsPlayer() and attacker ~= ply then return "player" end
+    -- взрыв (и своей гранатой тоже)
+    if ply.DeathEffect_LastBlast and now - ply.DeathEffect_LastBlast <= KILLING_BLOW_TIME then return "explosion" end
+
+    local killer = ply.DeathEffect_LastKiller
+    if IsValid(attacker) and attacker:IsPlayer() and attacker ~= ply then
+        return killer and killer.ent == attacker and killer.weapon or "player"
+    end
 
     -- умер мозг: припадок шёл 20+ секунд
     local org = ply.organism
@@ -89,9 +111,9 @@ local function DeathEffect_GetCause(ply, attacker)
     local selfHit = ply.DeathEffect_LastSelfHit
     if selfHit and now - selfHit <= KILLING_BLOW_TIME then return "suicide" end
 
-    local killer = ply.DeathEffect_LastKiller
+    -- умер позже от ран (истёк кровью и т.п.) - по тому, чем ранили
     if killer and now - killer.time <= KILLER_MEMORY then
-        return killer.npc and "npc" or "player"
+        return killer.weapon or (killer.npc and "npc" or "player")
     end
     if IsValid(attacker) and (attacker:IsNPC() or attacker:IsNextBot()) then return "npc" end
 
@@ -190,6 +212,7 @@ hook.Add("PlayerDeath", "DeathEffect_OnDeath", function(ply, inflictor, attacker
     ply.DeathEffect_LastKiller = nil
     ply.DeathEffect_LastSelfHit = nil
     ply.DeathEffect_ElectroHeart = nil
+    ply.DeathEffect_LastBlast = nil
 
     if not ply:IsBot() then
         net.Start("DeathEffect_Cause")
@@ -246,6 +269,7 @@ hook.Add("PlayerSpawn", "DeathEffect_OnSpawn", function(ply)
     ply.DeathEffect_LastKiller = nil
     ply.DeathEffect_LastSelfHit = nil
     ply.DeathEffect_ElectroHeart = nil
+    ply.DeathEffect_LastBlast = nil
 end)
 
 hook.Add("PlayerDisconnected", "DeathEffect_Cleanup", function(ply)
