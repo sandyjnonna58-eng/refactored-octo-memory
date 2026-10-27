@@ -3,8 +3,9 @@
 hg.LastMoments = hg.LastMoments or {}
 local LM = hg.LastMoments
 
--- вихрь проверяется раньше (zb_vortexdeath_chance 50), так что при 100 здесь выходит 50 на 50
-local chance = CreateConVar("zb_lastmoments_chance", "100", FCVAR_ARCHIVE, "Chance (%) that the death timer turns into your last moments: a song and memories for 1:12", 0, 100)
+-- вихрь проверяется раньше (zb_dying_vortex_chance 50), так что при 100 здесь выходит 50 на 50.
+-- Новое имя вместо zb_lastmoments_chance: старое значение (20) оставалось сохранённым в конфиге
+local chance = CreateConVar("zb_dying_lastmoments_chance", "100", FCVAR_ARCHIVE, "Chance (%) that the death timer turns into your last moments: a song and memories for 1:12", 0, 100)
 local duration = 72
 
 resource.AddSingleFile("sound/rem_theseareyourlastmoments.mp3")

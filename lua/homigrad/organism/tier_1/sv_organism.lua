@@ -899,7 +899,7 @@ hook.Add("Org Think", "Main", function(owner, org, timeValue)
 	end
 
 	if isPly and org.otrub and org.incapacitated then
-		-- таймер смерти только начался: с шансом он станет экраном умирания "вихрь" (vortexdeath/sv_vortexdeath.lua),
+		-- таймер смерти только начался: с шансом (zb_dying_vortex_chance) он станет экраном умирания "вихрь" (vortexdeath/sv_vortexdeath.lua),
 		-- а если вихрь не выпал - последними моментами (lastmoments/sv_lastmoments.lua)
 		if not org.deathStateEnd then
 			if hg.VortexDeath and hg.VortexDeath.OnDeathTimer then hg.VortexDeath.OnDeathTimer(owner, org, curTime) end

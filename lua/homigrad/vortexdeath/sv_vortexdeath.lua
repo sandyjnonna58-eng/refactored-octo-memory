@@ -4,7 +4,8 @@
 hg.VortexDeath = hg.VortexDeath or {}
 local VD = hg.VortexDeath
 
-local chance = CreateConVar("zb_vortexdeath_chance", "50", FCVAR_ARCHIVE, "Chance (%) that the death timer turns into the red vortex dying screen with its song", 0, 100)
+-- новое имя вместо zb_vortexdeath_chance: старое значение оставалось сохранённым в конфиге
+local chance = CreateConVar("zb_dying_vortex_chance", "50", FCVAR_ARCHIVE, "Chance (%) that the death timer turns into the red vortex dying screen with its song", 0, 100)
 VD.Duration = 84
 VD.GiveUpSpeed = 4
 
