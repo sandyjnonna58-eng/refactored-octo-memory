@@ -1,11 +1,12 @@
 -- Экран умирания "вихрь": когда ты вырублен и пошёл таймер смерти, с шансом (раньше последних моментов: 50 на 50 с ними)
 -- таймер растягивается на всю песню rem_death_cfyt.ogg (~84 с), а клиент показывает красный вихрь (cl_vortexdeath.lua).
--- "Give up" (прыжок) - сдаться и умереть сразу.
+-- "Give up" (зажатый прыжок) - время смерти идёт в GiveUpSpeed раз быстрее.
 hg.VortexDeath = hg.VortexDeath or {}
 local VD = hg.VortexDeath
 
 local chance = CreateConVar("zb_vortexdeath_chance", "50", FCVAR_ARCHIVE, "Chance (%) that the death timer turns into the red vortex dying screen with its song", 0, 100)
 VD.Duration = 84
+VD.GiveUpSpeed = 4
 
 util.AddNetworkString("rem_vortexdeath_giveup")
 
@@ -46,15 +47,28 @@ timer.Create("rem_vortexdeath", 0.5, 0, function()
 	end
 end)
 
--- "Give up": сдаться - таймер смерти кончается сразу
+-- "Give up": пока клиент держит прыжок, таймер смерти (и экран с песней) идут быстрее
 net.Receive("rem_vortexdeath_giveup", function(len, ply)
-	if not IsValid(ply) or not ply:Alive() or not Active(ply) then return end
-	local org = ply.organism
-	if org and org.deathStateEnd then
-		org.deathStateEnd = CurTime()
-	elseif (ply.remVortexTest or 0) > CurTime() then
-		ply.remVortexTest = nil
-		ply:SetNWFloat("rem_vortex_until", 0)
+	if not IsValid(ply) then return end
+	ply.remVortexHold = net.ReadBool() or nil
+end)
+
+hook.Add("Think", "rem_vortexdeath_giveup", function()
+	local dt = FrameTime()
+	for _, ply in player.Iterator() do
+		if ply.remVortexHold then
+			if not ply:Alive() or not Active(ply) then
+				ply.remVortexHold = nil
+			else
+				-- лишние (speed - 1) секунд за каждую секунду: сдвигаем конец таймера и начало экрана
+				local skip = dt * (VD.GiveUpSpeed - 1)
+				local org = ply.organism
+				if org and org.deathStateEnd then org.deathStateEnd = org.deathStateEnd - skip end
+				if ply.remVortexTest then ply.remVortexTest = ply.remVortexTest - skip end
+				ply:SetNWFloat("rem_vortex_until", ply:GetNWFloat("rem_vortex_until", 0) - skip)
+				ply:SetNWFloat("rem_vortex_start", ply:GetNWFloat("rem_vortex_start", 0) - skip)
+			end
+		end
 	end
 end)
 
@@ -72,10 +86,11 @@ COMMANDS.vortexdeath = {function(ply, args)
 		ply:SetNWFloat("rem_vortex_until", now + VD.Duration)
 	end
 	ply.remVortexTest = now + VD.Duration
-	ply:ChatPrint("Vortex dying screen started. Jump to give up.")
+	ply:ChatPrint("Vortex dying screen started. Hold jump to give up faster.")
 end, 1}
 
 hook.Add("PlayerSpawn", "rem_vortexdeath", function(ply)
 	ply.remVortexTest = nil
+	ply.remVortexHold = nil
 	ply:SetNWFloat("rem_vortex_until", 0)
 end)

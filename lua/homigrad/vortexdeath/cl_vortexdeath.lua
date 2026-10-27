@@ -1,11 +1,12 @@
 -- Экран умирания "вихрь" (таймер смерти, sv_vortexdeath.lua) под песню rem_death_cfyt.ogg:
 -- чёрный экран, по одному проступают красные "!!!", ниже "Give up"; потом из темноты поднимается красный
 -- пиксельный шум, тёмные спиральные рукава закручиваются к тёмному центру и со временем распрямляются в лучи.
--- Пока он идёт, остальная музыка затихает (hg.RemAudio); прыжок - "Give up", сдаться и умереть сразу.
+-- Пока он идёт, остальная музыка затихает (hg.RemAudio); зажатый прыжок - "Give up": время смерти (и песня) идёт быстрее.
 hg.VortexDeath = hg.VortexDeath or {}
 local DV = hg.VortexDeath
 
 local SONG = "sound/rem_death_cfyt.ogg"
+DV.GiveUpSpeed = 4 -- во сколько раз быстрее идёт время, пока зажат "Give up" (так же в sv_vortexdeath.lua)
 local FADE_IN, FADE_OUT = 0.6, 1.5
 
 local RAMP_START, RAMP_TIME = 9, 48 -- когда начинает проступать красный и за сколько доходит до максимума
@@ -55,8 +56,9 @@ local function DrawSpun(mat, cx, cy, w, h, ang, a, zoom)
 	surface.DrawPoly(poly)
 end
 
--- t - секунды с начала звука; alpha 0..255 - общая прозрачность (затухание в конце); skipKey - подпись клавиши пропуска
-function DV.Draw(t, alpha, skipKey)
+-- t - секунды с начала звука; alpha 0..255 - общая прозрачность (затухание в конце); skipKey - подпись клавиши,
+-- holding - клавиша зажата (надпись ярче)
+function DV.Draw(t, alpha, skipKey, holding)
 	local sw, sh = ScrW(), ScrH()
 	local mul = alpha / 255
 	local k = smooth((t - RAMP_START) / RAMP_TIME)
@@ -93,7 +95,7 @@ function DV.Draw(t, alpha, skipKey)
 
 	if t >= GIVEUP_TIME then
 		local a = math.floor(255 * math.min(1, (t - GIVEUP_TIME) / 1.5) * mul)
-		local col = Color(200, 20, 20, a)
+		local col = holding and Color(255, 45, 45, a) or Color(200, 20, 20, a)
 		-- на ярко-красном фоне надпись получает тёмную обводку, как в оригинале
 		if k > 0.5 then
 			draw.SimpleTextOutlined("Give up", "DeathVortex_GiveUp", sw / 2, sh * 0.78, col, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER, 2, Color(40, 0, 0, a))
@@ -101,7 +103,7 @@ function DV.Draw(t, alpha, skipKey)
 			draw.SimpleText("Give up", "DeathVortex_GiveUp", sw / 2, sh * 0.78, col, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 		end
 		if skipKey then
-			draw.SimpleText("[" .. skipKey .. "]", "DeathVortex_Key", sw / 2, sh * 0.78 + sh * 0.055, Color(170, 20, 20, math.floor(a * 0.7)), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			draw.SimpleText("hold [" .. skipKey .. "]", "DeathVortex_Key", sw / 2, sh * 0.78 + sh * 0.055, Color(170, 20, 20, math.floor(a * 0.7)), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 		end
 	end
 end
@@ -184,12 +186,47 @@ local function JumpKeyName()
 	return key and string.upper(key) or "SPACE"
 end
 
+-- свои часы вихря: идут быстрее, пока зажат прыжок, и подтягиваются к серверным (rem_vortex_start сдвигает сервер)
+local clock = 0
+local holding = false
+local wasActive = false
+
+local function ServerClock()
+	return CurTime() - LocalPlayer():GetNWFloat("rem_vortex_start", CurTime())
+end
+
+local function JumpHeld()
+	if gui.IsGameUIVisible() or vgui.GetKeyboardFocus() or (IsValid(LocalPlayer()) and LocalPlayer():IsTyping()) then return false end
+	local key = input.LookupBinding("+jump")
+	local code = key and input.GetKeyCode(key)
+	return code and code > 0 and input.IsButtonDown(code) or false
+end
+
 hook.Add("Think", "rem_vortexdeath", function()
 	local active = DV.Active()
 	local dt = FrameTime()
+	if active and not wasActive then clock = ServerClock() end
+	wasActive = active
+
+	-- "Give up": пока прыжок зажат (и надпись уже появилась), время идёт быстрее
+	local hold = active and clock >= GIVEUP_TIME and JumpHeld()
+	if hold ~= holding then
+		holding = hold
+		net.Start("rem_vortexdeath_giveup")
+		net.WriteBool(hold)
+		net.SendToServer()
+	end
+	local rate = holding and DV.GiveUpSpeed or 1
+
+	if active then
+		local target = ServerClock()
+		clock = clock + dt * rate
+		if math.abs(clock - target) > 1 then clock = target else clock = Lerp(math.min(dt * 2, 1), clock, target) end
+	end
 
 	if active and not IsValid(station) and not loading then
 		loading = true
+		clock = ServerClock()
 		sound.PlayFile(SONG, "noblock noplay", function(chan)
 			loading = false
 			if not IsValid(chan) then return end
@@ -198,8 +235,7 @@ hook.Add("Think", "rem_vortexdeath", function()
 			station = chan
 			if hg.RemAudio then hg.RemAudio.SetExempt(chan) end
 			-- песня идёт с начала таймера: догоняем, если звук загрузился с опозданием
-			local late = CurTime() - LocalPlayer():GetNWFloat("rem_vortex_start", CurTime())
-			if late > 0.5 then chan:SetTime(late) end
+			if clock > 0.5 then chan:SetTime(clock) end
 			volume = 1
 			chan:SetVolume(MusicVolume:GetFloat())
 			chan:Play()
@@ -217,22 +253,19 @@ hook.Add("Think", "rem_vortexdeath", function()
 		return
 	end
 	station:SetVolume(volume * MusicVolume:GetFloat())
+	if active then
+		-- песня ускоряется вместе со временем и держится вровень с экраном
+		station:SetPlaybackRate(rate)
+		if math.abs(station:GetTime() - clock) > 0.75 and clock < station:GetLength() then station:SetTime(clock) end
+	end
 end)
 
 hook.Add("Dying Screen Processing", "rem_vortexdeath", function()
 	if visible <= 0 then return end
-	local t = CurTime() - LocalPlayer():GetNWFloat("rem_vortex_start", CurTime())
-	DV.Draw(t, math.floor(255 * visible), DV.Active() and JumpKeyName() or nil)
+	DV.Draw(clock, math.floor(255 * visible), DV.Active() and JumpKeyName() or nil, holding)
 end)
 
--- "Give up": прыжок во время вихря - сдаться
-local nextGiveUp = 0
+-- прыжок во время вихря не прыгает
 hook.Add("PlayerBindPress", "rem_vortexdeath", function(ply, bind, pressed)
-	if not pressed or not DV.Active() or not string.find(bind, "+jump", 1, true) then return end
-	if CurTime() - ply:GetNWFloat("rem_vortex_start", 0) < GIVEUP_TIME then return true end -- надпись ещё не появилась
-	if nextGiveUp > CurTime() then return true end
-	nextGiveUp = CurTime() + 1
-	net.Start("rem_vortexdeath_giveup")
-	net.SendToServer()
-	return true
+	if DV.Active() and string.find(bind, "+jump", 1, true) then return true end
 end)
