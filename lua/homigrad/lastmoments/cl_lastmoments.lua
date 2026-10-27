@@ -17,7 +17,7 @@ local NOISE_ALPHA = 0.12               -- шум поверх воспомина
 
 local matNoise = {}
 for i = 1, 4 do
-	matNoise[i] = Material("rem_death/vortex_noise" .. i .. ".png") -- без smooth: крупные пиксели
+	matNoise[i] = Material("rem_death/vortex_static" .. i .. ".png") -- без smooth: крупные пиксели
 end
 local matVignette = Material("rem_death/vignette.png", "smooth")
 

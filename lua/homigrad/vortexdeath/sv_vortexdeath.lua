@@ -12,7 +12,7 @@ VD.GiveUpSpeed = 4
 util.AddNetworkString("rem_vortexdeath_giveup")
 
 resource.AddSingleFile("sound/rem_death_cfyt.ogg")
-for _, name in ipairs({"vortex_swirl", "vortex_rays", "vortex_centre", "vortex_noise1", "vortex_noise2", "vortex_noise3", "vortex_noise4"}) do
+for _, name in ipairs({"vortex_swirl", "vortex_rays", "vortex_centre", "vortex_static1", "vortex_static2", "vortex_static3", "vortex_static4"}) do
 	resource.AddSingleFile("materials/rem_death/" .. name .. ".png")
 end
 resource.AddSingleFile("resource/fonts/VT323-Regular.ttf")

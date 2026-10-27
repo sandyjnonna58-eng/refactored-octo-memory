@@ -21,7 +21,7 @@ local matRays = Material("rem_death/vortex_rays.png", "smooth")
 local matCentre = Material("rem_death/vortex_centre.png", "smooth")
 local matNoise = {}
 for i = 1, 4 do
-	matNoise[i] = Material("rem_death/vortex_noise" .. i .. ".png") -- без smooth: крупные пиксели
+	matNoise[i] = Material("rem_death/vortex_static" .. i .. ".png") -- без smooth: крупные пиксели
 end
 
 local function CreateFonts()
@@ -39,11 +39,12 @@ local function smooth(a)
 	return a * a * (3 - 2 * a)
 end
 
--- текстура, повёрнутая внутри неповёрнутого прямоугольника (эллипс остаётся горизонтальным)
+-- текстура, повёрнутая внутри неповёрнутого прямоугольника (эллипс остаётся горизонтальным);
+-- ang растёт - картинка крутится по часовой стрелке (поворачиваем UV в обратную сторону)
 local poly = {{}, {}, {}, {}}
 local corners = {{-0.5, -0.5}, {0.5, -0.5}, {0.5, 0.5}, {-0.5, 0.5}}
 local function DrawSpun(mat, cx, cy, w, h, ang, a, zoom)
-	local c, s = math.cos(math.rad(ang)), math.sin(math.rad(ang))
+	local c, s = math.cos(math.rad(-ang)), math.sin(math.rad(-ang))
 	for i = 1, 4 do
 		local dx, dy = corners[i][1], corners[i][2]
 		local p = poly[i]
