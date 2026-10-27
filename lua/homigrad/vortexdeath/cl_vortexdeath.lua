@@ -173,6 +173,8 @@ function DV.DrawDeceasedText(t, alpha, flash, text, desc, skipKey)
 end
 
 local MusicVolume = GetConVar("snd_musicvolume")
+-- песни таймера смерти (вихрь, последние моменты) громче обычной музыки: 3 = 300%
+local DyingVolume = CreateClientConVar("rem_dying_music_volume", "3", true, false, "Volume of the death timer songs (vortex, last moments), 1 = 100%, 3 = 300%", 0, 5)
 local station, loading
 local volume, visible = 0, 0
 
@@ -237,7 +239,7 @@ hook.Add("Think", "rem_vortexdeath", function()
 			-- песня идёт с начала таймера: догоняем, если звук загрузился с опозданием
 			if clock > 0.5 then chan:SetTime(clock) end
 			volume = 1
-			chan:SetVolume(MusicVolume:GetFloat())
+			chan:SetVolume(MusicVolume:GetFloat() * DyingVolume:GetFloat())
 			chan:Play()
 		end)
 	end
@@ -252,7 +254,7 @@ hook.Add("Think", "rem_vortexdeath", function()
 		station = nil
 		return
 	end
-	station:SetVolume(volume * MusicVolume:GetFloat())
+	station:SetVolume(volume * MusicVolume:GetFloat() * DyingVolume:GetFloat())
 	if active then
 		-- песня ускоряется вместе со временем и держится вровень с экраном
 		station:SetPlaybackRate(rate)

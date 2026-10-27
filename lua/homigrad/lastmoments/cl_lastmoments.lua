@@ -28,6 +28,8 @@ CreateFonts()
 hook.Add("OnScreenSizeChanged", "rem_lastmoments_fonts", CreateFonts)
 
 local MusicVolume = GetConVar("snd_musicvolume")
+-- песни таймера смерти (вихрь, последние моменты) громче обычной музыки: 3 = 300%
+local DyingVolume = CreateClientConVar("rem_dying_music_volume", "3", true, false, "Volume of the death timer songs (vortex, last moments), 1 = 100%, 3 = 300%", 0, 5)
 
 local station
 local loading = false
@@ -75,7 +77,7 @@ hook.Add("Think", "rem_lastmoments", function()
 		return
 	end
 
-	station:SetVolume(volume * MusicVolume:GetFloat())
+	station:SetVolume(volume * MusicVolume:GetFloat() * DyingVolume:GetFloat())
 end)
 
 -- воспоминания по очереди: плавно проявляются, медленно приближаются и гаснут
