@@ -394,6 +394,12 @@ local function SkipDeathScreen()
     ActivateCompatMode()
 end
 
+-- со звуком rem_death_cfyt.ogg вместо обычной вспышки идёт экран "вихрь" (cl_cdeath_vortex.lua) на всю длину звука
+local VORTEX_SOUND = "rem_death_cfyt.ogg"
+local function IsVortexDeath()
+    return deathRandomSound == VORTEX_SOUND and DeathVortex ~= nil and DeathScreenEnabled() and not RealishDeathEffect()
+end
+
 local function CanSkipDeathScreen()
     return isDead and stage2Started and not autoCompatTriggered and not compatActive and not inSpectator and not inTransition
 end
@@ -620,6 +626,7 @@ local function CinematicDeathTracker()
     if isDead and stage2Started and not autoCompatTriggered then
         local fadeDuration = RealishDeathEffect() and REALISH_BLACK_FADE_DURATION or BLACK_FADE_DURATION
         local fadeOutDuration = RealishDeathEffect() and REALISH_BLACK_FADE_OUT_DURATION or BLACK_FADE_OUT_DURATION
+        if IsVortexDeath() then fadeDuration, fadeOutDuration = DeathVortex.Duration, DeathVortex.FadeOut end
 
         if (CurTime() - stage2Time) >= (fadeDuration + fadeOutDuration) then
             autoCompatTriggered = true
@@ -800,6 +807,13 @@ local function CinematicDeathBackground()
 
     if elapsed >= STAGE_1_DURATION then
         local stageElapsed = elapsed - STAGE_1_DURATION
+
+        if IsVortexDeath() then
+            local fadeOut = math.Clamp((stageElapsed - DeathVortex.Duration) / DeathVortex.FadeOut, 0, 1)
+            DeathVortex.Draw(elapsed, math.floor(255 * (1 - fadeOut)), CanSkipDeathScreen() and jumpKeyName or nil)
+            return
+        end
+
         local realish = RealishDeathEffect()
         local fadeDuration = realish and REALISH_BLACK_FADE_DURATION or BLACK_FADE_DURATION
         local fadeOutDuration = realish and REALISH_BLACK_FADE_OUT_DURATION or BLACK_FADE_OUT_DURATION

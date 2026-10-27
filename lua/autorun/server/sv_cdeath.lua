@@ -1,6 +1,11 @@
 if not SERVER then return end
 
 resource.AddSingleFile("sound/rem_death_cfyt.ogg") -- звук смерти (cl_cdeath.lua)
+-- экран "вихрь" (cl_cdeath_vortex.lua): текстуры и пиксельный шрифт VT323 (OFL, resource/fonts/VT323-OFL.txt)
+for _, name in ipairs({"vortex_swirl", "vortex_rays", "vortex_centre", "vortex_noise1", "vortex_noise2", "vortex_noise3", "vortex_noise4"}) do
+    resource.AddSingleFile("materials/rem_death/" .. name .. ".png")
+end
+resource.AddSingleFile("resource/fonts/VT323-Regular.ttf")
 
 
 CreateConVar(
