@@ -1,19 +1,19 @@
 -- Последние моменты (sv_lastmoments.lua): песня и воспоминания - скриншоты жизни из data/dreams,
 -- которые раз в минуту делает cl_main.lua (лежат в hg.screens).
 -- В стиле экрана умирания "вихрь" (vortexdeath/cl_vortexdeath.lua): чёрный экран, красный пиксельный шрифт VT323
--- печатает надпись по буквам, воспоминания проступают красными сквозь пиксельный шум, края темнеют.
+-- печатает надпись по буквам, воспоминания (своего цвета) проступают сквозь пиксельный шум, края темнеют.
 local song_path = "sound/rem_theseareyourlastmoments.mp3"
 local fade_in, fade_out = 1.5, 2
 local intro_time = 5
 local memory_time_min, memory_time_max = 4, 12
 local memory_zoom = 0.08
-local colMemory = Color(255, 45, 40)
+local colMemory = Color(225, 215, 200)
 local colText = Color(225, 20, 20)
 
 local INTRO_TEXT = "These are your last moments."
 local TYPE_START, TYPE_SPEED = 0.4, 14 -- когда начинает печататься и сколько букв в секунду
 local NOISE_FPS = 20
-local NOISE_ALPHA = 0.22               -- шум поверх воспоминаний
+local NOISE_ALPHA = 0.12               -- шум поверх воспоминаний
 
 local matNoise = {}
 for i = 1, 4 do
@@ -108,9 +108,9 @@ hook.Add("Post Post Pre Post Processing", "rem_lastmoments", function()
 		surface.SetDrawColor(colMemory.r, colMemory.g, colMemory.b, 210 * a)
 		surface.DrawTexturedRect((sw - w) / 2, (sh - h) / 2, w, h)
 
-		-- красный пиксельный шум, сильнее всего между воспоминаниями
+		-- пиксельный шум (бесцветный, чтобы фото оставались своего цвета)
 		surface.SetMaterial(matNoise[math.floor(CurTime() * NOISE_FPS) % 4 + 1])
-		surface.SetDrawColor(255, 25, 25, 255 * (NOISE_ALPHA + 0.12 * (1 - a)) * a * visible)
+		surface.SetDrawColor(255, 255, 255, 255 * (NOISE_ALPHA + 0.12 * (1 - a)) * a * visible)
 		surface.DrawTexturedRect(0, 0, sw, sh)
 	end
 
