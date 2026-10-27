@@ -1,11 +1,12 @@
--- Экран смерти "вихрь" (идёт в паре со звуком rem_death_cfyt.ogg, см. cl_cdeath.lua):
+-- Экран умирания "вихрь" (таймер смерти, sv_vortexdeath.lua) под песню rem_death_cfyt.ogg:
 -- чёрный экран, по одному проступают красные "!!!", ниже "Give up"; потом из темноты поднимается красный
 -- пиксельный шум, тёмные спиральные рукава закручиваются к тёмному центру и со временем распрямляются в лучи.
-DeathVortex = DeathVortex or {}
-local DV = DeathVortex
+-- Пока он идёт, остальная музыка затихает (hg.RemAudio); прыжок - "Give up", сдаться и умереть сразу.
+hg.VortexDeath = hg.VortexDeath or {}
+local DV = hg.VortexDeath
 
-DV.Duration = 82 -- сколько длится экран (звук ~85 с)
-DV.FadeOut = 2
+local SONG = "sound/rem_death_cfyt.ogg"
+local FADE_IN, FADE_OUT = 0.6, 1.5
 
 local RAMP_START, RAMP_TIME = 9, 48 -- когда начинает проступать красный и за сколько доходит до максимума
 local MARKS_DOT = {0.4, 0.9, 1.4}    -- когда появляются точки
@@ -103,3 +104,70 @@ function DV.Draw(t, alpha, skipKey)
 		end
 	end
 end
+
+local MusicVolume = GetConVar("snd_musicvolume")
+local station, loading
+local volume, visible = 0, 0
+
+function DV.Active()
+	local ply = LocalPlayer()
+	return IsValid(ply) and ply:Alive() and ply:GetNWFloat("rem_vortex_until", 0) > CurTime()
+end
+
+local function JumpKeyName()
+	local key = input.LookupBinding("+jump")
+	return key and string.upper(key) or "SPACE"
+end
+
+hook.Add("Think", "rem_vortexdeath", function()
+	local active = DV.Active()
+	local dt = FrameTime()
+
+	if active and not IsValid(station) and not loading then
+		loading = true
+		sound.PlayFile(SONG, "noblock noplay", function(chan)
+			loading = false
+			if not IsValid(chan) then return end
+			if not DV.Active() then chan:Stop() return end
+
+			station = chan
+			if hg.RemAudio then hg.RemAudio.SetExempt(chan) end
+			-- песня идёт с начала таймера: догоняем, если звук загрузился с опозданием
+			local late = CurTime() - LocalPlayer():GetNWFloat("rem_vortex_start", CurTime())
+			if late > 0.5 then chan:SetTime(late) end
+			volume = 1
+			chan:SetVolume(MusicVolume:GetFloat())
+			chan:Play()
+		end)
+	end
+
+	visible = math.Approach(visible, active and 1 or 0, dt / (active and FADE_IN or FADE_OUT))
+	if hg.RemAudio then hg.RemAudio.Duck("vortexdeath", active and 0 or nil) end
+
+	if not IsValid(station) then return end
+	volume = math.Approach(volume, active and 1 or 0, dt / FADE_OUT)
+	if volume <= 0 and not active then
+		station:Stop()
+		station = nil
+		return
+	end
+	station:SetVolume(volume * MusicVolume:GetFloat())
+end)
+
+hook.Add("Post Post Pre Post Processing", "rem_vortexdeath", function()
+	if visible <= 0 then return end
+	local t = CurTime() - LocalPlayer():GetNWFloat("rem_vortex_start", CurTime())
+	DV.Draw(t, math.floor(255 * visible), DV.Active() and JumpKeyName() or nil)
+end)
+
+-- "Give up": прыжок во время вихря - сдаться
+local nextGiveUp = 0
+hook.Add("PlayerBindPress", "rem_vortexdeath", function(ply, bind, pressed)
+	if not pressed or not DV.Active() or not string.find(bind, "+jump", 1, true) then return end
+	if CurTime() - ply:GetNWFloat("rem_vortex_start", 0) < GIVEUP_TIME then return true end -- надпись ещё не появилась
+	if nextGiveUp > CurTime() then return true end
+	nextGiveUp = CurTime() + 1
+	net.Start("rem_vortexdeath_giveup")
+	net.SendToServer()
+	return true
+end)

@@ -560,7 +560,9 @@ hook.Add("Post Post Pre Post Processing", "organism-effects", function()
 	tinnitusSoundFactor = Lerp(FrameTime()*2.5,tinnitusSoundFactor or 0, math.min(math.max( lply.tinnitus and (lply.tinnitus - CurTime()) or 0, 0)*7.5,120))
 	local tinnitusSoundFactor2 = tinnitusSoundFactor + (hook.Run("ModifyTinnitusFactor", tinnitusSoundFactor) or 0)
 
-	if lply:Alive() and (otrub or new_organism.otrub) and incapacitated and deathStateEnd then
+	-- во время экрана "вихрь" (vortexdeath) обычный таймер смерти не рисуется
+	local vortex = hg.VortexDeath and hg.VortexDeath.Active and hg.VortexDeath.Active()
+	if not vortex and lply:Alive() and (otrub or new_organism.otrub) and incapacitated and deathStateEnd then
 		local seconds = math.max(math.ceil(deathStateEnd - CurTime()), 0)
 		local progress = math.Clamp(1 - (deathStateEnd - CurTime()) / remDeathStateDuration, 0, 1)
 		remDeathStateColor.a = math.Clamp((25 - (deathStateEnd - CurTime())) / 2, 0, 1) * 255

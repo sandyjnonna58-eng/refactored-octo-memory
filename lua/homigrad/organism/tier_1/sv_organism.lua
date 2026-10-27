@@ -900,7 +900,11 @@ hook.Add("Org Think", "Main", function(owner, org, timeValue)
 
 	if isPly and org.otrub and org.incapacitated then
 		-- таймер смерти только начался: с шансом он станет последними моментами (lastmoments/sv_lastmoments.lua)
-		if not org.deathStateEnd and hg.LastMoments and hg.LastMoments.OnDeathTimer then hg.LastMoments.OnDeathTimer(owner, org, curTime) end
+		-- ...или (если не выпали последние моменты) экраном умирания "вихрь" (vortexdeath/sv_vortexdeath.lua)
+		if not org.deathStateEnd then
+			if hg.LastMoments and hg.LastMoments.OnDeathTimer then hg.LastMoments.OnDeathTimer(owner, org, curTime) end
+			if not org.deathStateEnd and hg.VortexDeath and hg.VortexDeath.OnDeathTimer then hg.VortexDeath.OnDeathTimer(owner, org, curTime) end
+		end
 		org.deathStateEnd = org.deathStateEnd or curTime + 25
 		if (org.defibDeathGrace or 0) > curTime then org.deathStateEnd = org.defibDeathGrace end
 
