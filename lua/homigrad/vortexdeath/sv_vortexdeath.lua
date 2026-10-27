@@ -1,10 +1,10 @@
--- Экран умирания "вихрь": когда ты вырублен и пошёл таймер смерти, с шансом (если не выпали последние моменты)
+-- Экран умирания "вихрь": когда ты вырублен и пошёл таймер смерти, с шансом (по умолчанию всегда, раньше последних моментов)
 -- таймер растягивается на всю песню rem_death_cfyt.ogg (~84 с), а клиент показывает красный вихрь (cl_vortexdeath.lua).
 -- "Give up" (прыжок) - сдаться и умереть сразу.
 hg.VortexDeath = hg.VortexDeath or {}
 local VD = hg.VortexDeath
 
-local chance = CreateConVar("zb_vortexdeath_chance", "20", FCVAR_ARCHIVE, "Chance (%) that the death timer turns into the red vortex dying screen with its song", 0, 100)
+local chance = CreateConVar("zb_vortexdeath_chance", "100", FCVAR_ARCHIVE, "Chance (%) that the death timer turns into the red vortex dying screen with its song", 0, 100)
 VD.Duration = 84
 
 util.AddNetworkString("rem_vortexdeath_giveup")
