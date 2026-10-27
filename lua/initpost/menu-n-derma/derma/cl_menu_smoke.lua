@@ -14,6 +14,7 @@ end
 local WARP_U = 0.0065 -- сила по горизонтали (доля ширины картинки)
 local WARP_V = 0.0035
 local WARP_SPEED = 1
+local WARP_MIN = 0.08 -- слабее этого сдвиг меньше полупикселя: такие клетки рисуются обычным фоном
 
 -- клубы поверх фона (размеры и скорости - для 1920x1080, дальше масштабируются)
 local PUFF_COUNT = 44
@@ -67,44 +68,73 @@ function MS.Reset()
 	MS.LastTime = RealTime()
 end
 
+-- клетки сетки, где есть дым, и их вершины: не меняются, считаем один раз
+local activeCells, activeVerts
+local vertU, vertV = {}, {}
+
+local function BuildActiveCells()
+	local GX, GY = MS.GX, MS.GY
+	local grid = {}
+	for j, row in ipairs(MS.Grid) do
+		grid[j] = {}
+		for i, m in ipairs(row) do grid[j][i] = m >= WARP_MIN and m or 0 end
+	end
+	activeCells, activeVerts = {}, {}
+	local seen = {}
+	for j = 0, GY - 1 do
+		local row, nextRow = grid[j + 1], grid[j + 2]
+		for i = 0, GX - 1 do
+			if row[i + 1] > 0 or row[i + 2] > 0 or nextRow[i + 1] > 0 or nextRow[i + 2] > 0 then
+				activeCells[#activeCells + 1] = {i, j}
+				for _, v in ipairs({{i, j}, {i + 1, j}, {i + 1, j + 1}, {i, j + 1}}) do
+					local key = v[2] * (GX + 1) + v[1]
+					if not seen[key] then
+						seen[key] = true
+						activeVerts[#activeVerts + 1] = {v[1], v[2], key, grid[v[2] + 1][v[1] + 1]}
+					end
+				end
+			end
+		end
+	end
+end
+
+local sin, cos = math.sin, math.cos
+
 local function DrawWarpedBackground(x0, y0, w, h, alpha)
 	surface.SetMaterial(bgMat)
 	surface.SetDrawColor(255, 255, 255, alpha)
 	surface.DrawTexturedRect(x0, y0, w, h)
 
-	local grid, GX, GY = MS.Grid, MS.GX, MS.GY
-	if not grid then return end
+	local GX, GY = MS.GX, MS.GY
+	if not MS.Grid then return end
+	if not activeCells then BuildActiveCells() end
 
+	-- смещение текстуры в каждой вершине; на краях маски вес 0, так что швов с обычным фоном нет
 	local t = RealTime() * WARP_SPEED
-	local cw, ch = w / GX, h / GY
-
-	-- смещение текстуры в вершине (i, j); на краях маски = 0, так что швов с обычным фоном нет
-	local function uv(i, j)
-		local m = grid[j + 1][i + 1]
-		local u, v = i / GX, j / GY
-		if m <= 0 then return u, v end
-		local du = (math.sin(t * 0.13 + j * 0.35 + i * 0.21) + 0.6 * math.sin(t * 0.071 + i * 0.5 - j * 0.23)) * WARP_U * m
-		local dv = (math.cos(t * 0.11 + i * 0.31 + j * 0.17) + 0.5 * math.sin(t * 0.083 - i * 0.27)) * WARP_V * m
-		return u + du, v + dv
+	for n = 1, #activeVerts do
+		local v = activeVerts[n]
+		local i, j, key, m = v[1], v[2], v[3], v[4]
+		local u, vv = i / GX, j / GY
+		if m > 0 then
+			u = u + (sin(t * 0.13 + j * 0.35 + i * 0.21) + 0.6 * sin(t * 0.071 + i * 0.5 - j * 0.23)) * WARP_U * m
+			vv = vv + (cos(t * 0.11 + i * 0.31 + j * 0.17) + 0.5 * sin(t * 0.083 - i * 0.27)) * WARP_V * m
+		end
+		vertU[key], vertV[key] = u, vv
 	end
 
-	for j = 0, GY - 1 do
-		local row, nextRow = grid[j + 1], grid[j + 2]
-		for i = 0, GX - 1 do
-			if row[i + 1] > 0 or row[i + 2] > 0 or nextRow[i + 1] > 0 or nextRow[i + 2] > 0 then
-				local px, py = x0 + i * cw, y0 + j * ch
-				local a, b, c, d = verts[1], verts[2], verts[3], verts[4]
-				a.x, a.y = px, py
-				a.u, a.v = uv(i, j)
-				b.x, b.y = px + cw, py
-				b.u, b.v = uv(i + 1, j)
-				c.x, c.y = px + cw, py + ch
-				c.u, c.v = uv(i + 1, j + 1)
-				d.x, d.y = px, py + ch
-				d.u, d.v = uv(i, j + 1)
-				surface.DrawPoly(verts)
-			end
-		end
+	local cw, ch = w / GX, h / GY
+	local stride = GX + 1
+	local a, b, c, d = verts[1], verts[2], verts[3], verts[4]
+	for n = 1, #activeCells do
+		local cell = activeCells[n]
+		local i, j = cell[1], cell[2]
+		local px, py = x0 + i * cw, y0 + j * ch
+		local k = j * stride + i
+		a.x, a.y, a.u, a.v = px, py, vertU[k], vertV[k]
+		b.x, b.y, b.u, b.v = px + cw, py, vertU[k + 1], vertV[k + 1]
+		c.x, c.y, c.u, c.v = px + cw, py + ch, vertU[k + stride + 1], vertV[k + stride + 1]
+		d.x, d.y, d.u, d.v = px, py + ch, vertU[k + stride], vertV[k + stride]
+		surface.DrawPoly(verts)
 	end
 end
 

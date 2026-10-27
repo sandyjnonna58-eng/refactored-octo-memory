@@ -133,10 +133,11 @@ if CLIENT then
     local offZ = CreateClientConVar("pepperspray_offset_z", "-6", true, false, "Spray offset Up")
     local sndDelay = CreateClientConVar("pepperspray_sound_delay", "0.04", true, false, "Delay between spray sound loops")
     hook.Add("Think", "PepperSprayParticles", function()
-        for _, swep in ipairs(ents.FindByClass("weapon_pepperspray_tpik")) do
-            if swep:GetNWBool("IsSpraying", false) then
-                local owner = swep:GetOwner()
-                if not IsValid(owner) then continue end
+        -- распыляют только из рук: смотрим оружие игроков, а не все сущности карты каждый кадр
+        for _, ply in player.Iterator() do
+            local swep = ply:GetActiveWeapon()
+            if IsValid(swep) and swep:GetClass() == "weapon_pepperspray_tpik" and swep:GetNWBool("IsSpraying", false) then
+                local owner = ply
                 if not emitter then 
                     emitter = ParticleEmitter(owner:GetPos()) 
                 else
