@@ -10,11 +10,12 @@ util.AddNetworkString("rem_skills_levelup")
 local save_dir = "zcity_skills"
 
 -- иконки навыков, перков и радиального меню (Tabler Icons, MIT), иконки состояний sef_icons (из MELEECITY)
-for _, dir in ipairs({"materials/rem_skills/", "materials/radialmenu_rem/", "materials/rem_misc/", "materials/sef_icons/"}) do
+for _, dir in ipairs({"materials/rem_skills/", "materials/radialmenu_rem/", "materials/rem_misc/", "materials/sef_icons/", "materials/rem_menu/"}) do
 	for _, name in ipairs(file.Find(dir .. "*.png", "GAME")) do
 		resource.AddSingleFile(dir .. name)
 	end
 end
+resource.AddSingleFile("materials/rem_menu/menu_bg.jpg") -- фон главного меню
 
 -- опыт за события
 local xp_player_kill = 60

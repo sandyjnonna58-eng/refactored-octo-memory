@@ -307,7 +307,9 @@ local menu_live = {
     logo_drift_x = 7,
     logo_drift_y = 4,
     enter_x = 18,
-    enter_y = 12
+    enter_y = 12,
+    bg_drift_x = 22,
+    bg_drift_y = 12
 }
 local menu_profile_fallback_band = {
     icon = Material("vgui/mats_jack_awards/10")
@@ -988,23 +990,21 @@ function PANEL:First( ply )
 end
 
 local gradient_d = surface.GetTextureID("vgui/gradient-d")
-local gradient_r = surface.GetTextureID("vgui/gradient-r")
 local gradient_l = surface.GetTextureID("vgui/gradient-l")
-local menu_gradient_right = Color(18,18,18,65)
 
 local clr_1 = Color(100,100,100,35)
+local menu_bg_shade_left = 170
 function PANEL:Paint(w,h)
     local backgroundAlpha = math.Clamp(self.DisconnectBackgroundAlpha or 255, 0, 255)
     if backgroundAlpha > 0 then
         local bgMul = backgroundAlpha / 255
-        draw.RoundedBox(0, 0, 0, w, h, Color(self.ColorBG.r, self.ColorBG.g, self.ColorBG.b, (self.ColorBG.a or 255) * bgMul))
-        hg.DrawBlur(self, 5)
-        surface.SetDrawColor(menu_gradient_right.r, menu_gradient_right.g, menu_gradient_right.b, menu_gradient_right.a * bgMul)
-        surface.SetTexture(gradient_r)
-        surface.DrawTexturedRect(0,0,w,h)
-        surface.SetDrawColor(self.ColorBG.r, self.ColorBG.g, self.ColorBG.b, (self.ColorBG.a or 255) * bgMul)
+        -- город в дымке с живым дымом (cl_menu_smoke.lua); слегка смещается за мышью
+        local parX, parY = self:GetLiveOffset(MenuUnit(menu_live.bg_drift_x), MenuUnit(menu_live.bg_drift_y))
+        hg.MenuSmoke.Draw(w, h, parX, parY, backgroundAlpha)
+        -- затемнение слева, чтобы кнопки читались на ярком фоне
+        surface.SetDrawColor(0, 0, 0, menu_bg_shade_left * bgMul)
         surface.SetTexture(gradient_l)
-        surface.DrawTexturedRect(0,0,w,h)
+        surface.DrawTexturedRect(0, 0, w * 0.55, h)
         surface.SetDrawColor(clr_1.r, clr_1.g, clr_1.b, clr_1.a * bgMul)
         surface.SetTexture(gradient_d)
         surface.DrawTexturedRect(0,0,w,h)
