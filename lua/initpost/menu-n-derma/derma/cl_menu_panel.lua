@@ -707,9 +707,10 @@ function PANEL:Paint(w,h)
     local backgroundAlpha = math.Clamp(self.DisconnectBackgroundAlpha or 255, 0, 255)
     if backgroundAlpha > 0 then
         local bgMul = backgroundAlpha / 255
-        -- город в дымке с живым дымом (cl_menu_smoke.lua); слегка смещается за мышью
+        -- город в дымке с живым дымом (cl_menu_smoke.lua); слегка смещается за мышью.
+        -- дым смешивается сложением, поэтому прозрачность самого меню (появление/закрытие) передаём явно
         local parX, parY = self:GetLiveOffset(MenuUnit(menu_live.bg_drift_x), MenuUnit(menu_live.bg_drift_y))
-        hg.MenuSmoke.Draw(w, h, parX, parY, backgroundAlpha)
+        hg.MenuSmoke.Draw(w, h, parX, parY, backgroundAlpha, backgroundAlpha * self:GetAlpha() / 255)
         -- затемнение слева, чтобы кнопки читались на ярком фоне
         surface.SetDrawColor(0, 0, 0, menu_bg_shade_left * bgMul)
         surface.SetTexture(gradient_l)
