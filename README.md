@@ -5,10 +5,7 @@ refactored
 Наполовину Аркада
 
 Короче всё идите нахуй
-Я хочу вкусно  и точку 👁️
 
 КОНТЕНТ
 
 https://steamcommunity.com/sharedfiles/filedetails/?id=3827740854
-
-(b) я архитектор ай ай телефоны кусают  
