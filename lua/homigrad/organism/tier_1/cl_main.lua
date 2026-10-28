@@ -118,6 +118,7 @@ local function PlayRemDeathStateSound()
 		if not IsValid(station) then return end
 		if not LocalPlayer():Alive() then station:Stop() return end
 		remDeathStateStation = station
+		if hg.RemAudio then hg.RemAudio.SetExempt(station) end -- чужая музыка его не глушит
 		station:EnableLooping(true)
 		station:SetVolume(1)
 		station:Play()
@@ -125,6 +126,34 @@ local function PlayRemDeathStateSound()
 end
 
 net.Receive("rem_deathstate_sound", PlayRemDeathStateSound)
+
+-- вихрь и последние моменты: сердце останавливается один раз - с 3-й секунды (звук ~6.5 с, до ~10-й),
+-- не глушится их песней и громче её
+local REM_DYING_HEART_AT = 3
+local REM_DYING_HEART_VOLUME = 2
+local remDyingScreenStart, remDyingHeartPlayed, remDyingHeartStation
+
+local function UpdateRemDyingHeart(active)
+	if not active then
+		remDyingScreenStart, remDyingHeartPlayed = nil, nil
+		if IsValid(remDyingHeartStation) then remDyingHeartStation:Stop() end
+		remDyingHeartStation = nil
+		return
+	end
+
+	remDyingScreenStart = remDyingScreenStart or CurTime()
+	if remDyingHeartPlayed or CurTime() - remDyingScreenStart < REM_DYING_HEART_AT then return end
+	remDyingHeartPlayed = true
+
+	sound.PlayFile("sound/rem_heartstopuncon.wav", "noplay noblock", function(station)
+		if not IsValid(station) then return end
+		if not LocalPlayer():Alive() or not remDyingHeartPlayed then station:Stop() return end
+		remDyingHeartStation = station
+		if hg.RemAudio then hg.RemAudio.SetExempt(station) end
+		station:SetVolume(REM_DYING_HEART_VOLUME)
+		station:Play()
+	end)
+end
 
 -- умирание: из центра экрана надвигается белый свет и к концу таймера заливает всё
 local remDeathStateDuration = 25
@@ -565,6 +594,7 @@ hook.Add("Post Post Pre Post Processing", "organism-effects", function()
 	local dyingScreen = (hg.VortexDeath and hg.VortexDeath.Active and hg.VortexDeath.Active())
 		or lply:GetNWFloat("rem_lastmoments_until", 0) > CurTime()
 		or (deathStateEnd and deathStateEnd - CurTime() > 50)
+	UpdateRemDyingHeart(lply:Alive() and dyingScreen)
 	if not dyingScreen and lply:Alive() and (otrub or new_organism.otrub) and incapacitated and deathStateEnd then
 		local seconds = math.max(math.ceil(deathStateEnd - CurTime()), 0)
 		local progress = math.Clamp(1 - (deathStateEnd - CurTime()) / remDeathStateDuration, 0, 1)
