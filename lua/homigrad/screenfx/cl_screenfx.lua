@@ -341,9 +341,6 @@ hook.Add("Post Pain Post Processing", "rem_fx", function()
 	local pulse = math.min(adrenalineBlur + painBlur, radial_max)
 	local radial = math.min(math.max(kick, pulse), radial_max)
 
-	-- сильная боль - до радиального размытия, чтобы оно её смазывало
-	if painOverlay > 0.01 and LocalPlayer():Alive() and not mat_pain_edge:IsError() then DrawPainOverlay(painOverlay) end
-
 	if radial > 0.01 and not mat_radialblur:IsError() then
 		local fromKick = kick >= pulse
 		mat_radialblur:SetFloat("$c0_x", fromKick and kickX or 0.5)
@@ -351,6 +348,9 @@ hook.Add("Post Pain Post Processing", "rem_fx", function()
 		mat_radialblur:SetFloat("$c0_z", radial * kick_width)
 		DrawShader(mat_radialblur)
 	end
+
+	-- сильная боль - после радиального размытия, оно её не смазывает
+	if painOverlay > 0.01 and LocalPlayer():Alive() and not mat_pain_edge:IsError() then DrawPainOverlay(painOverlay) end
 
 	-- мозговая травма последней - поверх всего остального
 	if trauma > 0.01 and LocalPlayer():Alive() then DrawTrauma(trauma) end
