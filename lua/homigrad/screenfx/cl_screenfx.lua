@@ -24,6 +24,15 @@ local burst_aspect = 1370 / 768
 local mat_glow = Material("rem_fx/hit_glow.png", "smooth")
 local glow_aspect = 1024 / 512
 
+-- сильная боль: края экрана наливаются красным, к центру тянутся красные лучи, между ними тёмное кольцо с шумом
+local mat_pain_edge = Material("rem_fx/pain_edge.png", "smooth")
+local mat_pain_dark = Material("rem_fx/pain_dark.png", "smooth")
+local mat_pain_rays = Material("rem_fx/pain_rays.png", "smooth")
+local mat_pain_noise = {}
+for i = 1, 4 do
+	mat_pain_noise[i] = Material("rem_death/vortex_static" .. i .. ".png") -- без smooth: крупные пиксели
+end
+
 local hg_reduce_screeneffects = ConVarExists("hg_reduce_screeneffects") and GetConVar("hg_reduce_screeneffects") or CreateClientConVar("hg_reduce_screeneffects", "0", true, false, "Reduce screen shader effects by 50%", 0, 1)
 local hg_potatopc = ConVarExists("hg_potatopc") and GetConVar("hg_potatopc")
 
@@ -42,6 +51,12 @@ local adrenaline_max = 1.1
 local pain_start = 15
 local pain_full = 100
 local pain_max = 1
+
+-- боль 100% = 120: с 60% эффект проступает, к 140% (отключка, sv_pain.lua) - на полную
+local pain_overlay_start = 72
+local pain_overlay_full = 168
+local pain_overlay_spin = 1.5 -- градусов в секунду, лучи медленно ползут
+local painOverlay = 0
 
 local blood_gray_start = 4200
 local blood_gray_full = 2600
@@ -172,7 +187,37 @@ hook.Add("Think", "rem_fx", function()
 
 	local pain = org and not org.otrub and Remap01(org.pain or 0, pain_start, pain_full) * pain_max * EffectMul() or 0
 	painBlur = Lerp(math.min(dt * 2, 1), painBlur, pain)
+
+	local overlay = org and not org.otrub and Remap01(org.pain or 0, pain_overlay_start, pain_overlay_full) * EffectMul() or 0
+	painOverlay = Lerp(math.min(dt * 2, 1), painOverlay, overlay)
 end)
+
+local function DrawPainOverlay(a)
+	local sw, sh = ScrW(), ScrH()
+	-- пока боль слабее, кольца больше экрана - краснота подползает с краёв
+	local scale = Lerp(a, 1.6, 1)
+	local w, h = sw * scale, sh * scale
+	local x, y = (sw - w) / 2, (sh - h) / 2
+
+	cam.Start2D()
+		surface.SetMaterial(mat_pain_dark)
+		surface.SetDrawColor(15, 0, 0, 235 * a)
+		surface.DrawTexturedRect(x, y, w, h)
+
+		surface.SetMaterial(mat_pain_noise[math.floor(CurTime() * 20) % 4 + 1])
+		surface.SetDrawColor(230, 15, 15, 40 * a)
+		surface.DrawTexturedRect(0, 0, sw, sh)
+
+		local size = math.max(sw, sh) * 1.15 * scale
+		surface.SetMaterial(mat_pain_rays)
+		surface.SetDrawColor(255, 15, 15, 230 * a)
+		surface.DrawTexturedRectRotated(sw / 2, sh / 2, size, size, CurTime() * pain_overlay_spin)
+
+		surface.SetMaterial(mat_pain_edge)
+		surface.SetDrawColor(255, 0, 0, 255 * a)
+		surface.DrawTexturedRect(x, y, w, h)
+	cam.End2D()
+end
 
 hook.Add("NeedsDepthPass", "rem_fx", function()
 	if gray > 0.01 or blur > 0.01 or trauma > 0.01 then return true end
@@ -292,6 +337,9 @@ hook.Add("Post Processing", "rem_fx", function()
 	elseif burst > 0 then
 		burst = 0
 	end
+
+	-- сильная боль - до радиального размытия, чтобы оно её смазывало
+	if painOverlay > 0.01 and LocalPlayer():Alive() and not mat_pain_edge:IsError() then DrawPainOverlay(painOverlay) end
 
 	if radial > 0.01 and not mat_radialblur:IsError() then
 		local fromKick = kick >= pulse

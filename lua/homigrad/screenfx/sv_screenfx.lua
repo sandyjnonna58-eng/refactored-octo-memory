@@ -13,6 +13,9 @@ local skull_check_interval = 0.1
 
 resource.AddSingleFile("materials/rem_fx/hit_burst.png")
 resource.AddSingleFile("materials/rem_fx/hit_glow.png")
+for _, name in ipairs({"pain_edge", "pain_dark", "pain_rays"}) do
+	resource.AddSingleFile("materials/rem_fx/" .. name .. ".png")
+end
 
 local function SendBurst(ply, strength)
 	if (ply.remFxNextBurst or 0) > CurTime() then return end
