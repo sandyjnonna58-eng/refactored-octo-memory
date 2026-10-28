@@ -1,6 +1,7 @@
 if not SERVER then return end
 
 resource.AddSingleFile("sound/rem_deathost.mp3") -- звук экрана смерти (cl_cdeath.lua)
+resource.AddSingleFile("sound/rem_oneandonly.mp3") -- он же, если умер в последние моменты
 
 
 
@@ -210,6 +211,8 @@ end)
 
 hook.Add("PlayerDeath", "DeathEffect_OnDeath", function(ply, inflictor, attacker)
     local cause = DeathEffect_GetCause(ply, attacker)
+    -- умер в последние моменты (lastmoments/sv_lastmoments.lua) - у экрана смерти свой звук
+    local lastMoments = ply:GetNWFloat("rem_lastmoments_until", 0) > 0
     ply.DeathEffect_LastDamage = nil
     ply.DeathEffect_LastKiller = nil
     ply.DeathEffect_LastSelfHit = nil
@@ -219,6 +222,7 @@ hook.Add("PlayerDeath", "DeathEffect_OnDeath", function(ply, inflictor, attacker
     if not ply:IsBot() then
         net.Start("DeathEffect_Cause")
             net.WriteString(cause)
+            net.WriteBool(lastMoments)
         net.Send(ply)
     end
 

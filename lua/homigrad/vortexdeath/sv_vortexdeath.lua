@@ -1,11 +1,9 @@
--- Экран умирания "вихрь": когда ты вырублен и пошёл таймер смерти, с шансом (раньше последних моментов: 50 на 50 с ними)
+-- Экран умирания "вихрь": когда ты вырублен и пошёл таймер смерти и не выпали последние моменты (zb_lastmoments_share)
 -- таймер растягивается на всю песню rem_death_cfyt.ogg (~84 с), а клиент показывает красный вихрь (cl_vortexdeath.lua).
 -- "Give up" (зажатый прыжок) - время смерти идёт в GiveUpSpeed раз быстрее.
 hg.VortexDeath = hg.VortexDeath or {}
 local VD = hg.VortexDeath
 
--- новое имя вместо zb_vortexdeath_chance: старое значение оставалось сохранённым в конфиге
-local chance = CreateConVar("zb_dying_vortex_chance", "50", FCVAR_ARCHIVE, "Chance (%) that the death timer turns into the red vortex dying screen with its song", 0, 100)
 VD.Duration = 84
 VD.GiveUpSpeed = 4
 
@@ -27,7 +25,6 @@ end
 function VD.OnDeathTimer(owner, org, now)
 	if not IsValid(owner) or not owner:IsPlayer() then return end
 	if hg.LastBattle and hg.LastBattle.IsActiveFor and hg.LastBattle.IsActiveFor(owner) then return end
-	if math.Rand(0, 100) >= chance:GetFloat() then return end
 	Start(owner, org, now)
 end
 

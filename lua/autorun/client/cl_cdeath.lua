@@ -37,8 +37,10 @@ local DEATH_CAUSES = {
 }
 local DEFAULT_CAUSE = DEATH_CAUSES.player
 
--- звук экрана смерти - всегда этот (экран в стиле вихря, vortexdeath/cl_vortexdeath.lua)
+-- звук экрана смерти - всегда этот (экран в стиле вихря, vortexdeath/cl_vortexdeath.lua),
+-- а если умер в последние моменты - свой
 local DEATH_SOUND = "rem_deathost.mp3"
+local LAST_MOMENTS_DEATH_SOUND = "rem_oneandonly.mp3"
 
 -- пока играет звук смерти, всё остальное затихает: игровые звуки (soundfade) и музыка (hg.RemAudio)
 local DEATH_SOUND_FADE = 1.5
@@ -60,9 +62,11 @@ local suicideText = SUICIDE_TEXTS[1]
 
 local deathCause     = nil
 local deathCauseTime = -math.huge
+local deathLastMoments = false
 
 net.Receive("DeathEffect_Cause", function()
     deathCause     = DEATH_CAUSES[net.ReadString()]
+    deathLastMoments = net.ReadBool()
     deathCauseTime = CurTime()
     if deathCause == DEATH_CAUSES.suicide then suicideText = SUICIDE_TEXTS[math.random(#SUICIDE_TEXTS)] end
 end)
@@ -347,7 +351,8 @@ end
 
 local function StartDeathSound(cause)
     deathSoundPending = false
-    sound.PlayFile("sound/" .. DEATH_SOUND, "noplay", function(station)
+    local lastMoments = deathLastMoments and deathCauseTime >= deathTime - 2
+    sound.PlayFile("sound/" .. (lastMoments and LAST_MOMENTS_DEATH_SOUND or DEATH_SOUND), "noplay", function(station)
         if not IsValid(station) then return end
         if not isDead then station:Stop() return end
         deathSoundChannels[#deathSoundChannels + 1] = station
