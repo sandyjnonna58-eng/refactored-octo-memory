@@ -15,11 +15,7 @@ for _, dir in ipairs({"materials/rem_skills/", "materials/radialmenu_rem/", "mat
 		resource.AddSingleFile(dir .. name)
 	end
 end
--- фон главного меню: размытый город и кадры кипящего дыма (cl_menu_smoke.lua)
-resource.AddSingleFile("materials/rem_menu/menu_bg_soft.jpg")
-for i = 1, 20 do
-	resource.AddSingleFile(string.format("materials/rem_menu/smoke/smoke_%02d.png", i))
-end
+resource.AddSingleFile("materials/rem_menu/menu_bg.jpg") -- фон главного меню
 
 -- опыт за события
 local xp_player_kill = 60
