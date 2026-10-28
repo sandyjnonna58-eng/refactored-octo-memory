@@ -88,6 +88,9 @@ hook.Add("RenderScreenspaceEffects", "homigrad", function()
 
 	hook_Run("Post Pain Processing")
 
+	-- после виньетки и шума боли: красный эффект боли, радиальное размытие, мозговая травма (screenfx/cl_screenfx.lua)
+	hook_Run("Post Pain Post Processing")
+
 	-- экраны умирания (вихрь, последние моменты) - поверх всех эффектов, чтобы боль и отключка их не затемняли
 	hook_Run("Dying Screen Processing")
 end)

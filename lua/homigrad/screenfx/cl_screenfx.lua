@@ -302,10 +302,6 @@ hook.Add("Post Processing", "rem_fx", function()
 		DrawShader(mat_depthblur)
 	end
 
-	-- адреналин и боль всегда из центра; удар перекрывает их, если сильнее
-	local pulse = math.min(adrenalineBlur + painBlur, radial_max)
-	local radial = math.min(math.max(kick, pulse), radial_max)
-
 	local burstFrac = 1 - (CurTime() - burstStart) / burstLength
 	local burstA = (burst > 0 and burstFrac > 0) and burst * burstFrac ^ 1.5 or 0
 
@@ -337,6 +333,13 @@ hook.Add("Post Processing", "rem_fx", function()
 	elseif burst > 0 then
 		burst = 0
 	end
+end)
+
+-- после виньетки и шума боли из cl_screeneffects.lua: иначе они затемняют красноту почти в чёрный
+hook.Add("Post Pain Post Processing", "rem_fx", function()
+	-- адреналин и боль всегда из центра; удар перекрывает их, если сильнее
+	local pulse = math.min(adrenalineBlur + painBlur, radial_max)
+	local radial = math.min(math.max(kick, pulse), radial_max)
 
 	-- сильная боль - до радиального размытия, чтобы оно её смазывало
 	if painOverlay > 0.01 and LocalPlayer():Alive() and not mat_pain_edge:IsError() then DrawPainOverlay(painOverlay) end
