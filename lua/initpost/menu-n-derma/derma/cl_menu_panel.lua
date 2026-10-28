@@ -705,9 +705,24 @@ function PANEL:Paint(w,h)
         -- сцены со сбоями (cl_menu_wd.lua)
         local oldMul = surface.GetAlphaMultiplier()
         surface.SetAlphaMultiplier(oldMul * backgroundAlpha / 255)
-        WD.DrawBackground(w, h)
+        -- под видеофоном точечные сцены не нужны
+        if IsValid(self.wdVideo) then
+            surface.SetDrawColor(0, 0, 0, 255)
+            surface.DrawRect(0, 0, w, h)
+        else
+            WD.DrawBackground(w, h)
+        end
         surface.SetAlphaMultiplier(oldMul)
     end
+    if (self.DisconnectBlackAlpha or 0) > 0 then
+        surface.SetDrawColor(0, 0, 0, self.DisconnectBlackAlpha)
+        surface.DrawRect(0, 0, w, h)
+    end
+end
+
+-- список, карусель и загрузка - поверх дочерних панелей (видеофона); в разделах меню их нет
+function PANEL:PaintOver(w, h)
+    local WD = hg.WDMenu
     if IsValid(self.wdInput) and self.wdInput:IsVisible() then
         local a = self.wdInput:GetAlpha()
         self.WDRects = WD.DrawList(self.WDItems, self.WDSelected, a)
@@ -716,10 +731,6 @@ function PANEL:Paint(w,h)
     end
     if self.WDBootStart and not WD.DrawBoot(RealTime() - self.WDBootStart, LocalPlayer():Nick()) then
         self.WDBootStart = nil
-    end
-    if (self.DisconnectBlackAlpha or 0) > 0 then
-        surface.SetDrawColor(0, 0, 0, self.DisconnectBlackAlpha)
-        surface.DrawRect(0, 0, w, h)
     end
 end
 
@@ -841,6 +852,18 @@ function PANEL:CreateWDMenu()
         luaMenu:WDClick()
     end
 
+    -- личный видеофон (cl_menu_wd.lua): HTML-панель за всем остальным
+    if hg.WDMenu.HasPrivateVideo() then
+        local video = vgui.Create("DHTML", self)
+        self.wdVideo = video
+        video:SetPos(0, 0)
+        video:SetSize(ScrW(), ScrH())
+        video:SetMouseInputEnabled(false)
+        video:SetKeyboardInputEnabled(false)
+        video:SetHTML(hg.WDMenu.PrivateVideoHTML())
+        video:MoveToBack()
+    end
+
     local avatar = vgui.Create("AvatarImage", self)
     self.wdAvatar = avatar
     local sh = ScrH()
@@ -938,7 +961,8 @@ function PANEL:ActivateSelect(strTitle, tbl)
     end
 
     for _, child in ipairs(luaMenu:GetChildren()) do
-        if child ~= luaMenu.panelparrent and not (strTitle == "Appearance" and child == luaMenu.previewHolder) then
+        -- видеофон остаётся и за разделами меню
+        if child ~= luaMenu.panelparrent and child ~= luaMenu.wdVideo and not (strTitle == "Appearance" and child == luaMenu.previewHolder) then
             child:AlphaTo(0, 0.2, 0, function()
                 if IsValid(child) then child:SetVisible(false) end
             end)

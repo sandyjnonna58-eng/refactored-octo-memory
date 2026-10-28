@@ -24,11 +24,17 @@ def stipple(gray, step=6, rmax=2.6, gamma=0.8, jitter=1.6, seed=0):
 def save(img,name):
     img.convert("RGB").save(OUT+name+".png",optimize=True)
 
+def save2(gray,name,**kw):
+    # основной кадр и второй с другим разбросом точек: в игре мерцают между собой
+    seed=kw.pop("seed",0)
+    save(stipple(gray,seed=seed,**kw),name)
+    save(stipple(gray,seed=seed+100,**kw),name+"_b")
+
 # 1) город
 city=Image.open("materials/rem_menu/menu_bg.jpg").convert("L").resize((W,H),Image.LANCZOS)
 c=np.asarray(city).astype(float)/255
 c=np.clip((c-0.2)/0.75,0,1)**1.5
-save(stipple(c,seed=1),"scene_city")
+save2(c,"scene_city",seed=1)
 
 # 2) кольца-мишень
 yy,xx=np.mgrid[0:H,0:W].astype(float)
@@ -38,7 +44,7 @@ rings=((np.sin(r/26.0)>0.35)&(r<H*0.62)).astype(float)*np.clip(1-r/(H*0.7),0.15,
 rings*=np.clip(0.55+n*0.9,0,1)
 cross=((np.abs(xx-W*0.52)<3)|(np.abs(yy-H*0.5)<3))&(r<H*0.2)
 rings=np.maximum(rings,cross*0.9)
-save(stipple(rings,step=6,seed=2),"scene_rings")
+save2(rings,"scene_rings",step=6,seed=2)
 
 # 3) рой пиксельных черепов (свой рисунок 7x8)
 SK=["0111110","1111111","1101011","1101011","1111111","0110110","0011100","0101010"]
@@ -52,7 +58,23 @@ for _ in range(260):
     ys,xs=max(0,y),max(0,x); ye,xe=min(H,y+h),min(W,x+w)
     if ye<=ys or xe<=xs: continue
     field[ys:ye,xs:xe]=np.maximum(field[ys:ye,xs:xe],spr[ys-y:ye-y,xs-x:xe-x])
-save(stipple(field,step=5,rmax=2.2,seed=3),"scene_skulls")
+save2(field,"scene_skulls",step=5,rmax=2.2,seed=3)
+
+# 3б) фигура в капюшоне (свой рисунок): капюшон, плечи, тёмное лицо с двумя светлыми точками глаз
+hood=Image.new("L",(W,H),0); d=ImageDraw.Draw(hood)
+cx=W*0.5
+d.ellipse([cx-470,H*0.62,cx+470,H*1.35],fill=150)                     # плечи
+d.polygon([(cx-250,H*0.78),(cx-205,H*0.25),(cx-120,H*0.07),(cx,H*0.03),(cx+120,H*0.07),(cx+205,H*0.25),(cx+250,H*0.78)],fill=210)  # капюшон
+d.ellipse([cx-135,H*0.22,cx+135,H*0.72],fill=18)                        # тень лица
+for ex in (-50,50):
+    d.ellipse([cx+ex-13,H*0.43-7,cx+ex+13,H*0.43+7],fill=255)            # глаза
+hg_=np.asarray(hood.filter(ImageFilter.GaussianBlur(5))).astype(float)/255
+hn=np.asarray(Image.fromarray((rng.random((H//6,W//6))*255).astype(np.uint8)).resize((W,H),Image.BICUBIC)).astype(float)/255
+hg_=np.clip(hg_*(0.7+0.5*hn),0,1)
+save2(hg_,"scene_hood",step=5,rmax=2.3,seed=5)
+
+# шум из точек: из него сцены "проявляются"
+save(stipple(np.clip(rng.random((H,W))*0.9,0,1)**2,step=6,seed=9),"scene_noise")
 
 # 4) логотип FUNKAS: серое граффити с подтёками
 font=ImageFont.truetype("resource/fonts/FingerPaint-Regular.ttf",260)

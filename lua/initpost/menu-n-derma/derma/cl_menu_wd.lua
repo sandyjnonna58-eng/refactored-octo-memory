@@ -1,15 +1,26 @@
 -- Главное меню в стиле хакерского терминала (как меню Watch Dogs 2), рисует cl_menu_panel.lua:
 -- * при первом открытии за сессию - загрузка (строки терминала + предупреждение) и экран входа с логотипом FUNKAS;
--- * фон: сцены сменяют друг друга со сбоями картинки - точечные картинки (materials/rem_wd/, генератор
---   tools/menu_wd/gen.py), живая камера по карте вокруг игрока и "воспоминания" (скриншоты hg.screens);
+-- * фон: сцены из точек (materials/rem_wd/, генератор tools/menu_wd/gen.py) сменяют друг друга со сбоями картинки;
+--   точки мерцают, сцена проявляется из шума, у каждой своё движение (волны колец, наезд, сканирование, дрейф);
 -- * слева внизу список пунктов, выбранный - синяя плашка с "//"; справа внизу карусель карточек со стрелками,
 --   точками и кнопкой ACCESS; слева сверху аватар и ник.
 hg.WDMenu = hg.WDMenu or {}
 local WD = hg.WDMenu
 
+-- личный видеофон: если у игрока есть этот файл (в репозиторий и на сервер он не попадает, см. .gitignore),
+-- вместо точечных сцен за меню крутится видео (HTML-панель с <video>)
+WD.PrivateVideo = "materials/rem_wd_private/menu_bg.webm"
+function WD.HasPrivateVideo()
+	return file.Exists(WD.PrivateVideo, "GAME")
+end
+function WD.PrivateVideoHTML()
+	return [[<html><head><style>html,body{margin:0;padding:0;overflow:hidden;background:#000}
+video{position:absolute;left:0;top:0;width:100%;height:100%}</style></head><body>
+<video src="asset://garrysmod/]] .. WD.PrivateVideo .. [[" autoplay loop muted></video></body></html>]]
+end
+
 local colBlue = Color(0, 0, 255)
 local colText = Color(225, 225, 225)
-local colDim = Color(150, 150, 150)
 local colBox = Color(22, 22, 22, 215)
 local colPanel = Color(12, 12, 12, 225)
 local colGreen = Color(60, 230, 60)
@@ -18,17 +29,22 @@ local SCENE_TIME = 9     -- секунд на сцену
 local GLITCH_TIME = 0.6  -- сбой при смене сцены
 local CARD_TIME = 8      -- карточки листаются сами
 
+local function Mat(name) return Material("rem_wd/" .. name .. ".png", "smooth") end
+local function Pair(name) return {Mat(name), Mat(name .. "_b")} end
+
+-- сцены из точек; у каждой своё движение
 local scenes = {
-	{kind = "image", mat = Material("rem_wd/scene_rings.png", "smooth")},
-	{kind = "live"},
-	{kind = "image", mat = Material("rem_wd/scene_city.png", "smooth")},
-	{kind = "memory"},
-	{kind = "image", mat = Material("rem_wd/scene_skulls.png", "smooth")},
-	{kind = "live", yaw = 140},
+	{mats = Pair("scene_rings"), anim = "pulse"},
+	{mats = Pair("scene_hood"), anim = "zoom"},
+	{mats = Pair("scene_city"), anim = "scan"},
+	{mats = Pair("scene_skulls"), anim = "drift"},
 }
-local matLogo = Material("rem_wd/logo.png", "smooth")
-local matNoise = {}
-for i = 1, 4 do matNoise[i] = Material("rem_death/vortex_static" .. i .. ".png") end
+local matDotNoise = Mat("scene_noise")
+local matLogo = Mat("logo")
+
+local DOT = 115          -- яркость точек
+local FLICKER_FPS = 8    -- два разброса точек сменяют друг друга
+local RESOLVE_TIME = 1.2 -- сцена проявляется из шума
 
 local function CreateFonts()
 	local sh = ScrH()
@@ -52,55 +68,51 @@ end
 
 -- ===================== фон =====================
 
-local function DrawImageScene(mat, w, h, st)
-	if mat:IsError() then return end
-	local zoom = 1 + 0.05 * st / SCENE_TIME
-	local iw, ih = w * zoom, h * zoom
+local function Rect(mat, cx, cy, w, h, v, a)
 	surface.SetMaterial(mat)
-	surface.SetDrawColor(115, 115, 115, 255)
-	surface.DrawTexturedRect((w - iw) / 2, (h - ih) / 2, iw, ih)
+	surface.SetDrawColor(v, v, v, a)
+	surface.DrawTexturedRect(cx - w / 2, cy - h / 2, w, h)
 end
 
-local liveView = {drawhud = false, drawviewmodel = false, dopostprocess = false, drawmonitors = false}
-local function DrawLiveScene(scene, w, h, st)
-	local ply = LocalPlayer()
-	if not IsValid(ply) then return end
-	-- медленный облёт вокруг игрока, как съёмка с плеча
-	scene.baseYaw = scene.baseYaw or ply:EyeAngles().y -- начинаем оттуда, куда смотрит игрок
-	local yaw = (scene.yaw or 0) + st * 5 + scene.baseYaw
-	local ang = Angle(8, yaw, 0)
-	liveView.origin = ply:EyePos() - ang:Forward() * (70 + st * 6) + Vector(0, 0, 14)
-	liveView.angles = ang
-	liveView.x, liveView.y, liveView.w, liveView.h = 0, 0, w, h
-	liveView.fov = 62
-	render.RenderView(liveView)
+local function DrawDots(scene, w, h, st, a)
+	local mat = scene.mats[math.floor(RealTime() * FLICKER_FPS) % 2 + 1]
+	if mat:IsError() then return end
+	local cx, cy = w / 2, h / 2
 
-	surface.SetDrawColor(0, 0, 0, 120)
-	surface.DrawRect(0, 0, w, h)
-	surface.SetMaterial(matNoise[math.floor(RealTime() * 18) % 4 + 1])
-	surface.SetDrawColor(255, 255, 255, 22)
-	surface.DrawTexturedRect(0, 0, w, h)
-end
-
-local function DrawMemoryScene(w, h, st, index)
-	local list = {}
-	for _, mat in ipairs(hg.screens or {}) do
-		if mat and not mat:IsError() then list[#list + 1] = mat end
+	if scene.anim == "pulse" then
+		-- кольца расходятся волнами: две копии растут и гаснут по очереди
+		for k = 0, 1 do
+			local p = (st / 4.5 + k * 0.5) % 1
+			local s = 0.8 + p * 0.5
+			Rect(mat, cx, cy, w * s, h * s, DOT, a * math.sin(p * math.pi))
+		end
+	elseif scene.anim == "zoom" then
+		local s = 1 + 0.12 * st / SCENE_TIME
+		Rect(mat, cx, cy, w * s, h * s, DOT, a)
+	elseif scene.anim == "scan" then
+		local s = 1.03
+		Rect(mat, cx, cy, w * s, h * s, DOT * 0.8, a)
+		-- полоса сканирования: в узкой полосе те же точки ярче
+		local band = h * 0.16
+		local y = (st / 3 % 1) * (h + band) - band
+		render.SetScissorRect(0, math.floor(y), w, math.ceil(y + band), true)
+			Rect(mat, cx, cy, w * s, h * s, 235, a)
+		render.SetScissorRect(0, 0, 0, 0, false)
+	elseif scene.anim == "drift" then
+		-- два слоя: дальний медленно вправо, ближний крупнее и быстрее влево
+		Rect(mat, cx - w * 0.05 + st * 6, cy, w * 1.12, h * 1.12, DOT, a)
+		Rect(mat, cx + w * 0.12 - st * 16, cy + h * 0.04, w * 1.55, h * 1.55, DOT * 0.55, a * 0.6)
 	end
-	if #list == 0 then return false end
-	DrawImageScene(list[index % #list + 1], w, h, st)
-	return true
 end
 
 local function DrawScene(i, w, h, st)
 	local scene = scenes[(i - 1) % #scenes + 1]
-	if scene.kind == "image" then
-		DrawImageScene(scene.mat, w, h, st)
-	elseif scene.kind == "live" then
-		DrawLiveScene(scene, w, h, st)
-	elseif scene.kind == "memory" then
-		if not DrawMemoryScene(w, h, st, i) then DrawImageScene(scenes[1].mat, w, h, st) end
+	local k = math.Clamp(st / RESOLVE_TIME, 0, 1)
+	-- проявление: из шума точек в картинку
+	if k < 1 and not matDotNoise:IsError() then
+		Rect(matDotNoise, w / 2, h / 2, w, h, DOT, 255 * (1 - k))
 	end
+	DrawDots(scene, w, h, st, 255 * k)
 end
 
 -- сбой: экран режется на полосы, полосы съезжают и мигают синим/белым
