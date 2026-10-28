@@ -15,7 +15,6 @@ for _, dir in ipairs({"materials/rem_skills/", "materials/radialmenu_rem/", "mat
 		resource.AddSingleFile(dir .. name)
 	end
 end
-resource.AddSingleFile("materials/rem_menu/menu_bg.jpg") -- фон главного меню
 
 -- опыт за события
 local xp_player_kill = 60
