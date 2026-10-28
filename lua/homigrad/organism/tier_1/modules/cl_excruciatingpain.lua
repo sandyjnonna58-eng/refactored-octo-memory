@@ -1,8 +1,8 @@
--- Невыносимая боль: после 150% боли (100% = 120, выдерживают до 200%, sv_pain.lua) звучит rem_excruciatingpain.ogg,
+-- Невыносимая боль: после 150% боли (100% = 120, с 170% вырубает, sv_pain.lua) звучит rem_excruciatingpain.ogg,
 -- и чем сильнее боль, тем он громче. Боль спала, отключился или умер - затихает.
 local path = "sound/rem_excruciatingpain.ogg"
 local PAIN_100 = 120
-local START, FULL = 1.5, 2 -- с какой доли боли звучит и на какой - на полную
+local START, FULL = 1.5, 1.7 -- с какой доли боли звучит и на какой - на полную
 local VOLUME_MIN, VOLUME_MAX = 0.2, 1.5
 local FADE_IN, FADE_OUT = 1, 2.5 -- за сколько секунд громкость догоняет боль / затихает
 
