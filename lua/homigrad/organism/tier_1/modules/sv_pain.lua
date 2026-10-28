@@ -8,17 +8,17 @@ local consciousness_fake_threshold = 0.38
 local consciousness_recovery_speed = 12
 local low_consciousness_recovery_speed = 16
 local otrub_consciousness_recovery_speed = 20
--- 100% боли = 120. С 170% (204) человек падает и вырубается, а если очень долго держится на 150% (180) и выше -
--- тоже теряет сознание; после 150% звучит rem_excruciatingpain.ogg (cl_excruciatingpain.lua)
-local pain_tolerance = 204
+-- 100% боли = 120. С 140% (168) человек падает и вырубается, а если 7 с держится на 120% (144) и выше -
+-- тоже теряет сознание; с 120% звучит rem_excruciatingpain.ogg (cl_excruciatingpain.lua)
+local pain_tolerance = 168
 local otrub_pain_tolerance = 90
 local pain_fake_threshold = 1
 local pain_drain_base = 20
 local pain_drain_otrub_mul = 4.5
-local pain_unconscious_threshold = 204
+local pain_unconscious_threshold = 168
 local pain_unconscious_time = 1.5
-local pain_long_threshold = 180 -- 150%
-local pain_long_time = 7        -- столько секунд на 150%+ подряд - и отключается
+local pain_long_threshold = 144 -- 120%
+local pain_long_time = 7        -- столько секунд на 120%+ подряд - и отключается
 local pain_unconscious_cooldown = 12
 local shock_stage_thresholds = {15, 35, 60, 80}
 -- Викодин: глушит боль, но не трогает пульс и дыхание - умереть от него нельзя
