@@ -8,7 +8,8 @@ local consciousness_fake_threshold = 0.38
 local consciousness_recovery_speed = 12
 local low_consciousness_recovery_speed = 16
 local otrub_consciousness_recovery_speed = 20
--- 100% боли = 120. С 140% (168) человек падает и вырубается; с 120% звучит rem_excruciatingpain.ogg (cl_excruciatingpain.lua)
+-- 100% боли = 120. С 100% сознание за 10 с уходит и человек вырубается, с 140% (168) - почти сразу;
+-- в отключке от боли лежит, пока боль не спадёт до 80% (96). С 120% звучит rem_excruciatingpain.ogg (cl_excruciatingpain.lua)
 local pain_tolerance = 168
 local otrub_pain_tolerance = 90
 local pain_fake_threshold = 1
@@ -17,6 +18,9 @@ local pain_drain_otrub_mul = 4.5
 local pain_unconscious_threshold = 168
 local pain_unconscious_time = 1.5
 local pain_unconscious_cooldown = 12
+local pain_fade_threshold = 120 -- 100%: с этой боли сознание начинает уходить
+local pain_fade_time = 10       -- за столько секунд - до отключки
+local pain_wake_threshold = 96  -- 80%: ниже этого из болевой отключки можно очнуться
 local shock_stage_thresholds = {15, 35, 60, 80}
 -- Викодин: глушит боль, но не трогает пульс и дыхание - умереть от него нельзя
 local vicodin_strength = 0.6
@@ -68,7 +72,26 @@ local function updateShock(owner, org, timeValue)
 	end
 end
 
+local function KnockOut(org)
+	org.painKnockout = true
+	org.painFadeTime = 0
+	org.needotrub = true
+	org.consciousness = 0
+	org.painUnconscious = true
+end
+
 local function updatePainUnconscious(owner, org, timeValue)
+	-- вырубило болью: сознание 0, пока боль не спадёт до 80%
+	if org.painKnockout then
+		if not org.alive or org.pain <= pain_wake_threshold or hg.organism.FractureTolerant(org) then
+			org.painKnockout = nil
+		else
+			org.needotrub = true
+			org.consciousness = 0
+			return
+		end
+	end
+
 	if org.otrub or not org.alive then
 		return
 	end
@@ -76,9 +99,22 @@ local function updatePainUnconscious(owner, org, timeValue)
 	if hg.organism.FractureTolerant(org) then
 		org.painUnconscious = false
 		org.painUnconsciousTime = 0
+		org.painFadeTime = 0
 		return
 	end
 	org.painUnconscious = false
+
+	-- с 100% боли сознание тает: через pain_fade_time доходит до порога отключки (0.3)
+	if org.pain >= pain_fade_threshold then
+		org.painFadeTime = (org.painFadeTime or 0) + timeValue
+		org.consciousness = math.min(org.consciousness, 1 - (1 - consciousness_otrub_threshold) * math.min(org.painFadeTime / pain_fade_time, 1))
+		if org.painFadeTime >= pain_fade_time then
+			KnockOut(org)
+			return
+		end
+	else
+		org.painFadeTime = math.max((org.painFadeTime or 0) - timeValue, 0)
+	end
 
 	local now = CurTime()
 	if org.pain >= pain_unconscious_threshold and org.consciousness > 0.08 then
@@ -90,9 +126,7 @@ local function updatePainUnconscious(owner, org, timeValue)
 	if org.painUnconsciousTime >= pain_unconscious_time and now >= (org.painUnconsciousCooldown or 0) then
 		org.painUnconsciousCooldown = now + pain_unconscious_cooldown
 		org.painUnconsciousTime = 0
-		org.needotrub = true
-		org.consciousness = math.min(org.consciousness, 0.18)
-		org.painUnconscious = true
+		KnockOut(org)
 	else
 		org.painUnconscious = false
 	end
@@ -121,6 +155,8 @@ module[1] = function(org)
 	org.painUnconscious = false
 	org.painUnconsciousTime = 0
 	org.painUnconsciousCooldown = 0
+	org.painFadeTime = 0
+	org.painKnockout = nil
 
 	org.stun = 0
 	org.lightstun = 0
