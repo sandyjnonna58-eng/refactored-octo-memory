@@ -1,3 +1,7 @@
+-- потолок боли: 100% = 120, выдерживают до 200% (sv_pain.lua), сверху небольшой запас
+hg.organism = hg.organism or {}
+hg.organism.PainCap = 260
+
 if SERVER then
     local painaddDrainRate = 16
     local adrenalinePainaddPassiveRate = 20
@@ -19,11 +23,11 @@ if SERVER then
             org.pain = 0
             return
         end
-        org.avgpain = math.min(org.avgpain + add, 150)
+        org.avgpain = math.min(org.avgpain + add, hg.organism.PainCap or 260)
         org.painadd = math.max(org.painadd - add - passiveDrain, 0)
         local heroPainMul = 1
         org.pain = org.avgpain * math.max(1 - (org.adrenaline or 0) / 4, 0.75) * math.max(1 - (org.analgesia or 0), 0) * heroPainMul
-        org.pain = math.min(org.pain, 150)
+        org.pain = math.min(org.pain, hg.organism.PainCap or 260)
     end, HOOK_MONITOR_HIGH)
     hook.Add("Org Think", "ImmediatePainDrainBoost", function(owner, org, timeValue)
         local isHero = IsValid(owner) and owner:IsPlayer() and owner.RealishIsHero
@@ -41,6 +45,6 @@ if SERVER then
         org.avgpain = math.max(org.avgpain - extraSub, 0)
         local heroPainMul = 1
         org.pain = org.avgpain * math.max(1 - (org.adrenaline or 0) / 4, 0.75) * math.max(1 - (org.analgesia or 0), 0) * heroPainMul
-        org.pain = math.min(org.pain, 150)
+        org.pain = math.min(org.pain, hg.organism.PainCap or 260)
     end, HOOK_MONITOR_LOW)
 end

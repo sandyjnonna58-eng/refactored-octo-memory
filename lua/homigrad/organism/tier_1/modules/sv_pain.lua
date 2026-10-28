@@ -1,4 +1,5 @@
 local max, min, Clamp, Approach = math.max, math.min, math.Clamp, math.Approach
+resource.AddSingleFile("sound/rem_excruciatingpain.ogg") -- невыносимая боль после 150% (cl_excruciatingpain.lua)
 --local Organism = hg.organism
 hg.organism.module.pain = {}
 local module = hg.organism.module.pain
@@ -7,12 +8,14 @@ local consciousness_fake_threshold = 0.38
 local consciousness_recovery_speed = 12
 local low_consciousness_recovery_speed = 16
 local otrub_consciousness_recovery_speed = 20
-local pain_tolerance = 120
+-- 100% боли = 120. Человек выдерживает до 200% (240): только дальше падает и вырубается;
+-- после 150% звучит rem_excruciatingpain.ogg (cl_excruciatingpain.lua)
+local pain_tolerance = 240
 local otrub_pain_tolerance = 90
-local pain_fake_threshold = 0.9
+local pain_fake_threshold = 1
 local pain_drain_base = 20
 local pain_drain_otrub_mul = 4.5
-local pain_unconscious_threshold = 112
+local pain_unconscious_threshold = 240
 local pain_unconscious_time = 1.5
 local pain_unconscious_cooldown = 12
 local shock_stage_thresholds = {15, 35, 60, 80}
@@ -186,7 +189,7 @@ module[2] = function(owner, org, timeValue)
 		org.needfake = true
 	end
 
-	org.avgpain = min(org.avgpain + add, 150)
+	org.avgpain = min(org.avgpain + add, hg.organism.PainCap or 260)
 	if !org.lasthit or org.lasthit + 1 < CurTime() then org.avgpain = max(org.avgpain - sub, 0) end
 	org.painlessen = sub
 
