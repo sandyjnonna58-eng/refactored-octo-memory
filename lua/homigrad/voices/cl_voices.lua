@@ -3,6 +3,16 @@ local path = "sound/rem_theytalktoyou.mp3"
 local volume_max = 0.8
 local fade_in, fade_out = 0.8, 1.5
 local duck_to = 0.25
+-- во время суицида (позыв, оружие у головы) голоса тише
+local suicide_mul = 0.35
+local suicide_fade = 0.5 -- за сколько секунд стихают / возвращаются
+
+local suicideK = 1
+
+local function Suiciding(ply)
+	local now = CurTime()
+	return ply:GetNWBool("suiciding", false) or ply:GetNWFloat("rem_suicide_hold", 0) > now or ply:GetNWFloat("rem_urges_end", 0) > now
+end
 
 local station
 
@@ -20,6 +30,7 @@ net.Receive("rem_voices", function()
 		if IsValid(station) then chan:Stop() return end
 
 		station = chan
+		suicideK = Suiciding(LocalPlayer()) and suicide_mul or 1
 		if hg.RemAudio then hg.RemAudio.SetExempt(chan) end
 		chan:SetVolume(0)
 		chan:Play()
@@ -36,7 +47,8 @@ hook.Add("Think", "rem_voices", function()
 
 	local t, len = station:GetTime(), station:GetLength()
 	local vol = math.min(t / fade_in, (len - t) / fade_out, 1)
-	station:SetVolume(math.max(vol, 0) * volume_max)
+	suicideK = math.Approach(suicideK, Suiciding(LocalPlayer()) and suicide_mul or 1, FrameTime() / suicide_fade)
+	station:SetVolume(math.max(vol, 0) * volume_max * suicideK)
 
 	if hg.RemAudio then hg.RemAudio.Duck("voices", duck_to) end
 end)
