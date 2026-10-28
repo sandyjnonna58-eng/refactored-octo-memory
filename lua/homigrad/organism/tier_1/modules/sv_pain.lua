@@ -18,7 +18,7 @@ local pain_drain_otrub_mul = 4.5
 local pain_unconscious_threshold = 204
 local pain_unconscious_time = 1.5
 local pain_long_threshold = 180 -- 150%
-local pain_long_time = 30       -- столько секунд на 150%+ подряд - и отключается
+local pain_long_time = 7        -- столько секунд на 150%+ подряд - и отключается
 local pain_unconscious_cooldown = 12
 local shock_stage_thresholds = {15, 35, 60, 80}
 -- Викодин: глушит боль, но не трогает пульс и дыхание - умереть от него нельзя
