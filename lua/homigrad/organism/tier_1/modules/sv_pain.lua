@@ -1,5 +1,5 @@
 local max, min, Clamp, Approach = math.max, math.min, math.Clamp, math.Approach
-resource.AddSingleFile("sound/rem_excruciatingpain.ogg") -- невыносимая боль после 150% (cl_excruciatingpain.lua)
+resource.AddSingleFile("sound/rem_excruciatingpain.ogg") -- невыносимая боль с 120% (cl_excruciatingpain.lua)
 --local Organism = hg.organism
 hg.organism.module.pain = {}
 local module = hg.organism.module.pain
