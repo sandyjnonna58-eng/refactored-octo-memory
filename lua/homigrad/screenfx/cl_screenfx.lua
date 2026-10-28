@@ -1,5 +1,5 @@
 -- Шейдеры из Simple Custom Shaders:
--- радиальное размытие - попадания (от игроков сильнее), взрывы, адреналин и боль (постоянно), старт последнего боя;
+-- радиальное размытие (не больше 50%, без пульсации) - попадания (от игроков сильнее), взрывы, адреналин и боль (постоянно), старт последнего боя;
 -- серость по глубине - кровопотеря, таймер смерти, депрессия;
 -- размытие по глубине - урон мозгу, дезориентация.
 hg.RemFX = hg.RemFX or {}
@@ -30,20 +30,18 @@ local hg_potatopc = ConVarExists("hg_potatopc") and GetConVar("hg_potatopc")
 local kick_width = 0.15
 local kick_decay = 2.5
 local kick_max = 2.5
+-- радиальное размытие от всего сразу (удары, адреналин, боль) не сильнее 50% от kick_max
+local radial_max = kick_max * 0.5
 
--- адреналин: постоянное размытие, пульсирует как сердце
+-- адреналин: постоянное размытие, без пульсации
 local adrenaline_start = 0.2
 local adrenaline_full = 2.5
 local adrenaline_max = 1.1
-local adrenaline_pulse_speed = 7
-local adrenaline_pulse = 0.35
 
--- боль: тоже постоянное, медленно ноет; складывается с адреналином
+-- боль: тоже постоянное, складывается с адреналином
 local pain_start = 15
 local pain_full = 100
 local pain_max = 1
-local pain_pulse_speed = 2
-local pain_pulse = 0.2
 
 local blood_gray_start = 4200
 local blood_gray_full = 2600
@@ -260,11 +258,8 @@ hook.Add("Post Processing", "rem_fx", function()
 	end
 
 	-- адреналин и боль всегда из центра; удар перекрывает их, если сильнее
-	local time = CurTime()
-	local pulse = adrenalineBlur * (1 - adrenaline_pulse + adrenaline_pulse * math.abs(math.sin(time * adrenaline_pulse_speed)))
-		+ painBlur * (1 - pain_pulse + pain_pulse * math.abs(math.sin(time * pain_pulse_speed)))
-	pulse = math.min(pulse, kick_max)
-	local radial = math.max(kick, pulse)
+	local pulse = math.min(adrenalineBlur + painBlur, radial_max)
+	local radial = math.min(math.max(kick, pulse), radial_max)
 
 	local burstFrac = 1 - (CurTime() - burstStart) / burstLength
 	local burstA = (burst > 0 and burstFrac > 0) and burst * burstFrac ^ 1.5 or 0
