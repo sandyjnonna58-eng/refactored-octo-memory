@@ -1,6 +1,6 @@
 -- Кнопки главного меню в стиле Dying Light (cl_menu_panel.lua): список надписей на наклонённой в перспективе
--- плоскости, слева две тёмные планки с повёрнутыми "MAIN MENU" и "FUNKAS"; под мышью пункт заливается оранжевой
--- плашкой с тёмным жирным текстом и стрелкой.
+-- плоскости, слева тёмная панель с тонкой полосой и повёрнутым "MAIN MENU"; выбранный пункт (последний под мышью,
+-- сначала верхний) залит оранжевой плашкой от самой панели, текст тёмный жирный, справа стрелка.
 -- Перспектива - проективная матрица (гомография) в cam.PushModelMatrix; мышь переводится обратно обратной матрицей.
 -- Шрифты: Montserrat Medium и Barlow Semi Condensed Bold (OFL, resource/fonts/*-OFL.txt), раздаёт sv_menu_title_font.lua.
 hg.DLMenu = hg.DLMenu or {}
@@ -10,28 +10,30 @@ local colText = Color(240, 238, 232, 245)
 local colHover = Color(240, 110, 20, 255)
 local colHoverText = Color(25, 15, 5, 255)
 local colArrow = Color(255, 215, 175, 255)
-local colBar = Color(18, 16, 14, 235)
-local colSide = Color(240, 150, 30, 255)
-local colSideTitle = Color(235, 235, 230, 255)
+local colPanel = Color(16, 15, 13, 240)
+local colDivider = Color(125, 85, 45, 255)
+local colSide = Color(235, 235, 230, 255)
 
 -- размеры в долях высоты экрана
-local LINE = 0.066       -- высота строки
-local WIDTH = 0.72       -- ширина плоскости меню
-local SIDE = 0.11        -- место под планки слева
-local BAR_W, BAR_GAP = 0.042, 0.007
+local LINE = 0.064       -- высота строки
+local WIDTH = 0.8        -- ширина плоскости меню
+local PANEL = 0.175      -- ширина тёмной панели слева
+local DIVIDER, DIVIDER_W = 0.056, 0.003 -- тонкая полоса на панели
+local TEXT_GAP = 0.012   -- от панели до текста
 local HOVER_GROW = 6     -- как быстро растёт плашка
 -- плоскость на экране: левый край, наклон и перспектива (правый край дальше и выше)
 local LEFT = 0.13        -- доля ширины экрана
-local TILT = 0.10        -- насколько правый край выше (доля ширины меню)
-local FAR = 0.06         -- насколько правый край короче с каждой стороны (доля высоты меню)
-local SHEAR = 0.03       -- низ чуть правее верха (доля высоты меню)
+local CENTER = 0.55      -- середина меню по высоте экрана
+local TILT = 0.045       -- насколько правый край выше (доля ширины меню)
+local FAR = 0.035        -- насколько правый край короче с каждой стороны (доля высоты меню)
+local SHEAR = 0.012      -- низ чуть правее верха (доля высоты меню)
 
 local function CreateFonts()
 	local sh = ScrH()
-	surface.CreateFont("DLMenu_Item", {font = "Montserrat Medium", size = math.floor(sh * 0.05), weight = 500, antialias = true, extended = true})
-	surface.CreateFont("DLMenu_ItemHover", {font = "Barlow Semi Condensed", size = math.floor(sh * 0.066), weight = 700, antialias = true, extended = true})
-	surface.CreateFont("DLMenu_Side", {font = "Montserrat Medium", size = math.floor(sh * 0.03), weight = 500, antialias = true, extended = true})
-	surface.CreateFont("DLMenu_SideTitle", {font = "Barlow Semi Condensed", size = math.floor(sh * 0.05), weight = 700, antialias = true, extended = true})
+	surface.CreateFont("DLMenu_Item", {font = "Montserrat Medium", size = math.floor(sh * 0.056), weight = 500, antialias = true, extended = true})
+	surface.CreateFont("DLMenu_ItemHover", {font = "Barlow Semi Condensed", size = math.floor(sh * 0.068), weight = 700, antialias = true, extended = true})
+	surface.CreateFont("DLMenu_Side", {font = "Montserrat Medium", size = math.floor(sh * 0.05), weight = 500, antialias = true, extended = true})
+	surface.CreateFont("DLMenu_Small", {font = "Montserrat Medium", size = math.floor(sh * 0.02), weight = 500, antialias = true, extended = true})
 end
 CreateFonts()
 hook.Add("OnScreenSizeChanged", "DLMenu_Fonts", CreateFonts)
@@ -71,12 +73,12 @@ end
 function DL.Layout(count, offX, offY)
 	local sw, sh = ScrW(), ScrH()
 	local line, mw = sh * LINE, sh * WIDTH
-	local mh = line * count + line * 0.4
-	local L, T = sw * LEFT + (offX or 0), sh * 0.5 - mh / 2 + (offY or 0)
+	local mh = line * count + line * 0.55
+	local L, T = sw * LEFT + (offX or 0), sh * CENTER - mh / 2 + (offY or 0)
 	local quad = {
 		{L, T},
-		{L + mw * 0.93, T - mw * TILT + mh * FAR},
-		{L + mw * 0.93 + mh * SHEAR, T + mh - mw * TILT - mh * FAR},
+		{L + mw * 0.95, T - mw * TILT + mh * FAR},
+		{L + mw * 0.95 + mh * SHEAR, T + mh - mw * TILT - mh * FAR},
 		{L + mh * SHEAR, T + mh},
 	}
 	local s = SquareToQuad(quad)
@@ -91,12 +93,13 @@ function DL.Layout(count, offX, offY)
 
 	return {
 		sh = sh, line = line, mw = mw, mh = mh, m = m, inv = Invert3(m),
-		textX = sh * (SIDE + 0.02), barW = sh * BAR_W, barGap = sh * BAR_GAP,
+		panel = sh * PANEL, divider = sh * DIVIDER, dividerW = sh * DIVIDER_W, sideSize = sh * 0.05,
+		textX = sh * (PANEL + TEXT_GAP),
 		bounds = {math.floor(minX), math.floor(minY), math.ceil(maxX - minX), math.ceil(maxY - minY)},
 	}
 end
 
-local function RowTop(lay, i) return lay.line * 0.3 + (i - 1) * lay.line end
+local function RowTop(lay, i) return lay.line * 0.1 + (i - 1) * lay.line end
 
 local function TextWidth(font, text)
 	surface.SetFont(font)
@@ -110,14 +113,14 @@ function DL.Pick(lay, items, x, y)
 		local top = RowTop(lay, i)
 		if v >= top and v < top + lay.line then
 			local w = math.max(TextWidth("DLMenu_Item", item.text), TextWidth("DLMenu_ItemHover", item.text) * item.hover)
-			if u >= lay.textX - lay.line * 0.3 and u <= lay.textX + w + lay.line * 1.2 then return i end
+			if u >= lay.panel and u <= lay.textX + w + lay.line * 1.2 then return i end
 		end
 	end
 end
 
-function DL.UpdateHover(items, hovered, dt)
+function DL.UpdateHover(items, selected, dt)
 	for i, item in ipairs(items) do
-		item.hover = math.Approach(item.hover or 0, i == hovered and 1 or 0, dt * HOVER_GROW)
+		item.hover = math.Approach(item.hover or 0, i == selected and 1 or 0, dt * HOVER_GROW)
 	end
 end
 
@@ -156,22 +159,29 @@ local function VerticalText(base, text, font, col, x, y)
 	cam.PopModelMatrix()
 end
 
+-- мелкая подпись версии в правом нижнем углу
+function DL.DrawVersion(text, alpha)
+	draw.SimpleText(text, "DLMenu_Small", ScrW() - ScrH() * 0.03, ScrH() * 0.975, Color(215, 200, 175, 130 * alpha / 255), TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
+end
+
 -- items: {text = "SETTINGS", hover = 0..1}, сверху вниз; alpha 0..255
 function DL.Draw(lay, items, alpha)
 	local mul = alpha / 255
-	local line, bw, gap = lay.line, lay.barW, lay.barGap
+	local line = lay.line
+	local top = RowTop(lay, 1)
 	local base = ToMatrix(lay.m)
 
 	cam.PushModelMatrix(base)
 		draw.NoTexture()
-		-- две тёмные планки слева
-		surface.SetDrawColor(colBar.r, colBar.g, colBar.b, colBar.a * mul)
-		surface.DrawRect(0, line * 0.6, bw, lay.mh - line * 0.6)
-		surface.DrawRect(bw + gap, line * 0.3, bw, lay.mh - line * 0.5)
+		-- тёмная панель с тонкой полосой
+		surface.SetDrawColor(colPanel.r, colPanel.g, colPanel.b, colPanel.a * mul)
+		surface.DrawRect(0, top, lay.panel, lay.mh - top)
+		surface.SetDrawColor(colDivider.r, colDivider.g, colDivider.b, colDivider.a * mul)
+		surface.DrawRect(lay.divider, top, lay.dividerW, lay.mh - top)
 	cam.PopModelMatrix()
 
-	VerticalText(base, "< MAIN MENU", "DLMenu_Side", ColorAlpha(colSide, colSide.a * mul), bw * 0.88, line * 1.4)
-	VerticalText(base, "FUNKAS", "DLMenu_SideTitle", ColorAlpha(colSideTitle, colSideTitle.a * mul), bw * 2 + gap - bw * 0.05, line * 0.9)
+	-- "MAIN MENU" сверху вниз по середине широкой части панели
+	VerticalText(base, "MAIN MENU", "DLMenu_Side", ColorAlpha(colSide, colSide.a * mul), (lay.divider + lay.panel) / 2 + lay.sideSize * 0.5, top + line * 0.45)
 
 	cam.PushModelMatrix(base)
 		local x = lay.textX
@@ -181,13 +191,13 @@ function DL.Draw(lay, items, alpha)
 			local k = item.hover or 0
 
 			if k > 0.01 then
-				-- оранжевая плашка вырастает слева направо
+				-- оранжевая плашка вырастает от панели вправо
 				local tw = TextWidth("DLMenu_ItemHover", item.text)
-				local full = tw + line * 1.1
-				local w = full * math.ease.OutCubic(k)
+				local left = lay.panel
+				local w = (x + tw + line * 1.05 - left) * math.ease.OutCubic(k)
 				draw.NoTexture()
 				surface.SetDrawColor(colHover.r, colHover.g, colHover.b, colHover.a * mul)
-				Quad(x - line * 0.18, top + line * 0.03, x - line * 0.18 + w, top - line * 0.03, x - line * 0.18 + w, top + line * 0.94, x - line * 0.18, top + line)
+				Quad(left, top + line * 0.04, left + w, top, left + w, top + line * 0.96, left, top + line)
 			end
 
 			if k > 0.35 then

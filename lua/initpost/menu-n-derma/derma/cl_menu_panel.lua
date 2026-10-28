@@ -720,6 +720,7 @@ function PANEL:Paint(w,h)
     end
     if IsValid(self.dlList) and self.dlList:IsVisible() and self.DLLayout then
         hg.DLMenu.Draw(self.DLLayout, self.DLItems, self.dlList:GetAlpha())
+        if hg.Version then hg.DLMenu.DrawVersion("ver. " .. tostring(hg.Version), self.dlList:GetAlpha()) end
     end
     if (self.DisconnectBlackAlpha or 0) > 0 then
         surface.SetDrawColor(0, 0, 0, self.DisconnectBlackAlpha)
@@ -820,10 +821,12 @@ function PANEL:ThinkDLMenu()
     if self.dlList:IsVisible() and self.dlList:IsHovered() and not self.SwitchingPanel then
         hovered = hg.DLMenu.Pick(lay, self.DLItems, gui.MouseX(), gui.MouseY())
     end
-    if hovered and hovered ~= self.DLHovered then surface.PlaySound(SOUND_MENU_HOVER) end
+    if hovered and hovered ~= self.DLSelected then surface.PlaySound(SOUND_MENU_HOVER) end
     self.DLHovered = hovered
+    -- как в Dying Light: подсветка остаётся на последнем пункте под мышью, сначала - на верхнем
+    self.DLSelected = hovered or self.DLSelected or 1
     self.dlList:SetCursor(hovered and "hand" or "arrow")
-    hg.DLMenu.UpdateHover(self.DLItems, hovered, FrameTime())
+    hg.DLMenu.UpdateHover(self.DLItems, self.DLSelected, FrameTime())
 end
 
 function PANEL:ActivateSelect(strTitle, tbl)
