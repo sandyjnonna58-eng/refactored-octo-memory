@@ -8,8 +8,7 @@ local consciousness_fake_threshold = 0.38
 local consciousness_recovery_speed = 12
 local low_consciousness_recovery_speed = 16
 local otrub_consciousness_recovery_speed = 20
--- 100% боли = 120. С 140% (168) человек падает и вырубается, а если 7 с держится на 120% (144) и выше -
--- тоже теряет сознание; с 120% звучит rem_excruciatingpain.ogg (cl_excruciatingpain.lua)
+-- 100% боли = 120. С 140% (168) человек падает и вырубается; с 120% звучит rem_excruciatingpain.ogg (cl_excruciatingpain.lua)
 local pain_tolerance = 168
 local otrub_pain_tolerance = 90
 local pain_fake_threshold = 1
@@ -17,8 +16,6 @@ local pain_drain_base = 20
 local pain_drain_otrub_mul = 4.5
 local pain_unconscious_threshold = 168
 local pain_unconscious_time = 1.5
-local pain_long_threshold = 144 -- 120%
-local pain_long_time = 7        -- столько секунд на 120%+ подряд - и отключается
 local pain_unconscious_cooldown = 12
 local shock_stage_thresholds = {15, 35, 60, 80}
 -- Викодин: глушит боль, но не трогает пульс и дыхание - умереть от него нельзя
@@ -79,7 +76,6 @@ local function updatePainUnconscious(owner, org, timeValue)
 	if hg.organism.FractureTolerant(org) then
 		org.painUnconscious = false
 		org.painUnconsciousTime = 0
-		org.painLongTime = 0
 		return
 	end
 	org.painUnconscious = false
@@ -91,18 +87,9 @@ local function updatePainUnconscious(owner, org, timeValue)
 		org.painUnconsciousTime = math.max((org.painUnconsciousTime or 0) - timeValue * 0.5, 0)
 	end
 
-	-- долгая сильная боль выматывает: если боль спала, счётчик уходит медленно
-	if org.pain >= pain_long_threshold and org.consciousness > 0.08 then
-		org.painLongTime = (org.painLongTime or 0) + timeValue
-	else
-		org.painLongTime = math.max((org.painLongTime or 0) - timeValue * 0.25, 0)
-	end
-
-	local long = org.painLongTime >= pain_long_time
-	if (org.painUnconsciousTime >= pain_unconscious_time or long) and now >= (org.painUnconsciousCooldown or 0) then
+	if org.painUnconsciousTime >= pain_unconscious_time and now >= (org.painUnconsciousCooldown or 0) then
 		org.painUnconsciousCooldown = now + pain_unconscious_cooldown
 		org.painUnconsciousTime = 0
-		org.painLongTime = 0
 		org.needotrub = true
 		org.consciousness = math.min(org.consciousness, 0.18)
 		org.painUnconscious = true
@@ -133,7 +120,6 @@ module[1] = function(org)
 	org.shockStage = 0
 	org.painUnconscious = false
 	org.painUnconsciousTime = 0
-	org.painLongTime = 0
 	org.painUnconsciousCooldown = 0
 
 	org.stun = 0
