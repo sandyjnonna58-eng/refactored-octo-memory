@@ -152,6 +152,13 @@ function WD.DrawBackground(w, h)
 	end
 end
 
+-- подложка разделов меню (настройки, навыки и т.д.): ровное затемнение, сквозь него видно фон меню
+local colBackdrop = Color(0, 0, 0, 150)
+function WD.PaintBackdrop(w, h)
+	surface.SetDrawColor(colBackdrop)
+	surface.DrawRect(0, 0, w, h)
+end
+
 -- ===================== список =====================
 
 -- items: {text = "Settings"}; selected - индекс; возвращает прямоугольники для мыши

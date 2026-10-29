@@ -13,16 +13,11 @@ UI.TextDim = Color(160, 160, 160)
 UI.Dim = Color(60, 60, 60, 180)
 UI.Accent = Color(0, 0, 255)
 UI.Background = Color(10, 10, 10, 225)
-UI.Card = Color(22, 22, 22, 150)
-UI.CardStrong = Color(14, 14, 14, 150)
+UI.Card = Color(22, 22, 22, 215)
+UI.CardStrong = Color(14, 14, 14, 225)
 UI.CardHover = Color(0, 0, 255, 200)
 UI.Line = Color(255, 255, 255, 70)
 
-local gradient_r = surface.GetTextureID("vgui/gradient-r")
-local gradient_l = surface.GetTextureID("vgui/gradient-l")
-local gradient_d = surface.GetTextureID("vgui/gradient-d")
-local colGradient = Color(18, 18, 18, 65)
-local colOverlay = Color(100, 100, 100, 35)
 
 function UI.U(num)
 	return math.floor(num * math.min(ScrW(), ScrH()) / 1000)
@@ -42,19 +37,16 @@ end
 hook.Add("OnScreenSizeChanged", "RemUI_Fonts", CreateFonts)
 CreateFonts()
 
--- фон как у вкладок главного меню
+-- фон как у разделов главного меню: внутри меню - ровное затемнение поверх его фона,
+-- отдельное окно поверх игры - сплошная тёмная плашка
 function UI.PaintBackground(panel, w, h)
-	if hg.DrawBlur then hg.DrawBlur(panel, 5) end
-	draw.RoundedBox(0, 0, 0, w, h, UI.Background)
-	surface.SetDrawColor(colGradient)
-	surface.SetTexture(gradient_r)
-	surface.DrawTexturedRect(0, 0, w, h)
-	surface.SetDrawColor(UI.Background)
-	surface.SetTexture(gradient_l)
-	surface.DrawTexturedRect(0, 0, w, h)
-	surface.SetDrawColor(colOverlay)
-	surface.SetTexture(gradient_d)
-	surface.DrawTexturedRect(0, 0, w, h)
+	local inMenu = IsValid(MainMenu) and IsValid(panel) and panel:HasParent(MainMenu)
+	if inMenu and hg.WDMenu and hg.WDMenu.PaintBackdrop then
+		hg.WDMenu.PaintBackdrop(w, h)
+	else
+		surface.SetDrawColor(UI.Background)
+		surface.DrawRect(0, 0, w, h)
+	end
 end
 
 -- карточка: тёмная подложка и тонкая линия снизу

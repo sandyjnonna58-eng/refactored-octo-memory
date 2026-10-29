@@ -633,19 +633,8 @@ local function OpenRoleEditor(parentPanel, roleId, returnPanel)
 
     editorPanel:SetAlpha(0)
     editorPanel.Paint = function(self, w, h)
-        if hg.DrawBlur then
-            hg.DrawBlur(self, 5)
-        end
-        draw.RoundedBox(0, 0, 0, w, h, clr_verygray)
-        surface.SetDrawColor(menu_gradient_right)
-        surface.SetMaterial(tex_gradient_r)
-        surface.DrawTexturedRect(0, 0, w, h)
-        surface.SetDrawColor(clr_verygray)
-        surface.SetMaterial(tex_gradient_l)
-        surface.DrawTexturedRect(0, 0, w, h)
-        surface.SetDrawColor(clr_1)
-        surface.SetMaterial(tex_gradient_d)
-        surface.DrawTexturedRect(0, 0, w, h)
+        -- подложка как в главном меню: ровное затемнение поверх его фона (cl_menu_wd.lua)
+        hg.WDMenu.PaintBackdrop(w, h)
     end
     editorPanel:AlphaTo(255, 0.15, 0)
 
@@ -664,7 +653,7 @@ local function OpenRoleEditor(parentPanel, roleId, returnPanel)
         end
     end
     sidebar.Paint = function(self, w, h)
-        draw.RoundedBox(0, 0, 0, w, h, Color(12, 12, 12, 150))
+        draw.RoundedBox(0, 0, 0, w, h, Color(12, 12, 12, 215))
         surface.SetDrawColor(color_whitey.r, color_whitey.g, color_whitey.b, 90)
         surface.DrawRect(w - MenuUnit(1), 0, MenuUnit(1), h)
     end
@@ -673,7 +662,7 @@ local function OpenRoleEditor(parentPanel, roleId, returnPanel)
     sidebarHeader:Dock(TOP)
     sidebarHeader:SetTall(MenuUnit(TRAITOR_HEADER_HEIGHT))
     sidebarHeader.Paint = function(self, w, h)
-        draw.RoundedBox(0, 0, 0, w, h, Color(14, 14, 14, 150))
+        draw.RoundedBox(0, 0, 0, w, h, Color(14, 14, 14, 215))
         surface.SetDrawColor(color_whitey.r, color_whitey.g, color_whitey.b, 140)
         surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
     end
@@ -1266,19 +1255,8 @@ end
 function hg.DrawLoadoutMenu(parentPanel)
     parentPanel:SetAlpha(0)
     parentPanel.Paint = function(self, w, h)
-        if hg.DrawBlur then
-            hg.DrawBlur(self, 5)
-        end
-        draw.RoundedBox(0, 0, 0, w, h, clr_verygray)
-        surface.SetDrawColor(menu_gradient_right)
-        surface.SetMaterial(tex_gradient_r)
-        surface.DrawTexturedRect(0, 0, w, h)
-        surface.SetDrawColor(clr_verygray)
-        surface.SetMaterial(tex_gradient_l)
-        surface.DrawTexturedRect(0, 0, w, h)
-        surface.SetDrawColor(clr_1)
-        surface.SetMaterial(tex_gradient_d)
-        surface.DrawTexturedRect(0, 0, w, h)
+        -- подложка как в главном меню: ровное затемнение поверх его фона (cl_menu_wd.lua)
+        hg.WDMenu.PaintBackdrop(w, h)
     end
     parentPanel:AlphaTo(255, 0.15, 0)
 
