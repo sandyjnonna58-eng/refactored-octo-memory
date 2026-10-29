@@ -69,7 +69,7 @@ end
 
 local achievement_header_height = 70
 local achievement_color_white = Color(255,255,255,240)
-local achievement_color_dim = Color(60,60,60,180)
+local achievement_color_dim = Color(55,55,55,200)
 local achievement_color_text = Color(225,225,225)
 local achievement_color_text_dim = Color(160,160,160)
 local achievement_color_accent = Color(0, 0, 255)
@@ -433,7 +433,7 @@ function hg.DrawAchievmentsMenu(ParentPanel)
     header:SetTall(MenuUnit(achievement_header_height))
     header.Paint = function(self, w, h)
         draw.RoundedBox(0, 0, 0, w, h, achievement_card_strong)
-        surface.SetDrawColor(achievement_color_white.r, achievement_color_white.g, achievement_color_white.b, 140)
+        surface.SetDrawColor(achievement_color_accent.r, achievement_color_accent.g, achievement_color_accent.b, 255)
         surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
     end
 
@@ -470,7 +470,7 @@ function hg.DrawAchievmentsMenu(ParentPanel)
     listCard.Paint = function(self, w, h)
         surface.SetDrawColor(achievement_card.r, achievement_card.g, achievement_card.b, achievement_card.a)
         surface.DrawRect(0, 0, w, h)
-        surface.SetDrawColor(achievement_color_white.r, achievement_color_white.g, achievement_color_white.b, 70)
+        surface.SetDrawColor(achievement_color_white.r, achievement_color_white.g, achievement_color_white.b, 25)
         surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
     end
     listCard.Think = function(self)
@@ -494,7 +494,7 @@ function hg.DrawAchievmentsMenu(ParentPanel)
     listHeader.Paint = function(self, w, h)
         surface.SetDrawColor(achievement_card_strong.r, achievement_card_strong.g, achievement_card_strong.b, achievement_card_strong.a)
         surface.DrawRect(0, 0, w, h)
-        surface.SetDrawColor(achievement_color_white.r, achievement_color_white.g, achievement_color_white.b, 70)
+        surface.SetDrawColor(achievement_color_white.r, achievement_color_white.g, achievement_color_white.b, 25)
         surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
     end
 
@@ -525,7 +525,7 @@ function hg.DrawAchievmentsMenu(ParentPanel)
         surface.DrawRect(0, 0, w, h)
     end
     function listBar.btnGrip:Paint(w, h)
-        local col = self:IsHovered() and achievement_color_white or achievement_color_dim
+        local col = self:IsHovered() and achievement_color_accent or achievement_color_dim
         draw.RoundedBox(2, 1, 1, w - 2, h - 2, col)
     end
 
@@ -537,7 +537,7 @@ function hg.DrawAchievmentsMenu(ParentPanel)
     detailCard.Paint = function(self, w, h)
         surface.SetDrawColor(achievement_card.r, achievement_card.g, achievement_card.b, achievement_card.a)
         surface.DrawRect(0, 0, w, h)
-        surface.SetDrawColor(achievement_color_white.r, achievement_color_white.g, achievement_color_white.b, 70)
+        surface.SetDrawColor(achievement_color_white.r, achievement_color_white.g, achievement_color_white.b, 25)
         surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
     end
     detailCard.Think = function(self)
@@ -561,7 +561,7 @@ function hg.DrawAchievmentsMenu(ParentPanel)
     detailHeader.Paint = function(self, w, h)
         surface.SetDrawColor(achievement_card_strong.r, achievement_card_strong.g, achievement_card_strong.b, achievement_card_strong.a)
         surface.DrawRect(0, 0, w, h)
-        surface.SetDrawColor(achievement_color_white.r, achievement_color_white.g, achievement_color_white.b, 70)
+        surface.SetDrawColor(achievement_color_white.r, achievement_color_white.g, achievement_color_white.b, 25)
         surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
     end
 
@@ -877,11 +877,11 @@ hook.Add("HUDPaint","hg_NewAchievement", function()
         local HPos = ScrH() - ( HSize * ach.Lerp )
         draw.RoundedBox( 0, 2, HPos + 2, WSize - 4, HSize - 4, ach_clr2 )
 		
-		surface.SetDrawColor(155, 0, 0, 255)
+		surface.SetDrawColor(0, 0, 200, 255)
 		surface.SetMaterial(gradient_u)
 		surface.DrawTexturedRect( 0, HPos, WSize, HSize )
 	
-		surface.SetDrawColor( 150, 0, 0, 255)
+		surface.SetDrawColor( 0, 0, 255, 255)
 		surface.DrawOutlinedRect( 0, HPos, WSize, HSize, 2.5 )
 
         surface.SetFont("HomigradFontMedium")

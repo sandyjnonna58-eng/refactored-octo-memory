@@ -16,7 +16,7 @@ UI.Background = Color(10, 10, 10, 225)
 UI.Card = Color(22, 22, 22, 215)
 UI.CardStrong = Color(14, 14, 14, 225)
 UI.CardHover = Color(0, 0, 255, 200)
-UI.Line = Color(255, 255, 255, 70)
+UI.Line = Color(255, 255, 255, 25)
 
 
 function UI.U(num)
@@ -76,7 +76,7 @@ function UI.StyleScroll(scroll)
 		surface.DrawRect(0, 0, w, h)
 	end
 	bar.btnGrip.Paint = function(self, w, h)
-		draw.RoundedBox(2, 1, 1, w - 2, h - 2, self:IsHovered() and UI.White or UI.Dim)
+		draw.RoundedBox(2, 1, 1, w - 2, h - 2, self:IsHovered() and UI.Accent or UI.Dim)
 	end
 end
 

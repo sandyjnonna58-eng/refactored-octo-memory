@@ -761,7 +761,7 @@ local function OpenRoleEditor(parentPanel, roleId, returnPanel)
         draw.RoundedBox(0, 0, 0, w, h, Color(0, 0, 0, 80))
     end
     function sbar.btnGrip:Paint(w, h)
-        draw.RoundedBox(0, 0, 0, w, h, Color(100, 100, 100, 150))
+        draw.RoundedBox(0, 0, 0, w, h, Color(0, 0, 255, 200))
     end
 
     local function LoadUserPresets()
@@ -797,9 +797,9 @@ local function OpenRoleEditor(parentPanel, roleId, returnPanel)
             btn:SetFont(TRAITOR_MENU_FONT)
             btn:SetTextColor(Color(200, 255, 200))
             btn.Paint = function(s, w, h)
-                local bgColor = s:IsHovered() and Color(50, 80, 50, 150) or Color(30, 30, 30, 150)
+                local bgColor = s:IsHovered() and Color(0, 0, 255, 150) or Color(22, 22, 22, 215)
                 draw.RoundedBox(0, 0, 0, w, h, bgColor)
-                surface.SetDrawColor(200, 200, 200, 50)
+                surface.SetDrawColor(255, 255, 255, 25)
                 surface.DrawOutlinedRect(0, 0, w, h)
             end
             btn.DoClick = function()
@@ -828,9 +828,9 @@ local function OpenRoleEditor(parentPanel, roleId, returnPanel)
         btnCreate:SetFont(TRAITOR_MENU_FONT)
         btnCreate:SetTextColor(Color(255, 255, 255))
         btnCreate.Paint = function(s, w, h)
-            local bgColor = s:IsHovered() and Color(100, 100, 100, 150) or Color(30, 30, 30, 150)
+            local bgColor = s:IsHovered() and Color(0, 0, 255, 200) or Color(22, 22, 22, 215)
             draw.RoundedBox(0, 0, 0, w, h, bgColor)
-            surface.SetDrawColor(200, 200, 200, 50)
+            surface.SetDrawColor(255, 255, 255, 25)
             surface.DrawOutlinedRect(0, 0, w, h)
         end
         btnCreate.DoClick = function()
@@ -848,8 +848,8 @@ local function OpenRoleEditor(parentPanel, roleId, returnPanel)
             pnl:SetTall(MenuUnit(TRAITOR_PRESET_BUTTON_HEIGHT))
             pnl:DockMargin(MenuUnit(5), 0, MenuUnit(5), MenuUnit(2))
             pnl.Paint = function(s, w, h)
-                draw.RoundedBox(0, 0, 0, w, h, Color(30, 30, 30, 150))
-                surface.SetDrawColor(200, 200, 200, 50)
+                draw.RoundedBox(0, 0, 0, w, h, Color(22, 22, 22, 215))
+                surface.SetDrawColor(255, 255, 255, 25)
                 surface.DrawOutlinedRect(0, 0, w, h)
             end
 
@@ -926,7 +926,7 @@ local function OpenRoleEditor(parentPanel, roleId, returnPanel)
     local previewPanel = vgui.Create("DPanel", listsContainer)
     previewPanel.Paint = function(s, w, h)
         draw.RoundedBox(0, 0, 0, w, h, Color(20, 20, 20, 180))
-        surface.SetDrawColor(200, 200, 200, 50)
+        surface.SetDrawColor(255, 255, 255, 25)
         surface.DrawOutlinedRect(0, 0, w, h)
     end
 
@@ -1089,16 +1089,16 @@ local function OpenRoleEditor(parentPanel, roleId, returnPanel)
                 btn:SetText("")
                 btn.Paint = function(s, w, h)
                     local isSelected = state.loadout.skillset == id
-                    local bgColor = isSelected and Color(100, 100, 100, 150) or Color(30, 30, 30, 150)
+                    local bgColor = isSelected and Color(0, 0, 255, 200) or Color(22, 22, 22, 215)
                     if s:IsHovered() then
-                        bgColor = Color(150, 150, 150, 150)
+                        bgColor = Color(40, 40, 255, 230)
                     end
                     draw.RoundedBox(0, 0, 0, w, h, bgColor)
-                    surface.SetDrawColor(200, 200, 200, 50)
+                    surface.SetDrawColor(255, 255, 255, 25)
                     surface.DrawOutlinedRect(0, 0, w, h)
                     draw.SimpleText(info.name .. " (" .. info.cost .. " pts)", TRAITOR_MENU_FONT, MenuUnit(10), h / 2, Color(255, 255, 255), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
                     if isSelected then
-                        draw.SimpleText("EQUIPPED", TRAITOR_MENU_FONT, w - MenuUnit(10), h / 2, Color(100, 255, 100), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+                        draw.SimpleText("EQUIPPED", TRAITOR_MENU_FONT, w - MenuUnit(10), h / 2, Color(255, 255, 255), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
                     end
                 end
                 btn.OnCursorEntered = function()
@@ -1130,19 +1130,19 @@ local function OpenRoleEditor(parentPanel, roleId, returnPanel)
             btn.Paint = function(s, w, h)
                 local isSelected = table.HasValue(state.loadout.weapons, id)
                 local isDisabled = not isSelected and HasWeaponConflict(config, state.loadout.weapons, id)
-                local bgColor = isSelected and Color(100, 100, 100, 150) or Color(30, 30, 30, 150)
+                local bgColor = isSelected and Color(0, 0, 255, 200) or Color(22, 22, 22, 215)
                 if s:IsHovered() and not isDisabled then
-                    bgColor = Color(150, 150, 150, 150)
+                    bgColor = Color(40, 40, 255, 230)
                 end
                 draw.RoundedBox(0, 0, 0, w, h, bgColor)
-                surface.SetDrawColor(200, 200, 200, 50)
+                surface.SetDrawColor(255, 255, 255, 25)
                 surface.DrawOutlinedRect(0, 0, w, h)
                 draw.SimpleText(info.name .. " (" .. info.cost .. " pts)", TRAITOR_MENU_FONT, MenuUnit(10), h / 2, isDisabled and Color(160, 160, 160) or Color(255, 255, 255), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
                 if isDisabled then
                     draw.RoundedBox(0, 0, 0, w, h, Color(0, 0, 0, 190))
                 end
                 if isSelected then
-                    draw.SimpleText("EQUIPPED", TRAITOR_MENU_FONT, w - MenuUnit(10), h / 2, Color(100, 255, 100), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+                    draw.SimpleText("EQUIPPED", TRAITOR_MENU_FONT, w - MenuUnit(10), h / 2, Color(255, 255, 255), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
                 end
             end
             btn.OnCursorEntered = function()
@@ -1186,7 +1186,7 @@ local function OpenRoleEditor(parentPanel, roleId, returnPanel)
                         addonBtn:SetText("")
                         addonBtn.Paint = function(s, w, h)
                             local isSelected = table.HasValue(state.loadout.weapons, addonId)
-                            local bgColor = isSelected and Color(100, 100, 100, 150) or Color(25, 25, 25, 150)
+                            local bgColor = isSelected and Color(0, 0, 255, 200) or Color(22, 22, 22, 215)
                             if s:IsHovered() then
                                 bgColor = Color(140, 140, 140, 150)
                             end
@@ -1195,7 +1195,7 @@ local function OpenRoleEditor(parentPanel, roleId, returnPanel)
                             surface.DrawOutlinedRect(0, 0, w, h)
                             draw.SimpleText("↳ " .. addonInfo.name .. " (" .. addonInfo.cost .. " pts)", TRAITOR_MENU_FONT, MenuUnit(10), h / 2, Color(235, 235, 235), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
                             if isSelected then
-                                draw.SimpleText("EQUIPPED", TRAITOR_MENU_FONT, w - MenuUnit(10), h / 2, Color(100, 255, 100), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+                                draw.SimpleText("EQUIPPED", TRAITOR_MENU_FONT, w - MenuUnit(10), h / 2, Color(255, 255, 255), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
                             end
                         end
                         addonBtn.OnCursorEntered = function()

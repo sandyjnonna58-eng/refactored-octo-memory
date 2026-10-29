@@ -187,10 +187,11 @@ function hg.CreateCategory(ctgName, ParentPanel, yPos)
     pppanel:SetSize(ParentPanel:GetWide() / 1.05, ParentPanel:GetTall() * 0.07)
     pppanel:SetPos(ParentPanel:GetWide() / 2 -pppanel:GetWide() / 2, yPos)
     pppanel.Paint = function(self,w,h)
-        surface.SetDrawColor(60,60,60,145)
+        -- заголовок категории: тёмная плашка с синей полосой снизу
+        surface.SetDrawColor(14, 14, 14, 225)
         surface.DrawRect(0, 0, w, h)
-		surface.SetDrawColor(42, 42, 42, 184)
-		surface.DrawRect(0, h-5, w, 5)
+		surface.SetDrawColor(0, 0, 255, 255)
+		surface.DrawRect(0, h-3, w, 3)
     
         draw.SimpleText(ctgName, 'ZCity_Menu_Settings_Category', w / 2, h / 2, color3, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
@@ -246,7 +247,7 @@ local clr_8 = Color(0, 0, 255)
 
 local settings_color_blacky = Color(25,25,30,220)
 local settings_color_whitey = Color(255,255,255,240)
-local settings_color_dim = Color(60,60,60,180)
+local settings_color_dim = Color(55,55,55,200)
 local settings_color_text = Color(225,225,225)
 local settings_color_text_dim = Color(160,160,160)
 local settings_color_accent = Color(0, 0, 255)
@@ -673,7 +674,7 @@ function SettingsRefreshContent()
         surface.DrawRect(0, 0, w, h)
     end
     function sbar.btnGrip:Paint(w, h)
-        local col = self:IsHovered() and settings_color_whitey or settings_color_dim
+        local col = self:IsHovered() and settings_color_accent or settings_color_dim
         draw.RoundedBox(2, 1, 1, w - 2, h - 2, col)
     end
 
@@ -694,7 +695,7 @@ function SettingsRefreshContent()
         row.Paint = function(self, w, h)
             surface.SetDrawColor(22, 22, 22, 215)
             surface.DrawRect(0, 0, w, h)
-            surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 90)
+            surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 25)
             surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
         end
 
@@ -726,15 +727,18 @@ function SettingsRefreshContent()
             local targetProgress = animProgress
             function toggle:Paint(w, h)
                 animProgress = Lerp(FrameTime() * 8, animProgress, targetProgress)
-                local bgR = Lerp(animProgress, 60, 155)
-                local bgG = Lerp(animProgress, 60, 30)
-                local bgB = Lerp(animProgress, 60, 30)
-                draw.RoundedBox(MenuUnit(3), 0, 0, w, h, Color(20, 20, 20, 230))
-                draw.RoundedBox(MenuUnit(3), 1, 1, w - 2, h - 2, Color(bgR, bgG, bgB, 200))
+                -- выключено - тёмный квадрат, включено - синий; бегунок белый, без скруглений
+                local bgR = Lerp(animProgress, 45, 0)
+                local bgG = Lerp(animProgress, 45, 0)
+                local bgB = Lerp(animProgress, 45, 255)
+                surface.SetDrawColor(10, 10, 10, 235)
+                surface.DrawRect(0, 0, w, h)
+                surface.SetDrawColor(bgR, bgG, bgB, 255)
+                surface.DrawRect(1, 1, w - 2, h - 2)
                 local slsize = h - MenuUnit(6)
                 local slPos = Lerp(animProgress, MenuUnit(3), w - slsize - MenuUnit(3))
                 surface.SetDrawColor(245, 245, 245)
-                draw.RoundedBox(MenuUnit(2), slPos, MenuUnit(3), slsize, slsize, Color(245, 245, 245))
+                surface.DrawRect(slPos, MenuUnit(3), slsize, slsize)
             end
             function toggle:DoClick()
                 local newValue = not convar:GetBool()
@@ -760,15 +764,16 @@ function SettingsRefreshContent()
             
             function sliderBg:Paint(w, h)
                 local trackY = h / 2 - MenuUnit(1)
-                surface.SetDrawColor(20, 20, 20, 230)
+                -- дорожка тёмная, заполненная часть синяя, бегунок белый
+                surface.SetDrawColor(45, 45, 45, 230)
                 surface.DrawRect(0, trackY, w, MenuUnit(2))
                 
-                surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 220)
-                surface.DrawRect(0, trackY, w * frac, MenuUnit(2))
+                surface.SetDrawColor(0, 0, 255, 255)
+                surface.DrawRect(0, trackY - MenuUnit(1), w * frac, MenuUnit(4))
                 
                 local knobX = math.Clamp(w * frac - MenuUnit(3), 0, w - MenuUnit(6))
                 surface.SetDrawColor(245, 245, 245)
-                draw.RoundedBox(MenuUnit(2), knobX, h / 2 - MenuUnit(4), MenuUnit(6), MenuUnit(8), Color(245, 245, 245))
+                surface.DrawRect(knobX, h / 2 - MenuUnit(5), MenuUnit(6), MenuUnit(10))
             end
             
             local isDragging = false
@@ -918,7 +923,7 @@ function hg.DrawSettings(ParentPanel)
     sidebar:DockMargin(0, 0, 0, 0)
     sidebar.Paint = function(self, w, h)
         draw.RoundedBox(0, 0, 0, w, h, Color(12, 12, 12, 215))
-        surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 90)
+        surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 25)
         surface.DrawRect(w - MenuUnit(1), 0, MenuUnit(1), h)
     end
 
@@ -927,7 +932,7 @@ function hg.DrawSettings(ParentPanel)
     sidebarHeader:SetTall(MenuUnit(settings_header_height))
     sidebarHeader.Paint = function(self, w, h)
         draw.RoundedBox(0, 0, 0, w, h, Color(14, 14, 14, 215))
-        surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 140)
+        surface.SetDrawColor(settings_color_accent.r, settings_color_accent.g, settings_color_accent.b, 255)
         surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
     end
 
@@ -1089,7 +1094,7 @@ function hg.DrawSettings(ParentPanel)
     header:SetTall(MenuUnit(settings_header_height))
     header.Paint = function(self, w, h)
         draw.RoundedBox(0, 0, 0, w, h, Color(14, 14, 14, 215))
-        surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 140)
+        surface.SetDrawColor(settings_color_accent.r, settings_color_accent.g, settings_color_accent.b, 255)
         surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
     end
 
@@ -1204,7 +1209,7 @@ local function KeybindsCreateBinder(parent, bindName, slot, x, y)
     function binder:Paint(w, h)
         surface.SetDrawColor(20, 20, 20, 240)
         surface.DrawRect(0, 0, w, h)
-        surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, self:IsHovered() and 210 or 120)
+        surface.SetDrawColor(settings_color_accent.r, settings_color_accent.g, settings_color_accent.b, self:IsHovered() and 255 or 90)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
         draw.SimpleText(self.Trapping and "PRESS A BUTTON" or KeybindsFormatKey(self:GetValue()), "ZCity_Menu_Settings_Tiny", w / 2, h / 2, settings_color_text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         return true
@@ -1237,7 +1242,7 @@ function KeybindsRefreshContent()
         surface.DrawRect(0, 0, w, h)
     end
     function sbar.btnGrip:Paint(w, h)
-        local col = self:IsHovered() and settings_color_whitey or settings_color_dim
+        local col = self:IsHovered() and settings_color_accent or settings_color_dim
         draw.RoundedBox(2, 1, 1, w - 2, h - 2, col)
     end
 
@@ -1252,7 +1257,7 @@ function KeybindsRefreshContent()
         row.Paint = function(self, w, h)
             surface.SetDrawColor(22, 22, 22, 215)
             surface.DrawRect(0, 0, w, h)
-            surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 90)
+            surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 25)
             surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
         end
 
@@ -1276,7 +1281,7 @@ function KeybindsRefreshContent()
         clear.Paint = function(self, w, h)
             surface.SetDrawColor(20, 20, 20, 240)
             surface.DrawRect(0, 0, w, h)
-            surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, self:IsHovered() and 210 or 120)
+            surface.SetDrawColor(settings_color_accent.r, settings_color_accent.g, settings_color_accent.b, self:IsHovered() and 255 or 90)
             surface.DrawOutlinedRect(0, 0, w, h, 1)
             draw.SimpleText("Clear", "ZCity_Menu_Settings_Tiny", w / 2, h / 2, settings_color_text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
@@ -1322,7 +1327,7 @@ function hg.DrawKeybinds(ParentPanel)
     header:SetTall(MenuUnit(settings_header_height))
     header.Paint = function(self, w, h)
         draw.RoundedBox(0, 0, 0, w, h, Color(14, 14, 14, 215))
-        surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 140)
+        surface.SetDrawColor(settings_color_accent.r, settings_color_accent.g, settings_color_accent.b, 255)
         surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
     end
 
@@ -1442,7 +1447,7 @@ function hg.DrawKeybinds(ParentPanel)
     resetBtn.Paint = function(self, w, h)
         surface.SetDrawColor(20, 20, 20, 240)
         surface.DrawRect(0, 0, w, h)
-        surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, self:IsHovered() and 210 or 120)
+        surface.SetDrawColor(settings_color_accent.r, settings_color_accent.g, settings_color_accent.b, self:IsHovered() and 255 or 90)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
         draw.SimpleText("Reset defaults", "ZCity_Menu_Settings_Tiny", w / 2, h / 2, settings_color_text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
@@ -1600,7 +1605,7 @@ function InfoRefreshContent()
         card.Paint = function(self, w, h)
             surface.SetDrawColor(20, 20, 30, 130)
             surface.DrawRect(0, 0, w, h)
-            surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 90)
+            surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 25)
             surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
         end
 
@@ -1617,7 +1622,7 @@ function InfoRefreshContent()
             surface.DrawRect(0, 0, w, h)
         end
         function scrollBar.btnGrip:Paint(w, h)
-            local col = self:IsHovered() and settings_color_whitey or settings_color_dim
+            local col = self:IsHovered() and settings_color_accent or settings_color_dim
             draw.RoundedBox(2, 1, 1, w - 2, h - 2, col)
         end
 
@@ -1934,7 +1939,7 @@ function InfoRefreshContent()
             surface.DrawRect(0, 0, w, h)
         end
         function sbar.btnGrip:Paint(w, h)
-            local col = self:IsHovered() and settings_color_whitey or settings_color_dim
+            local col = self:IsHovered() and settings_color_accent or settings_color_dim
             draw.RoundedBox(2, 1, 1, w - 2, h - 2, col)
         end
 
@@ -2054,7 +2059,7 @@ function InfoRefreshContent()
             surface.DrawRect(0, 0, w, h)
         end
         function sbar.btnGrip:Paint(w, h)
-            local col = self:IsHovered() and settings_color_whitey or settings_color_dim
+            local col = self:IsHovered() and settings_color_accent or settings_color_dim
             draw.RoundedBox(2, 1, 1, w - 2, h - 2, col)
         end
 
@@ -2145,7 +2150,7 @@ function InfoRefreshContent()
             surface.DrawRect(0, 0, w, h)
         end
         function sbar.btnGrip:Paint(w, h)
-            local col = self:IsHovered() and settings_color_whitey or settings_color_dim
+            local col = self:IsHovered() and settings_color_accent or settings_color_dim
             draw.RoundedBox(2, 1, 1, w - 2, h - 2, col)
         end
 
@@ -2225,7 +2230,7 @@ function hg.DrawInformation(ParentPanel)
     end
     sidebar.Paint = function(self, w, h)
         draw.RoundedBox(0, 0, 0, w, h, Color(12, 12, 12, 215))
-        surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 90)
+        surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 25)
         surface.DrawRect(w - MenuUnit(1), 0, MenuUnit(1), h)
     end
 
@@ -2234,7 +2239,7 @@ function hg.DrawInformation(ParentPanel)
     sidebarHeader:SetTall(MenuUnit(settings_header_height))
     sidebarHeader.Paint = function(self, w, h)
         draw.RoundedBox(0, 0, 0, w, h, Color(14, 14, 14, 215))
-        surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 140)
+        surface.SetDrawColor(settings_color_accent.r, settings_color_accent.g, settings_color_accent.b, 255)
         surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
     end
 
@@ -2390,7 +2395,7 @@ function hg.DrawInformation(ParentPanel)
     header:SetTall(MenuUnit(settings_header_height))
     header.Paint = function(self, w, h)
         draw.RoundedBox(0, 0, 0, w, h, Color(14, 14, 14, 215))
-        surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 140)
+        surface.SetDrawColor(settings_color_accent.r, settings_color_accent.g, settings_color_accent.b, 255)
         surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
     end
 
