@@ -16,7 +16,7 @@ local function MenuUnit(num)
 end
 
 local function AchievementFontName()
-    return "Verily Serif Mono"
+    return "Share Tech Mono"
 end
 
 local function CreateAchievementFonts()
@@ -72,12 +72,12 @@ local achievement_color_white = Color(255,255,255,240)
 local achievement_color_dim = Color(60,60,60,180)
 local achievement_color_text = Color(225,225,225)
 local achievement_color_text_dim = Color(160,160,160)
-local achievement_color_accent = Color(192,57,43)
+local achievement_color_accent = Color(0, 0, 255)
 local achievement_gradient_right = Color(18,18,18,65)
 local achievement_overlay = Color(100,100,100,35)
-local achievement_bg = Color(10,10,19,235)
-local achievement_card = Color(20,20,30,120)
-local achievement_card_strong = Color(15,15,20,120)
+local achievement_bg = Color(10, 10, 10, 225)
+local achievement_card = Color(22, 22, 22, 150)
+local achievement_card_strong = Color(14, 14, 14, 150)
 local achievement_border = Color(255,255,255,90)
 local achievement_placeholder = Material("homigrad/vgui/models/star.png", "smooth")
 local gradient_u = Material("vgui/gradient-u")
@@ -225,7 +225,7 @@ local function AchievementCreateReturnButton(sidebar, ParentPanel)
 
     function backBtn:Paint(w, h)
         local isHovered = self:IsHovered()
-        local flash = isHovered and (0.5 + 0.5 * math.sin(CurTime() * 10)) or 0
+        local flash = isHovered and 1 or 0
         local textColor = achievement_color_text
         local outlineColor = Color(0, 0, 0, 255)
         if isHovered then
@@ -241,11 +241,12 @@ local function AchievementCreateReturnButton(sidebar, ParentPanel)
         matrix:Translate(Vector(0, h * (1 - scale) * 0.5, 0))
         matrix:Scale(Vector(scale, scale, 1))
         cam.PushModelMatrix(matrix)
-        draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
         if self.LineLerp and self.LineLerp > 0.01 then
-            surface.SetDrawColor(255, 255, 255, 255 * self.LineLerp)
-            surface.DrawRect(0, h / 2 + th / 2, tw * self.LineLerp, math.max(1, MenuUnit(1)))
+            -- под мышью - синяя плашка, как в главном меню
+            surface.SetDrawColor(0, 0, 255, 255 * self.LineLerp)
+            surface.DrawRect(-MenuUnit(4), h / 2 - th / 2 - MenuUnit(2), (tw + MenuUnit(8)) * self.LineLerp, th + MenuUnit(4))
         end
+        draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
         cam.PopModelMatrix()
         return true
     end
@@ -329,7 +330,7 @@ local function AchievementCreateHeaderReturnButton(parent, ParentPanel)
 
     function backBtn:Paint(w, h)
         local isHovered = self:IsHovered()
-        local flash = isHovered and (0.5 + 0.5 * math.sin(CurTime() * 10)) or 0
+        local flash = isHovered and 1 or 0
         local textColor = achievement_color_text
         local outlineColor = Color(0, 0, 0, 255)
         if isHovered then
@@ -345,11 +346,12 @@ local function AchievementCreateHeaderReturnButton(parent, ParentPanel)
         matrix:Translate(Vector(0, h * (1 - scale) * 0.5, 0))
         matrix:Scale(Vector(scale, scale, 1))
         cam.PushModelMatrix(matrix)
-        draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
         if self.LineLerp and self.LineLerp > 0.01 then
-            surface.SetDrawColor(255, 255, 255, 255 * self.LineLerp)
-            surface.DrawRect(0, h / 2 + th / 2, tw * self.LineLerp, math.max(1, MenuUnit(1)))
+            -- под мышью - синяя плашка, как в главном меню
+            surface.SetDrawColor(0, 0, 255, 255 * self.LineLerp)
+            surface.DrawRect(-MenuUnit(4), h / 2 - th / 2 - MenuUnit(2), (tw + MenuUnit(8)) * self.LineLerp, th + MenuUnit(4))
         end
+        draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
         cam.PopModelMatrix()
         return true
     end

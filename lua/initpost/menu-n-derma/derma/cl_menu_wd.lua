@@ -538,3 +538,39 @@ if not WD.BootShown then
 end
 
 concommand.Add("rem_boot_screen_test", function() WD.StartBoot() end)
+
+-- ===================== тишина игры в меню =====================
+-- Пока открыто главное меню или идёт загрузка, звуки игры заглушены (soundfade; cl_main.lua на это время
+-- свой soundfade не шлёт). Музыка меню и звуки загрузки - sound.PlayFile, их soundfade не трогает,
+-- а звуки интерфейса (surface.PlaySound) на это время тоже идут через sound.PlayFile, чтобы их было слышно.
+function WD.GameMuted()
+	return WD.BootActive() or (IsValid(MainMenu) and MainMenu:IsVisible())
+end
+
+local rawPlaySound = surface.RemRawPlaySound or surface.PlaySound
+surface.RemRawPlaySound = rawPlaySound
+local uiChannels = {}
+function surface.PlaySound(path)
+	if not WD.GameMuted() then return rawPlaySound(path) end
+	path = string.TrimLeft(path, "/")
+	sound.PlayFile("sound/" .. path, "noplay", function(chan)
+		if not IsValid(chan) then return end
+		-- держим ссылку, иначе канал соберёт сборщик мусора и звук оборвётся
+		uiChannels[#uiChannels + 1] = chan
+		if #uiChannels > 16 then table.remove(uiChannels, 1) end
+		chan:Play()
+	end)
+end
+
+local wasMuted = false
+timer.Create("WDMenu_MuteGame", 0.25, 0, function()
+	local ply = LocalPlayer()
+	if not IsValid(ply) then return end
+	local muted = WD.GameMuted()
+	if muted then
+		ply:ConCommand("soundfade 100 1 0.3 0")
+	elseif wasMuted then
+		ply:ConCommand("soundfade 0 1")
+	end
+	wasMuted = muted
+end)

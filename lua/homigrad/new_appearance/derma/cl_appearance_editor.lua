@@ -3,16 +3,16 @@ local APmodule = hg.Appearance
 local PANEL = {}
 
 local colors = {}
-colors.secondary = Color(25,25,35,195)
+colors.secondary = Color(24, 24, 24, 195)
 colors.mainText = Color(255,255,255,255)
 colors.secondaryText = Color(45,45,45,125)
 colors.selectionBG = Color(20,130,25,225)
 colors.highlightText = Color(120,35,35)
-colors.presetBG = Color(35,35,45,220)
-colors.presetBorder = Color(80,80,100,255)
-colors.presetHover = Color(50,50,65,240)
-colors.scrollbarBG = Color(20,20,30,200)
-colors.scrollbarGrip = Color(70,70,90,255)
+colors.presetBG = Color(32, 32, 32, 220)
+colors.presetBorder = Color(70, 70, 70, 255)
+colors.presetHover = Color(45, 45, 45, 240)
+colors.scrollbarBG = Color(22, 22, 22, 200)
+colors.scrollbarGrip = Color(60, 60, 60, 255)
 colors.scrollbarGripHover = Color(100,100,130,255)
 colors.scrollbarBorder = Color(100,100,120,200)
 colors.previewBorder = Color(255,200,50,255)
@@ -110,7 +110,7 @@ local function CreateStyledScrollPanel(parent)
     return scroll
 end
 
-local clr_ico, clr_menu = Color(30, 30, 40, 255), Color(15, 15, 20, 250)
+local clr_ico, clr_menu = Color(28, 28, 28, 255), Color(15, 15, 20, 250)
 local function CreateStyledAccessoryMenu(parent, title)
     local menu = vgui.Create("DFrame")
     menu:SetTitle(title or "")
@@ -221,7 +221,7 @@ local function CreateStyledAccessoryMenu(parent, title)
         
         function ico:Paint(w, h)
             local borderCol = self.bIsHovered and colors.scrollbarGripHover or colors.scrollbarBorder
-            draw.RoundedBox(4, 0, 0, w, h, Color(30, 30, 40, 255))
+            draw.RoundedBox(4, 0, 0, w, h, Color(28, 28, 28, 255))
             surface.SetDrawColor(borderCol)
             surface.DrawOutlinedRect(0, 0, w, h, 1)
             
@@ -286,7 +286,7 @@ local appearance_color_text = Color(225,225,225)
 local appearance_color_text_dim = Color(160,160,160)
 local appearance_color_dim = Color(60,60,60,180)
 local appearance_clr_1 = Color(100,100,100,35)
-local appearance_clr_verygray = Color(10,10,19,235)
+local appearance_clr_verygray = Color(10, 10, 10, 225)
 local appearance_gradient_right = Color(18,18,18,65)
 local appearance_preview_shift_x = 180
 local appearance_preview_shift_y = 140
@@ -407,7 +407,7 @@ local function CreateAppearanceTextButton(pParent, strTitle, fnClick, fnIsActive
 
     function btn:Paint(w, h)
         local isHovered = self:IsHovered()
-        local flash = isHovered and (0.5 + 0.5 * math.sin(CurTime() * 10)) or 0
+        local flash = isHovered and 1 or 0
         local textColor = self.RColor
         local outlineColor = Color(0, 0, 0, 255)
         if isHovered then
@@ -423,11 +423,12 @@ local function CreateAppearanceTextButton(pParent, strTitle, fnClick, fnIsActive
         matrix:Translate(Vector(0, h * (1 - scale) * 0.5, 0))
         matrix:Scale(Vector(scale, scale, 1))
         cam.PushModelMatrix(matrix)
-        draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
         if self.LineLerp and self.LineLerp > 0.01 then
-            surface.SetDrawColor(255, 255, 255, 255 * self.LineLerp)
-            surface.DrawRect(0, h / 2 + th / 2, tw * self.LineLerp, math.max(1, MenuUnit(1)))
+            -- под мышью - синяя плашка, как в главном меню
+            surface.SetDrawColor(0, 0, 255, 255 * self.LineLerp)
+            surface.DrawRect(-MenuUnit(4), h / 2 - th / 2 - MenuUnit(2), (tw + MenuUnit(8)) * self.LineLerp, th + MenuUnit(4))
         end
+        draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
         cam.PopModelMatrix()
         return true
     end
@@ -441,7 +442,7 @@ local function CreateAppearanceInfoRow(pParent, strTitle, fnValue)
     row:SetTall(MenuUnit(56))
     row:DockMargin(MenuUnit(10), MenuUnit(4), MenuUnit(10), MenuUnit(4))
     row.Paint = function(self, w, h)
-        surface.SetDrawColor(20, 20, 30, 120)
+        surface.SetDrawColor(22, 22, 22, 150)
         surface.DrawRect(0, 0, w, h)
         surface.SetDrawColor(appearance_color_white.r, appearance_color_white.g, appearance_color_white.b, 90)
         surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
@@ -630,7 +631,7 @@ function PANEL:PostInit()
         end
         function row:Paint(w, h)
             local isHovered = self:IsHovered()
-            local flash = isHovered and (0.5 + 0.5 * math.sin(CurTime() * 10)) or 0
+            local flash = isHovered and 1 or 0
             local textColor = appearance_color_text
             local outlineColor = Color(0, 0, 0, 255)
             if self.IsActive then
@@ -672,9 +673,9 @@ function PANEL:PostInit()
             self.SpinAngle = (self.SpinAngle or 20) + RealFrameTime() * 18 * (self.HoverLerp or 0)
         end
         function row:Paint(w, h)
-            local bg = self.IsActive and Color(28, 28, 38, 220) or Color(18, 18, 26, 180)
+            local bg = self.IsActive and Color(26, 26, 26, 220) or Color(18, 18, 18, 180)
             if self:IsHovered() then
-                bg = Color(34, 34, 46, 235)
+                bg = Color(30, 30, 30, 235)
             end
             surface.SetDrawColor(bg)
             surface.DrawRect(0, 0, w, h)
@@ -734,9 +735,9 @@ function PANEL:PostInit()
             self.HoverLerp = LerpFT(0.2, self.HoverLerp or 0, self:IsHovered() and 1 or 0)
         end
         function row:Paint(w, h)
-            local bg = self.IsActive and Color(28, 28, 38, 220) or Color(18, 18, 26, 180)
+            local bg = self.IsActive and Color(26, 26, 26, 220) or Color(18, 18, 18, 180)
             if self:IsHovered() then
-                bg = Color(34, 34, 46, 235)
+                bg = Color(30, 30, 30, 235)
             end
             surface.SetDrawColor(bg)
             surface.DrawRect(0, 0, w, h)
@@ -955,7 +956,7 @@ function PANEL:PostInit()
         presetMenu:MakePopup()
         presetMenu:SetDraggable(false)
         function presetMenu:Paint(w, h)
-            draw.RoundedBox(8, 0, 0, w, h, Color(20, 20, 28, 250))
+            draw.RoundedBox(8, 0, 0, w, h, Color(20, 20, 20, 250))
             surface.SetDrawColor(colors.presetBorder)
             surface.DrawOutlinedRect(0, 0, w, h, 2)
             draw.RoundedBoxEx(8, 0, 0, w, ScreenScale(12), colors.secondary, true, true, false, false)
@@ -1178,7 +1179,7 @@ function PANEL:PostInit()
         this:SetPos(math.Round(nextX), y)
     end
     sidebar.Paint = function(this, w, h)
-        draw.RoundedBox(0, 0, 0, w, h, Color(10, 10, 15, 120))
+        draw.RoundedBox(0, 0, 0, w, h, Color(12, 12, 12, 150))
         surface.SetDrawColor(appearance_color_white.r, appearance_color_white.g, appearance_color_white.b, 90)
         surface.DrawRect(w - MenuUnit(1), 0, MenuUnit(1), h)
     end
@@ -1187,7 +1188,7 @@ function PANEL:PostInit()
     sidebarHeader:Dock(TOP)
     sidebarHeader:SetTall(MenuUnit(appearance_header_height))
     sidebarHeader.Paint = function(this, w, h)
-        draw.RoundedBox(0, 0, 0, w, h, Color(15, 15, 20, 120))
+        draw.RoundedBox(0, 0, 0, w, h, Color(14, 14, 14, 150))
         surface.SetDrawColor(appearance_color_white.r, appearance_color_white.g, appearance_color_white.b, 140)
         surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
     end
@@ -1242,7 +1243,7 @@ function PANEL:PostInit()
     header:Dock(TOP)
     header:SetTall(MenuUnit(appearance_header_height))
     header.Paint = function(this, w, h)
-        draw.RoundedBox(0, 0, 0, w, h, Color(15, 15, 20, 120))
+        draw.RoundedBox(0, 0, 0, w, h, Color(14, 14, 14, 150))
         surface.SetDrawColor(appearance_color_white.r, appearance_color_white.g, appearance_color_white.b, 140)
         surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
     end
@@ -1343,7 +1344,7 @@ function PANEL:PostInit()
         surface.DrawRect(0, 0, w, h)
         surface.SetDrawColor(appearance_color_white.r, appearance_color_white.g, appearance_color_white.b, 120)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
-        this:DrawTextEntryText(color_white, Color(120, 130, 180), color_white)
+        this:DrawTextEntryText(color_white, Color(90, 110, 255), color_white)
     end
     function nameEntry:OnValueChange(val)
         main.AppearanceTable.AName = val
@@ -1403,7 +1404,7 @@ function PANEL:PostInit()
     end
     function returnBtn:Paint(w, h)
         local isHovered = self:IsHovered()
-        local flash = isHovered and (0.5 + 0.5 * math.sin(CurTime() * 10)) or 0
+        local flash = isHovered and 1 or 0
         local textColor = appearance_color_text
         local outlineColor = Color(0, 0, 0, 255)
         if isHovered then
@@ -1419,11 +1420,12 @@ function PANEL:PostInit()
         matrix:Translate(Vector(0, h * (1 - scale) * 0.5, 0))
         matrix:Scale(Vector(scale, scale, 1))
         cam.PushModelMatrix(matrix)
-        draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
         if self.LineLerp and self.LineLerp > 0.01 then
-            surface.SetDrawColor(255, 255, 255, 255 * self.LineLerp)
-            surface.DrawRect(0, h / 2 + th / 2, tw * self.LineLerp, math.max(1, MenuUnit(1)))
+            -- под мышью - синяя плашка, как в главном меню
+            surface.SetDrawColor(0, 0, 255, 255 * self.LineLerp)
+            surface.DrawRect(-MenuUnit(4), h / 2 - th / 2 - MenuUnit(2), (tw + MenuUnit(8)) * self.LineLerp, th + MenuUnit(4))
         end
+        draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
         cam.PopModelMatrix()
         return true
     end

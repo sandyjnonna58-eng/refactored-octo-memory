@@ -85,32 +85,32 @@ local function CreateSettingsFonts()
     local scale = math.min(ScrW(), ScrH()) / 1000
 
     surface.CreateFont("ZCity_Menu_Small", {
-        font = "Verily Serif Mono",
+        font = "Share Tech Mono",
         size = ScreenScale(20),
         weight = 200,
     })
     surface.CreateFont("ZCity_Menu_Tiny", {
-        font = "Verily Serif Mono",
+        font = "Share Tech Mono",
         size = ScreenScale(8),
         weight = 200,
     })
     surface.CreateFont("ZCity_Menu_Settings_Medium", {
-        font = "Verily Serif Mono",
+        font = "Share Tech Mono",
         size = math.max(16, math.floor(32 * scale)),
         weight = 300,
     })
     surface.CreateFont("ZCity_Menu_Settings_Small", {
-        font = "Verily Serif Mono",
+        font = "Share Tech Mono",
         size = math.max(14, math.floor(22 * scale)),
         weight = 300,
     })
     surface.CreateFont("ZCity_Menu_Settings_Tiny", {
-        font = "Verily Serif Mono",
+        font = "Share Tech Mono",
         size = math.max(12, math.floor(16 * scale)),
         weight = 300,
     })
     surface.CreateFont("ZCity_Menu_Settings_Category", {
-        font = "Verily Serif Mono",
+        font = "Share Tech Mono",
         size = ScreenScale(15),
         weight = 100
     })
@@ -242,14 +242,14 @@ local clr_4 = Color(0, 0, 0, 30)
 local clr_5 = Color(30, 29, 29, 30)
 local clr_6 = Color(255, 255, 255, 100)
 local clr_7 = Color(255, 255, 255, 200)
-local clr_8 = Color(70, 130, 180)
+local clr_8 = Color(0, 0, 255)
 
 local settings_color_blacky = Color(25,25,30,220)
 local settings_color_whitey = Color(255,255,255,240)
 local settings_color_dim = Color(60,60,60,180)
 local settings_color_text = Color(225,225,225)
 local settings_color_text_dim = Color(160,160,160)
-local settings_color_accent = Color(192,57,43)
+local settings_color_accent = Color(0, 0, 255)
 
 local tex_gradient_d = surface.GetTextureID("vgui/gradient-d")
 local tex_gradient_r = surface.GetTextureID("vgui/gradient-r")
@@ -257,7 +257,7 @@ local tex_gradient_l = surface.GetTextureID("vgui/gradient-l")
 local info_row_gradient = Material("vgui/gradient-l")
 local settings_menu_gradient_right = Color(18,18,18,65)
 local settings_clr_1 = Color(100,100,100,35)
-local settings_clr_verygray = Color(10,10,19,235)
+local settings_clr_verygray = Color(10, 10, 10, 225)
 
 local settings_sw, settings_sh = ScrW(), ScrH()
 local settings_active_category = nil
@@ -556,7 +556,7 @@ local function SettingsCreateCategoryButton(pParent, strTitle, categoryKey)
 
     function btn:Paint(w, h)
         local isHovered = self:IsHovered()
-        local flash = isHovered and (0.5 + 0.5 * math.sin(CurTime() * 10)) or 0
+        local flash = isHovered and 1 or 0
         local textColor = self.RColor
         local outlineColor = Color(0, 0, 0, 255)
         if isHovered then
@@ -572,11 +572,12 @@ local function SettingsCreateCategoryButton(pParent, strTitle, categoryKey)
         matrix:Translate(Vector(0, h * (1 - scale) * 0.5, 0))
         matrix:Scale(Vector(scale, scale, 1))
         cam.PushModelMatrix(matrix)
-        draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
         if self.LineLerp and self.LineLerp > 0.01 then
-            surface.SetDrawColor(255, 255, 255, 255 * self.LineLerp)
-            surface.DrawRect(0, h / 2 + th / 2, tw * self.LineLerp, math.max(1, MenuUnit(1)))
+            -- под мышью - синяя плашка, как в главном меню
+            surface.SetDrawColor(0, 0, 255, 255 * self.LineLerp)
+            surface.DrawRect(-MenuUnit(4), h / 2 - th / 2 - MenuUnit(2), (tw + MenuUnit(8)) * self.LineLerp, th + MenuUnit(4))
         end
+        draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
         cam.PopModelMatrix()
         return true
     end
@@ -691,7 +692,7 @@ function SettingsRefreshContent()
         row:Dock(TOP)
         row:DockMargin(MenuUnit(10), MenuUnit(4), MenuUnit(10), MenuUnit(4))
         row.Paint = function(self, w, h)
-            surface.SetDrawColor(20, 20, 30, 120)
+            surface.SetDrawColor(22, 22, 22, 150)
             surface.DrawRect(0, 0, w, h)
             surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 90)
             surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
@@ -816,7 +817,7 @@ function SettingsRefreshContent()
             valLabel:SetText(tostring(curVal))
             valLabel:SetNumeric(true)
             valLabel.Paint = function(self, w, h)
-                self:DrawTextEntryText(settings_color_text, Color(120, 130, 180), settings_color_text)
+                self:DrawTextEntryText(settings_color_text, Color(90, 110, 255), settings_color_text)
             end
             
             function valLabel:OnValueChange(val)
@@ -854,7 +855,7 @@ function SettingsRefreshContent()
                 surface.DrawRect(0, 0, w, h)
                 surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 120)
                 surface.DrawOutlinedRect(0, 0, w, h, 1)
-                self:DrawTextEntryText(color_white, Color(120, 130, 180), color_white)
+                self:DrawTextEntryText(color_white, Color(90, 110, 255), color_white)
             end
             function textEntry:OnValueChange(val)
                 if convar and convar.GetName then
@@ -925,7 +926,7 @@ function hg.DrawSettings(ParentPanel)
     end
     sidebar:DockMargin(0, 0, 0, 0)
     sidebar.Paint = function(self, w, h)
-        draw.RoundedBox(0, 0, 0, w, h, Color(10, 10, 15, 120))
+        draw.RoundedBox(0, 0, 0, w, h, Color(12, 12, 12, 150))
         surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 90)
         surface.DrawRect(w - MenuUnit(1), 0, MenuUnit(1), h)
     end
@@ -934,7 +935,7 @@ function hg.DrawSettings(ParentPanel)
     sidebarHeader:Dock(TOP)
     sidebarHeader:SetTall(MenuUnit(settings_header_height))
     sidebarHeader.Paint = function(self, w, h)
-        draw.RoundedBox(0, 0, 0, w, h, Color(15, 15, 20, 120))
+        draw.RoundedBox(0, 0, 0, w, h, Color(14, 14, 14, 150))
         surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 140)
         surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
     end
@@ -1050,7 +1051,7 @@ function hg.DrawSettings(ParentPanel)
     end
     function backBtn:Paint(w, h)
         local isHovered = self:IsHovered()
-        local flash = isHovered and (0.5 + 0.5 * math.sin(CurTime() * 10)) or 0
+        local flash = isHovered and 1 or 0
         local textColor = settings_color_text
         local outlineColor = Color(0, 0, 0, 255)
         if isHovered then
@@ -1066,11 +1067,12 @@ function hg.DrawSettings(ParentPanel)
         matrix:Translate(Vector(0, h * (1 - scale) * 0.5, 0))
         matrix:Scale(Vector(scale, scale, 1))
         cam.PushModelMatrix(matrix)
-        draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
         if self.LineLerp and self.LineLerp > 0.01 then
-            surface.SetDrawColor(255, 255, 255, 255 * self.LineLerp)
-            surface.DrawRect(0, h / 2 + th / 2, tw * self.LineLerp, math.max(1, MenuUnit(1)))
+            -- под мышью - синяя плашка, как в главном меню
+            surface.SetDrawColor(0, 0, 255, 255 * self.LineLerp)
+            surface.DrawRect(-MenuUnit(4), h / 2 - th / 2 - MenuUnit(2), (tw + MenuUnit(8)) * self.LineLerp, th + MenuUnit(4))
         end
+        draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
         cam.PopModelMatrix()
         return true
     end
@@ -1095,7 +1097,7 @@ function hg.DrawSettings(ParentPanel)
     header:DockMargin(0, 0, 0, 0)
     header:SetTall(MenuUnit(settings_header_height))
     header.Paint = function(self, w, h)
-        draw.RoundedBox(0, 0, 0, w, h, Color(15, 15, 20, 120))
+        draw.RoundedBox(0, 0, 0, w, h, Color(14, 14, 14, 150))
         surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 140)
         surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
     end
@@ -1181,7 +1183,7 @@ local function KeybindsCreateSidebarButton(pParent, strTitle)
 
     function btn:Paint(w, h)
         local isHovered = self:IsHovered()
-        local flash = isHovered and (0.5 + 0.5 * math.sin(CurTime() * 10)) or 0
+        local flash = isHovered and 1 or 0
         local textColor = self.RColor
         local outlineColor = Color(0, 0, 0, 255)
         if isHovered then
@@ -1191,11 +1193,12 @@ local function KeybindsCreateSidebarButton(pParent, strTitle)
         end
         surface.SetFont(self:GetFont())
         local tw, th = surface.GetTextSize(self:GetText())
-        draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
         if self.LineLerp and self.LineLerp > 0.01 then
-            surface.SetDrawColor(255, 255, 255, 255 * self.LineLerp)
-            surface.DrawRect(0, h / 2 + th / 2, tw * self.LineLerp, math.max(1, MenuUnit(1)))
+            -- под мышью - синяя плашка, как в главном меню
+            surface.SetDrawColor(0, 0, 255, 255 * self.LineLerp)
+            surface.DrawRect(-MenuUnit(4), h / 2 - th / 2 - MenuUnit(2), (tw + MenuUnit(8)) * self.LineLerp, th + MenuUnit(4))
         end
+        draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
         return true
     end
 end
@@ -1256,7 +1259,7 @@ function KeybindsRefreshContent()
         row:Dock(TOP)
         row:DockMargin(MenuUnit(10), MenuUnit(4), MenuUnit(10), MenuUnit(4))
         row.Paint = function(self, w, h)
-            surface.SetDrawColor(20, 20, 30, 120)
+            surface.SetDrawColor(22, 22, 22, 150)
             surface.DrawRect(0, 0, w, h)
             surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 90)
             surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
@@ -1336,7 +1339,7 @@ function hg.DrawKeybinds(ParentPanel)
     header:Dock(TOP)
     header:SetTall(MenuUnit(settings_header_height))
     header.Paint = function(self, w, h)
-        draw.RoundedBox(0, 0, 0, w, h, Color(15, 15, 20, 120))
+        draw.RoundedBox(0, 0, 0, w, h, Color(14, 14, 14, 150))
         surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 140)
         surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
     end
@@ -1424,7 +1427,7 @@ function hg.DrawKeybinds(ParentPanel)
 	end
 	function backBtn:Paint(w, h)
 		local isHovered = self:IsHovered()
-		local flash = isHovered and (0.5 + 0.5 * math.sin(CurTime() * 10)) or 0
+		local flash = isHovered and 1 or 0
 		local textColor = settings_color_text
 		local outlineColor = Color(0, 0, 0, 255)
 		if isHovered then
@@ -1440,11 +1443,12 @@ function hg.DrawKeybinds(ParentPanel)
 		matrix:Translate(Vector(0, h * (1 - scale) * 0.5, 0))
 		matrix:Scale(Vector(scale, scale, 1))
 		cam.PushModelMatrix(matrix)
-		draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
 		if self.LineLerp and self.LineLerp > 0.01 then
-			surface.SetDrawColor(255, 255, 255, 255 * self.LineLerp)
-			surface.DrawRect(0, h / 2 + th / 2, tw * self.LineLerp, math.max(1, MenuUnit(1)))
+			-- под мышью - синяя плашка, как в главном меню
+			surface.SetDrawColor(0, 0, 255, 255 * self.LineLerp)
+			surface.DrawRect(-MenuUnit(4), h / 2 - th / 2 - MenuUnit(2), (tw + MenuUnit(8)) * self.LineLerp, th + MenuUnit(4))
 		end
+		draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
 		cam.PopModelMatrix()
 		return true
 	end
@@ -1546,7 +1550,7 @@ local function InfoCreateSectionButton(pParent, strTitle, sectionKey)
 
     function btn:Paint(w, h)
         local isHovered = not self.SectionDisabled and self:IsHovered()
-        local flash = isHovered and (0.5 + 0.5 * math.sin(CurTime() * 10)) or 0
+        local flash = isHovered and 1 or 0
         local textColor = self.RColor
         local outlineColor = Color(0, 0, 0, 255)
         if isHovered then
@@ -1562,11 +1566,12 @@ local function InfoCreateSectionButton(pParent, strTitle, sectionKey)
         matrix:Translate(Vector(0, h * (1 - scale) * 0.5, 0))
         matrix:Scale(Vector(scale, scale, 1))
         cam.PushModelMatrix(matrix)
-        draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
         if self.LineLerp and self.LineLerp > 0.01 then
-            surface.SetDrawColor(255, 255, 255, 255 * self.LineLerp)
-            surface.DrawRect(0, h / 2 + th / 2, tw * self.LineLerp, math.max(1, MenuUnit(1)))
+            -- под мышью - синяя плашка, как в главном меню
+            surface.SetDrawColor(0, 0, 255, 255 * self.LineLerp)
+            surface.DrawRect(-MenuUnit(4), h / 2 - th / 2 - MenuUnit(2), (tw + MenuUnit(8)) * self.LineLerp, th + MenuUnit(4))
         end
+        draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
         cam.PopModelMatrix()
         return true
     end
@@ -1723,7 +1728,7 @@ function InfoRefreshContent()
         for _, statData in ipairs(info_stat_rows) do
             local statPanel = vgui.Create("DPanel", statsGrid)
             statPanel.Paint = function(self, w, h)
-                surface.SetDrawColor(20, 20, 30, 120)
+                surface.SetDrawColor(22, 22, 22, 150)
                 surface.DrawRect(0, 0, w, h)
                 surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 65)
                 surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
@@ -1752,7 +1757,7 @@ function InfoRefreshContent()
 
         local kdPanel = vgui.Create("DPanel", statsGrid)
         kdPanel.Paint = function(self, w, h)
-            surface.SetDrawColor(20, 20, 30, 120)
+            surface.SetDrawColor(22, 22, 22, 150)
             surface.DrawRect(0, 0, w, h)
             surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 65)
             surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
@@ -1838,7 +1843,7 @@ function InfoRefreshContent()
                 row:DockMargin(0, 0, 0, MenuUnit(8))
                 row:SetTall(MenuUnit(56))
                 row.Paint = function(self, w, h)
-                    surface.SetDrawColor(20, 20, 30, 120)
+                    surface.SetDrawColor(22, 22, 22, 150)
                     surface.DrawRect(0, 0, w, h)
                     surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 55)
                     surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
@@ -2077,7 +2082,7 @@ function InfoRefreshContent()
             row:DockMargin(0, 0, 0, MenuUnit(10))
             row:SetTall(MenuUnit(64))
             row.Paint = function(self, w, h)
-                surface.SetDrawColor(20, 20, 30, 120)
+                surface.SetDrawColor(22, 22, 22, 150)
                 surface.DrawRect(0, 0, w, h)
                 surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 80)
                 surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
@@ -2246,7 +2251,7 @@ function hg.DrawInformation(ParentPanel)
         end
     end
     sidebar.Paint = function(self, w, h)
-        draw.RoundedBox(0, 0, 0, w, h, Color(10, 10, 15, 120))
+        draw.RoundedBox(0, 0, 0, w, h, Color(12, 12, 12, 150))
         surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 90)
         surface.DrawRect(w - MenuUnit(1), 0, MenuUnit(1), h)
     end
@@ -2255,7 +2260,7 @@ function hg.DrawInformation(ParentPanel)
     sidebarHeader:Dock(TOP)
     sidebarHeader:SetTall(MenuUnit(settings_header_height))
     sidebarHeader.Paint = function(self, w, h)
-        draw.RoundedBox(0, 0, 0, w, h, Color(15, 15, 20, 120))
+        draw.RoundedBox(0, 0, 0, w, h, Color(14, 14, 14, 150))
         surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 140)
         surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
     end
@@ -2367,7 +2372,7 @@ function hg.DrawInformation(ParentPanel)
     end
     function backBtn:Paint(w, h)
         local isHovered = self:IsHovered()
-        local flash = isHovered and (0.5 + 0.5 * math.sin(CurTime() * 10)) or 0
+        local flash = isHovered and 1 or 0
         local textColor = settings_color_text
         local outlineColor = Color(0, 0, 0, 255)
         if isHovered then
@@ -2383,11 +2388,12 @@ function hg.DrawInformation(ParentPanel)
         matrix:Translate(Vector(0, h * (1 - scale) * 0.5, 0))
         matrix:Scale(Vector(scale, scale, 1))
         cam.PushModelMatrix(matrix)
-        draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
         if self.LineLerp and self.LineLerp > 0.01 then
-            surface.SetDrawColor(255, 255, 255, 255 * self.LineLerp)
-            surface.DrawRect(0, h / 2 + th / 2, tw * self.LineLerp, math.max(1, MenuUnit(1)))
+            -- под мышью - синяя плашка, как в главном меню
+            surface.SetDrawColor(0, 0, 255, 255 * self.LineLerp)
+            surface.DrawRect(-MenuUnit(4), h / 2 - th / 2 - MenuUnit(2), (tw + MenuUnit(8)) * self.LineLerp, th + MenuUnit(4))
         end
+        draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
         cam.PopModelMatrix()
         return true
     end
@@ -2410,7 +2416,7 @@ function hg.DrawInformation(ParentPanel)
     header:Dock(TOP)
     header:SetTall(MenuUnit(settings_header_height))
     header.Paint = function(self, w, h)
-        draw.RoundedBox(0, 0, 0, w, h, Color(15, 15, 20, 120))
+        draw.RoundedBox(0, 0, 0, w, h, Color(14, 14, 14, 150))
         surface.SetDrawColor(settings_color_whitey.r, settings_color_whitey.g, settings_color_whitey.b, 140)
         surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
     end

@@ -269,6 +269,8 @@ local fwdDir = Vector(0, 2.5, 0)
 local rightDir = Vector(2.5, 0, 0)
 
 local function plyCommand(ply,cmd)
+	-- главное меню и загрузка при входе сами держат игру заглушённой (menu-n-derma/derma/cl_menu_wd.lua)
+	if hg.WDMenu and hg.WDMenu.GameMuted and hg.WDMenu.GameMuted() and string.StartWith(cmd, "soundfade") then return end
 	local time = CurTime()
 	ply.cmdtimer = ply.cmdtimer or time
 

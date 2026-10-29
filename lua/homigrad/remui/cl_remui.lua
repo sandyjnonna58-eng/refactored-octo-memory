@@ -1,5 +1,5 @@
--- Общий стиль Remorse для моих меню (навыки, мутации, обвесы): те же шрифт, цвета, звуки и подчёркивание,
--- что в главном меню и Achievements. Остальные файлы берут hg.RemUI только во время отрисовки.
+-- Общий стиль моих меню (навыки, мутации, обвесы) - как главное меню (cl_menu_wd.lua): шрифт Share Tech Mono,
+-- тёмные плашки, под мышью синяя плашка. Остальные файлы берут hg.RemUI только во время отрисовки.
 hg.RemUI = hg.RemUI or {}
 local UI = hg.RemUI
 
@@ -11,11 +11,11 @@ UI.White = Color(255, 255, 255, 240)
 UI.Text = Color(225, 225, 225)
 UI.TextDim = Color(160, 160, 160)
 UI.Dim = Color(60, 60, 60, 180)
-UI.Accent = Color(192, 57, 43)
-UI.Background = Color(10, 10, 19, 235)
-UI.Card = Color(20, 20, 30, 120)
-UI.CardStrong = Color(15, 15, 20, 120)
-UI.CardHover = Color(40, 40, 55, 140)
+UI.Accent = Color(0, 0, 255)
+UI.Background = Color(10, 10, 10, 225)
+UI.Card = Color(22, 22, 22, 150)
+UI.CardStrong = Color(14, 14, 14, 150)
+UI.CardHover = Color(0, 0, 255, 200)
 UI.Line = Color(255, 255, 255, 70)
 
 local gradient_r = surface.GetTextureID("vgui/gradient-r")
@@ -31,7 +31,7 @@ local U = UI.U
 
 local function CreateFonts()
 	local scale = math.min(ScrW(), ScrH()) / 1000
-	local font = "Verily Serif Mono"
+	local font = "Share Tech Mono"
 
 	surface.CreateFont("RemUI_Title", {font = font, size = math.max(18, math.floor(34 * scale)), weight = 300, extended = true})
 	surface.CreateFont("RemUI_Medium", {font = font, size = math.max(16, math.floor(26 * scale)), weight = 300, extended = true})
@@ -127,12 +127,14 @@ function UI.TextButton(parent, text, opts)
 		surface.SetFont(self.Font)
 		local lw, lh = surface.GetTextSize(label)
 		local x = opts.center and (w - lw) / 2 or U(4)
-		draw.SimpleTextOutlined(label, self.Font, x, h / 2, col, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, color_black)
 
+		-- под мышью синяя плашка (как выбранный пункт главного меню), текст белый
 		if self.HoverLerp > 0.01 then
-			surface.SetDrawColor(255, 255, 255, 255 * self.HoverLerp)
-			surface.DrawRect(x, h / 2 + lh / 2, lw * self.HoverLerp, math.max(1, U(1)))
+			surface.SetDrawColor(UI.Accent.r, UI.Accent.g, UI.Accent.b, 255 * self.HoverLerp)
+			surface.DrawRect(0, 0, w * self.HoverLerp, h)
 		end
+		if self.HoverLerp > 0.5 then col = UI.White end
+		draw.SimpleTextOutlined(label, self.Font, x, h / 2, col, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, color_black)
 
 		return true
 	end

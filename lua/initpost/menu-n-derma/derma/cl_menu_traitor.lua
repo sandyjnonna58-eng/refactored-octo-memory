@@ -20,14 +20,14 @@ local TRAITOR_PREVIEW_START_OFFSET = 80
 
 local function CreateTraitorMenuFonts()
     surface.CreateFont(TRAITOR_MENU_FONT, {
-        font = "Verily Serif Mono",
+        font = "Share Tech Mono",
         size = ScreenScale(10),
         weight = 400,
         antialias = true
     })
 
     surface.CreateFont(TRAITOR_POINTS_FONT, {
-        font = "Verily Serif Mono",
+        font = "Share Tech Mono",
         size = ScreenScale(12),
         weight = 400,
         antialias = true
@@ -38,7 +38,7 @@ hook.Add("OnScreenSizeChanged", "ZCity_TraitorLoadout_Fonts", CreateTraitorMenuF
 CreateTraitorMenuFonts()
 
 local color_whitey = Color(225, 225, 225, 255)
-local clr_verygray = Color(10, 10, 19, 235)
+local clr_verygray = Color(10, 10, 10, 225)
 local menu_gradient_right = Color(18, 18, 18, 65)
 local clr_1 = Color(100, 100, 100, 35)
 
@@ -113,7 +113,7 @@ end
 
 local function PaintAnimatedLabel(self, w, h)
     local isHovered = self:IsHovered()
-    local flash = isHovered and (0.5 + 0.5 * math.sin(CurTime() * 10)) or 0
+    local flash = isHovered and 1 or 0
     local textColor = color_whitey
     local outlineColor = Color(0, 0, 0, 255)
 
@@ -131,11 +131,12 @@ local function PaintAnimatedLabel(self, w, h)
     matrix:Translate(Vector(0, h * (1 - scale) * 0.5, 0))
     matrix:Scale(Vector(scale, scale, 1))
     cam.PushModelMatrix(matrix)
-    draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
     if self.LineLerp and self.LineLerp > 0.01 then
-        surface.SetDrawColor(255, 255, 255, 255 * self.LineLerp)
-        surface.DrawRect(0, h / 2 + th / 2, tw * self.LineLerp, math.max(1, MenuUnit(1)))
+        -- под мышью - синяя плашка, как в главном меню
+        surface.SetDrawColor(0, 0, 255, 255 * self.LineLerp)
+        surface.DrawRect(-MenuUnit(4), h / 2 - th / 2 - MenuUnit(2), (tw + MenuUnit(8)) * self.LineLerp, th + MenuUnit(4))
     end
+    draw.SimpleTextOutlined(self:GetText(), self:GetFont(), 0, h / 2, textColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, 1, outlineColor)
     cam.PopModelMatrix()
     return true
 end
@@ -663,7 +664,7 @@ local function OpenRoleEditor(parentPanel, roleId, returnPanel)
         end
     end
     sidebar.Paint = function(self, w, h)
-        draw.RoundedBox(0, 0, 0, w, h, Color(10, 10, 15, 120))
+        draw.RoundedBox(0, 0, 0, w, h, Color(12, 12, 12, 150))
         surface.SetDrawColor(color_whitey.r, color_whitey.g, color_whitey.b, 90)
         surface.DrawRect(w - MenuUnit(1), 0, MenuUnit(1), h)
     end
@@ -672,7 +673,7 @@ local function OpenRoleEditor(parentPanel, roleId, returnPanel)
     sidebarHeader:Dock(TOP)
     sidebarHeader:SetTall(MenuUnit(TRAITOR_HEADER_HEIGHT))
     sidebarHeader.Paint = function(self, w, h)
-        draw.RoundedBox(0, 0, 0, w, h, Color(15, 15, 20, 120))
+        draw.RoundedBox(0, 0, 0, w, h, Color(14, 14, 14, 150))
         surface.SetDrawColor(color_whitey.r, color_whitey.g, color_whitey.b, 140)
         surface.DrawRect(0, h - MenuUnit(1), w, MenuUnit(1))
     end

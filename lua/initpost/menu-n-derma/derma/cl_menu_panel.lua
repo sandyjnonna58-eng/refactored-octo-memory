@@ -130,13 +130,13 @@ end
 
 local function CreateMainMenuFonts()
     surface.CreateFont("ZCity_Menu_Tiny", {
-        font = "Verily Serif Mono",
+        font = "Share Tech Mono",
         size = ScreenScale(8),
         weight = 200
     })
 
     surface.CreateFont("ZCity_Menu_Small", {
-        font = "Verily Serif Mono",
+        font = "Share Tech Mono",
         size = ScreenScale(20),
         weight = 200
     })
@@ -194,7 +194,7 @@ local splasheh = {
 
 --print(string.upper('I wish you good health, Jason Statham'))
 surface.CreateFont("ZC_MM_Title", {
-    font = "Verily Serif Mono",
+    font = "Share Tech Mono",
     size = ScreenScale(40),
     weight = 800,
     antialias = true
@@ -225,7 +225,7 @@ end
 
 local color_red = Color(255,25,25,45)
 local clr_gray = Color(255,255,255,25)
-local clr_verygray = Color(10,10,19,235)
+local clr_verygray = Color(10, 10, 10, 225)
 local appearance_preview = {
     width = 340,
     height = 920,
