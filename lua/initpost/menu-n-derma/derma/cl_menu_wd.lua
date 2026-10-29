@@ -481,10 +481,6 @@ function WD.StartBoot()
 		else
 			DrawLogin(t, w, h, Nick())
 		end
-		-- подсказка мигает, когда можно идти дальше
-		if StageReady(self.Stage, t) and not self.FadeStart and math.floor(RealTime() * 1.6) % 2 == 0 then
-			draw.SimpleText("Press any key to continue", "WD_Login", w / 2, h * 0.94, Color(200, 200, 200, 230), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-		end
 		surface.SetAlphaMultiplier(oldMul)
 	end
 end
