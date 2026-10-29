@@ -2,6 +2,9 @@ local PANEL = {}
 local curent_panel 
 local red_select = Color(192,0,0)
 local menu_music_default_path = "sound/rem_mainmenu.mp3"
+-- личная музыка меню (как и видеофон в cl_menu_wd.lua: только у себя, см. .gitignore)
+local menu_music_private_path = "sound/rem_wd_private/menu_music.ogg"
+if file.Exists(menu_music_private_path, "GAME") then menu_music_default_path = menu_music_private_path end
 local menu_music_appearance_path = "sound/rem_appearencemenu.mp3"
 local menu_music_flags = "noblock noplay"
 local menu_music_volume = 0.25

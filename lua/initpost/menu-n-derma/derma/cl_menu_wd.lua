@@ -421,6 +421,32 @@ local function Nick()
 	return IsValid(ply) and ply:Nick() or "player"
 end
 
+-- личные звуки загрузки (как и видеофон: только у себя, см. .gitignore); нет файла - тишина
+local BOOT_SOUNDS = {terminal = "sound/rem_wd_private/boot_terminal.ogg", login = "sound/rem_wd_private/boot_login.ogg"}
+local BOOT_SOUND_VOLUME = 0.8
+local bootChannels = {}
+
+local function PlayBootSound(name, delay)
+	local path = BOOT_SOUNDS[name]
+	if not file.Exists(path, "GAME") then return end
+	timer.Create("WDMenu_BootSound_" .. name, delay or 0, 1, function()
+		if not WD.BootActive() then return end
+		sound.PlayFile(path, "noplay noblock", function(chan)
+			if not IsValid(chan) then return end
+			if IsValid(bootChannels[name]) then bootChannels[name]:Stop() end
+			bootChannels[name] = chan
+			chan:SetVolume(BOOT_SOUND_VOLUME)
+			chan:Play()
+		end)
+	end)
+end
+
+local function StopBootSound(name)
+	timer.Remove("WDMenu_BootSound_" .. name)
+	if IsValid(bootChannels[name]) then bootChannels[name]:Stop() end
+	bootChannels[name] = nil
+end
+
 local function StageReady(stage, t)
 	if stage == 1 then return t >= TERMINAL_READY end
 	return t >= LoginReady(Nick())
@@ -447,6 +473,9 @@ function WD.BootKey()
 	if pnl.Stage == 1 then
 		pnl.Stage = 2
 		pnl.StageStart = RealTime()
+		StopBootSound("terminal")
+		-- щелчок подтверждения в конце звука - вместе с синей полосой "Logging as"
+		PlayBootSound("login", math.max(LoginReady(Nick()) - 1.55, 0))
 	else
 		pnl.FadeStart = RealTime()
 	end
@@ -464,6 +493,11 @@ function WD.StartBoot()
 	pnl:SetZPos(32767)
 	pnl.Stage = 1
 	pnl.StageStart = RealTime()
+	PlayBootSound("terminal", 0.15)
+	function pnl:OnRemove()
+		StopBootSound("terminal")
+		StopBootSound("login")
+	end
 
 	function pnl:OnKeyCodePressed(code)
 		WD.BootKey()
