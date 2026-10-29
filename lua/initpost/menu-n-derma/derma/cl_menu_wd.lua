@@ -339,6 +339,7 @@ local DISCLAIMER = "This server is a work of fiction. Any resemblance to actual 
 local LINE_TIME = 0.08
 local TERMINAL_READY = #BOOT_LINES * LINE_TIME + 0.4 -- все строки и предупреждение на экране
 local FADE_OUT = 0.5
+local KEY_LOCK = 0.4 -- после смены этапа нажатия не принимаются (одно нажатие не пролетает два этапа)
 
 local function LoginReady(nick) return 0.5 + #nick / 14 + 18 / 20 + 0.05 end -- ник, пароль и синяя полоса
 
@@ -433,6 +434,9 @@ end
 function WD.BootKey()
 	local pnl = WD.BootPanel
 	if not IsValid(pnl) or pnl.FadeStart then return end
+	-- одно и то же нажатие может прийти дважды (клавиша и Esc через меню паузы) - второе отсекаем
+	if RealTime() - (pnl.LastKey or 0) < KEY_LOCK then return end
+	pnl.LastKey = RealTime()
 	local t = RealTime() - pnl.StageStart
 	if not StageReady(pnl.Stage, t) then
 		-- допечатать сразу
@@ -476,10 +480,16 @@ function WD.StartBoot()
 		surface.SetDrawColor(0, 0, 0, 255)
 		surface.DrawRect(0, 0, w, h)
 		local t = RealTime() - self.StageStart
+		local ok, err
 		if self.Stage == 1 then
-			DrawTerminal(t, w, h)
+			ok, err = pcall(DrawTerminal, t, w, h)
 		else
-			DrawLogin(t, w, h, Nick())
+			ok, err = pcall(DrawLogin, t, w, h, Nick())
+		end
+		-- если рисование сломалось - пишем в консоль и уходим в игру, а не висим невидимым экраном
+		if not ok then
+			ErrorNoHalt("[boot screen] " .. tostring(err) .. "\n")
+			self.FadeStart = self.FadeStart or RealTime()
 		end
 		surface.SetAlphaMultiplier(oldMul)
 	end
