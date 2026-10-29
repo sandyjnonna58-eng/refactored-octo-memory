@@ -1,5 +1,5 @@
 -- Главное меню в стиле хакерского терминала (как меню Watch Dogs 2), рисует cl_menu_panel.lua:
--- * при первом открытии за сессию - загрузка (строки терминала + предупреждение) и экран входа с логотипом FUNKAS;
+-- * при заходе в игру - загрузка (строки терминала + предупреждение) и экран входа с логотипом FUNKAS, дальше по клавише;
 -- * фон: сцены из точек (materials/rem_wd/, генератор tools/menu_wd/gen.py) сменяют друг друга со сбоями картинки;
 --   точки мерцают, сцена проявляется из шума, у каждой своё движение (волны колец, наезд, сканирование, дрейф);
 -- * слева внизу список пунктов, выбранный - синяя плашка с "//"; справа внизу карусель карточек со стрелками,
@@ -337,9 +337,10 @@ local WARNING = "A very small percentage of individuals may experience epileptic
 local DISCLAIMER = "This server is a work of fiction. Any resemblance to actual events or any real persons, living or dead, is purely coincidental. No organization has approved, endorsed or authorized it."
 
 local LINE_TIME = 0.08
-local TERMINAL_END = #BOOT_LINES * LINE_TIME + 1.6
-local LOGIN_END = TERMINAL_END + 3.6
-WD.BootLength = LOGIN_END + 0.5
+local TERMINAL_READY = #BOOT_LINES * LINE_TIME + 0.4 -- все строки и предупреждение на экране
+local FADE_OUT = 0.5
+
+local function LoginReady(nick) return 0.5 + #nick / 14 + 18 / 20 + 0.05 end -- ник, пароль и синяя полоса
 
 local function DrawTerminal(t, w, h)
 	local sh = h
@@ -409,17 +410,91 @@ local function DrawLogin(t, w, h, nick)
 	end
 end
 
--- t - секунды с начала; поверх всего; true, пока загрузка ещё идёт
-function WD.DrawBoot(t, nick)
-	local w, h = ScrW(), ScrH()
-	if t >= WD.BootLength then return false end
-	local fade = math.Clamp((WD.BootLength - t) / 0.5, 0, 1)
-	surface.SetDrawColor(0, 0, 0, 255 * fade)
-	surface.DrawRect(0, 0, w, h)
-	if t < TERMINAL_END then
-		DrawTerminal(t, w, h)
-	elseif t < LOGIN_END then
-		DrawLogin(t - TERMINAL_END, w, h, nick)
-	end
-	return true
+-- ===================== загрузка при входе в игру =====================
+-- Терминал, потом экран входа; дальше только по клавише: первое нажатие допечатывает текст,
+-- следующее - к экрану входа / в игру. rem_boot_screen 0 - не показывать.
+local cvBoot = CreateClientConVar("rem_boot_screen", "1", true, false, "Show the boot terminal and login screen when joining", 0, 1)
+
+local function Nick()
+	local ply = LocalPlayer()
+	return IsValid(ply) and ply:Nick() or "player"
 end
+
+local function StageReady(stage, t)
+	if stage == 1 then return t >= TERMINAL_READY end
+	return t >= LoginReady(Nick())
+end
+
+function WD.BootActive()
+	return IsValid(WD.BootPanel)
+end
+
+-- нажатие клавиши на загрузке
+function WD.BootKey()
+	local pnl = WD.BootPanel
+	if not IsValid(pnl) or pnl.FadeStart then return end
+	local t = RealTime() - pnl.StageStart
+	if not StageReady(pnl.Stage, t) then
+		-- допечатать сразу
+		pnl.StageStart = RealTime() - (pnl.Stage == 1 and TERMINAL_READY or LoginReady(Nick()))
+		return
+	end
+	surface.PlaySound("ui/rem_select.wav")
+	if pnl.Stage == 1 then
+		pnl.Stage = 2
+		pnl.StageStart = RealTime()
+	else
+		pnl.FadeStart = RealTime()
+	end
+end
+
+function WD.StartBoot()
+	if IsValid(WD.BootPanel) then WD.BootPanel:Remove() end
+	local pnl = vgui.Create("EditablePanel")
+	WD.BootPanel = pnl
+	pnl:SetPos(0, 0)
+	pnl:SetSize(ScrW(), ScrH())
+	pnl:MakePopup()
+	pnl:SetMouseInputEnabled(false)
+	pnl:SetKeyboardInputEnabled(true)
+	pnl:SetZPos(32767)
+	pnl.Stage = 1
+	pnl.StageStart = RealTime()
+
+	function pnl:OnKeyCodePressed(code)
+		WD.BootKey()
+	end
+
+	function pnl:Paint(w, h)
+		local fade = self.FadeStart and math.Clamp(1 - (RealTime() - self.FadeStart) / FADE_OUT, 0, 1) or 1
+		if fade <= 0 then
+			self:Remove()
+			return
+		end
+		local oldMul = surface.GetAlphaMultiplier()
+		surface.SetAlphaMultiplier(fade)
+		surface.SetDrawColor(0, 0, 0, 255)
+		surface.DrawRect(0, 0, w, h)
+		local t = RealTime() - self.StageStart
+		if self.Stage == 1 then
+			DrawTerminal(t, w, h)
+		else
+			DrawLogin(t, w, h, Nick())
+		end
+		-- подсказка мигает, когда можно идти дальше
+		if StageReady(self.Stage, t) and not self.FadeStart and math.floor(RealTime() * 1.6) % 2 == 0 then
+			draw.SimpleText("Press any key to continue", "WD_Login", w / 2, h * 0.94, Color(200, 200, 200, 230), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		end
+		surface.SetAlphaMultiplier(oldMul)
+	end
+end
+
+-- файлы initpost грузятся уже на InitPostEntity (autorun/loader.lua), так что запускаем сразу, один раз за сессию
+if not WD.BootShown then
+	WD.BootShown = true
+	timer.Simple(0, function()
+		if cvBoot:GetBool() then WD.StartBoot() end
+	end)
+end
+
+concommand.Add("rem_boot_screen_test", function() WD.StartBoot() end)

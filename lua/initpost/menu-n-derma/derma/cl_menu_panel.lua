@@ -720,7 +720,7 @@ function PANEL:Paint(w,h)
     end
 end
 
--- список, карусель и загрузка - поверх дочерних панелей (видеофона); в разделах меню их нет
+-- список и карусель - поверх дочерних панелей (видеофона); в разделах меню их нет
 function PANEL:PaintOver(w, h)
     local WD = hg.WDMenu
     if IsValid(self.wdInput) and self.wdInput:IsVisible() then
@@ -728,9 +728,6 @@ function PANEL:PaintOver(w, h)
         self.WDRects = WD.DrawList(self.WDItems, self.WDSelected, a)
         self.WDZones = WD.DrawCarousel(self.WDCards, self.WDCard, a, self.WDHover and self.WDHover.zone)
         WD.DrawProfile(LocalPlayer():Nick(), a)
-    end
-    if self.WDBootStart and not WD.DrawBoot(RealTime() - self.WDBootStart, LocalPlayer():Nick()) then
-        self.WDBootStart = nil
     end
 end
 
@@ -835,12 +832,6 @@ function PANEL:CreateWDMenu()
     self.WDCard = 1
     self.WDCardTime = RealTime()
 
-    -- загрузка и экран входа - один раз за сессию
-    if not hg.WDMenu.BootDone then
-        hg.WDMenu.BootDone = true
-        self.WDBootStart = RealTime()
-    end
-
     local luaMenu = self
     local input = vgui.Create("DPanel", self)
     self.wdInput = input
@@ -873,15 +864,7 @@ function PANEL:CreateWDMenu()
     avatar:SetMouseInputEnabled(false)
 end
 
-function PANEL:WDBooting()
-    return self.WDBootStart and RealTime() - self.WDBootStart < hg.WDMenu.BootLength
-end
-
 function PANEL:WDClick()
-    if self:WDBooting() then
-        self.WDBootStart = nil
-        return
-    end
     local hover = self.WDHover
     if not hover then return end
     if hover.item then
@@ -902,10 +885,6 @@ function PANEL:WDClick()
     end
 end
 
-function PANEL:OnKeyCodePressed(code)
-    if self:WDBooting() then self.WDBootStart = nil end
-end
-
 function PANEL:ThinkWDMenu()
     if not IsValid(self.wdInput) then return end
 
@@ -914,16 +893,13 @@ function PANEL:ThinkWDMenu()
         self.previewHolder:SetVisible(false)
     end
 
-    -- аватар не должен торчать поверх загрузки
-    if self.wdInput:IsVisible() and IsValid(self.wdAvatar) then self.wdAvatar:SetVisible(not self:WDBooting()) end
-
     if RealTime() - (self.WDCardTime or 0) > CARD_TIME_AUTO then
         self.WDCard = self.WDCard % #wd_cards + 1
         self.WDCardTime = RealTime()
     end
 
     local hover
-    if self.wdInput:IsVisible() and self.wdInput:IsHovered() and not self.SwitchingPanel and not self:WDBooting() then
+    if self.wdInput:IsVisible() and self.wdInput:IsHovered() and not self.SwitchingPanel then
         local mx, my = gui.MouseX(), gui.MouseY()
         for i, r in ipairs(self.WDRects or {}) do
             if InRect(r, mx, my) then hover = {item = i} break end
@@ -1032,6 +1008,12 @@ end
 vgui.Register( "ZMainMenu", PANEL, "ZFrame")
 
 hook.Add("OnPauseMenuShow","OpenMainMenu",function()
+    -- на загрузке при входе Esc - тоже "любая клавиша", меню не открываем
+    if hg.WDMenu and hg.WDMenu.BootActive and hg.WDMenu.BootActive() then
+        hg.WDMenu.BootKey()
+        return false
+    end
+
     local run = hook.Run("OnShowZCityPause")
     if run != nil then
         return run
