@@ -9,3 +9,5 @@ refactored
 КОНТЕНТ
 
 https://steamcommunity.com/sharedfiles/filedetails/?id=3827740854
+
+Совместимость с InfMap (бесконечные карты gm_infmap): см. [INFMAP.md](INFMAP.md)
