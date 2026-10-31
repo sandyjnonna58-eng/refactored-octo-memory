@@ -2,3 +2,6 @@
 # личный видеофон меню (cl_menu_wd.lua): только у себя, не в репозиторий и не на сервер
 materials/rem_wd_private/
 sound/rem_wd_private/
+
+# кэш Python от скриптов в tools/
+__pycache__/
