@@ -76,6 +76,7 @@ module[1] = function(org)
 	org.lastCardiacPain = 0
 
 	org.tempchanging = 0
+	org.exertion = 0
 	org.heatbuff = 30 -- seconds of heat supply
 	org.needed_temp = 36.7
 end
@@ -200,6 +201,12 @@ module[2] = function(owner, org, timeValue)
 	-- temperature
 	local needed_temp = math.min(math.max(37 * (org.pulse / 45), 35), 36.7)
 	local changeRate = timeValue / 60
+	-- нагрузка греет, вода охлаждает (sv_bodyheat.lua)
+	if hg.organism.BodyHeat then
+		local heatOffset, heatRate = hg.organism.BodyHeat(owner, org, timeValue)
+		needed_temp = needed_temp + heatOffset
+		changeRate = changeRate * heatRate
+	end
 	changeRate = changeRate * (org.temperature < needed_temp and math.Clamp(org.heatbuff / 60, 1, 2) or 1)
 	if math.abs(org.tempchanging) < changeRate then
 		org.temperature = math.Approach(org.temperature, needed_temp, changeRate)
