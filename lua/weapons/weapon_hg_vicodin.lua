@@ -80,15 +80,17 @@ if CLIENT then
 		Quad(e[1], e[2], e[3], e[4], col, f)
 	end
 
-	local function Finish()
-		local m = Mesh()
+	-- формат вершин берём у материала, которым рисуем (Mesh() без материала даёт формат без цвета -
+	-- рисование читает мусор и роняет игру)
+	local function Finish(mat)
+		local m = Mesh(mat)
 		m:BuildFromTriangles(verts)
 		verts = nil
 		return m
 	end
 
 	-- непрозрачное (таблетки, этикетка, крышка) и прозрачный пластик - отдельно, пластик рисуется вторым
-	local function BuildBottle()
+	local function BuildBottle(solidMat, glassMat)
 		verts = {}
 		for _, pill in ipairs(PILLS) do
 			local c, d = Vector(pill[1], pill[2], pill[3]), Vector(pill[4], pill[5], pill[6])
@@ -101,21 +103,30 @@ if CLIENT then
 			Cylinder(line[1] - 0.09, line[1] + 0.09, 1.505, INK, nil, nil, line[2], line[3], 10)
 		end
 		Cylinder(4.85, 6.0, 1.58, CAP, CAP)
-		local solid = Finish()
+		local solid = Finish(solidMat)
 
 		verts = {}
 		Cylinder(4.6, 4.85, 1.2, GLASS)
 		Cylinder(0.0, 4.6, 1.45, GLASS, nil, GLASS)
 		Cylinder(0.4, 4.3, 1.46, SHINE, nil, nil, 200, 214, 2)
-		return solid, Finish()
+		return solid, Finish(glassMat)
 	end
 
-	local solidMesh, glassMesh
+	local solidMesh, glassMesh, bottleBroken
 	local solidMat = CreateMaterial("rem_vicodin_solid", "UnlitGeneric", {["$basetexture"] = "color/white", ["$vertexcolor"] = 1, ["$nocull"] = 1})
 	local glassMat = CreateMaterial("rem_vicodin_glass", "UnlitGeneric", {["$basetexture"] = "color/white", ["$vertexcolor"] = 1, ["$vertexalpha"] = 1, ["$translucent"] = 1, ["$nocull"] = 1})
 
 	local function DrawBottle(pos, ang)
-		if not solidMesh then solidMesh, glassMesh = BuildBottle() end
+		if bottleBroken then return end
+		if not solidMesh then
+			local ok, solid, glass = pcall(BuildBottle, solidMat, glassMat)
+			if not ok or not solid or not glass then
+				bottleBroken = true
+				ErrorNoHalt("[vicodin] model build failed: " .. tostring(solid) .. "\n")
+				return
+			end
+			solidMesh, glassMesh = solid, glass
+		end
 		local lc = render.GetLightColor(pos)
 		local k = math.Clamp(0.3 + (lc.x + lc.y + lc.z) / 3 * 2.5, 0.3, 1.15)
 		local m = Matrix()

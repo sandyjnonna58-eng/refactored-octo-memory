@@ -128,7 +128,7 @@ if CLIENT then
 		end
 	end
 
-	local function BuildVest()
+	local function BuildVest(mat)
 		verts = {}
 		-- задняя панель и лямки через плечи
 		Box(-7.4, -8.6, -3.6, -6.4, 8.6, 3.8, KHAKI)
@@ -165,17 +165,28 @@ if CLIENT then
 			Segment(mid, Vector(8.5, wdat[2], wdat[3]), 0.32, WIRES[k])
 		end
 
-		local m = Mesh()
+		-- формат вершин берём у материала, которым рисуем (Mesh() без материала даёт формат без цвета -
+		-- рисование читает мусор и роняет игру)
+		local m = Mesh(mat)
 		m:BuildFromTriangles(verts)
 		verts = nil
 		return m
 	end
 
-	local vestMesh
+	local vestMesh, vestBroken
 	local vestMat = CreateMaterial("rem_suicidevest", "UnlitGeneric", {["$basetexture"] = "color/white", ["$vertexcolor"] = 1, ["$nocull"] = 1})
 
 	local function DrawVest(pos, ang)
-		vestMesh = vestMesh or BuildVest()
+		if vestBroken then return end
+		if not vestMesh then
+			local ok, res = pcall(BuildVest, vestMat)
+			if not ok or not res then
+				vestBroken = true
+				ErrorNoHalt("[suicide vest] model build failed: " .. tostring(res) .. "\n")
+				return
+			end
+			vestMesh = res
+		end
 		-- яркость по освещению в этом месте карты (чтобы в темноте пояс не светился)
 		local lc = render.GetLightColor(pos)
 		local k = math.Clamp(0.3 + (lc.x + lc.y + lc.z) / 3 * 2.5, 0.3, 1.15)
@@ -192,7 +203,7 @@ if CLIENT then
 
 	-- на груди у всех, у кого пояс (сервер ставит NW-флаг)
 	hook.Add("PostDrawOpaqueRenderables", "rem_suicidevest", function(depth, skybox)
-		if skybox then return end
+		if depth or skybox then return end
 		for _, ply in player.Iterator() do
 			if not ply:GetNWBool("rem_vest", false) then continue end
 			local ent = hg.GetCurrentCharacter and hg.GetCurrentCharacter(ply) or ply
