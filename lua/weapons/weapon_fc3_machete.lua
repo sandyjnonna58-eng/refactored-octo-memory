@@ -1,10 +1,10 @@
 if SERVER then AddCSLuaFile() end
 -- Мачете из Far Cry 3 (модель из пакета контента сервера remorseism_custom_content, models/weapons/rin/fc3/melee).
--- Анимации и удары - как у катаны (c_kf2_katana, кость 46); клинок поставлен так, что верх рукояти на месте гарды
--- катаны, остриё и кромка смотрят туда же. Взять может только хост сервера (на выделенном - суперадмин).
-SWEP.Base = "weapon_hg_katana"
+-- Анимации, удары, звуки и урон - как у обычного мачете (weapon_hg_machete, v_me_machete), виден клинок FC3.
+-- Взять может только хост сервера (на выделенном - суперадмин).
+SWEP.Base = "weapon_hg_machete"
 SWEP.PrintName = "FC3 Machete"
-SWEP.Instructions = "A heavy jungle machete. Host only.\n\nLMB to attack.\nRMB to block."
+SWEP.Instructions = "A heavy jungle machete with a saw-backed spine. Host only.\n\nLMB to attack.\nRMB to block."
 SWEP.Category = "Weapons - Melee"
 SWEP.Spawnable = true
 SWEP.AdminOnly = true
@@ -12,21 +12,10 @@ SWEP.AdminOnly = true
 SWEP.WorldModel = "models/weapons/rin/fc3/melee/machetefc3.mdl"
 SWEP.WorldModelExchange = "models/weapons/rin/fc3/melee/machetefc3.mdl"
 
-SWEP.weaponPos = Vector(1.33, 4.53, -4.00)
-SWEP.weaponAng = Angle(0, 110, 0)
-
--- как мачете: короче и легче катаны, быстрее замах, сильнее кровотечение
-SWEP.AttackTime = 0.4
-SWEP.AnimTime1 = 1.2
-SWEP.WaitTime1 = 1.1
-SWEP.DamagePrimary = 42
-SWEP.BleedMultiplier = 2
-SWEP.PainMultiplier = 1.3
-SWEP.PenetrationPrimary = 6
-SWEP.StaminaPrimary = 24
-SWEP.AttackLen1 = 52
-SWEP.weight = 1.3
-SWEP.AttackHitFlesh = "machete/machetehit1.ogg"
+-- кость 94 анимаций NMRiH: рукоять вдоль x (вверх - к -x), кромка в -y, плоскость клинка - z;
+-- низ рукояти там же, где низ рукояти топорика (weapon_hatchet), остриё вверх, кромка вперёд
+SWEP.weaponPos = Vector(5.40, -2.00, -1.20)
+SWEP.weaponAng = Angle(-90, 0, 0)
 
 SWEP.IconOverride = "entities/weapon_fc3_machete.png"
 if CLIENT then
