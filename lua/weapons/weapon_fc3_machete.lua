@@ -25,11 +25,16 @@ end
 if SERVER then resource.AddSingleFile("materials/entities/weapon_fc3_machete.png") end
 
 SWEP.HostOnly = true
+-- у обычного мачете NoHolster: сборка (sv_util "homigrad-dropholstered") выбрасывает его, как только в руках другое;
+-- мачете FC3 убираются на пояс и остаются в инвентаре
+SWEP.NoHolster = false
 
 -- тейкдауны Far Cry 4 (homigrad/takedowns): E со спины / через укрытие / снизу с уступа или лестницы, из воды, прыжок с высоты на цель
 SWEP.Takedowns = true
 -- камера Far Cry (homigrad/fccamera): X - поднять камеру, наводиться на игроков и NPC - отмечаются
 SWEP.FCCamera = true
+-- лечение как в Far Cry (homigrad/fcheal): с мачете в инвентаре F при ранениях лечит
+SWEP.FCHeal = true
 -- клинок в руке анимации FC4 (от ValveBiped.Anim_Attachment_RH): низ рукояти там, где у мачете FC4, остриё и лезвие туда же
 SWEP.TakedownOffset = {Vector(3.81, -4.47, 2.93), Angle(0, 0, -90)}
 
