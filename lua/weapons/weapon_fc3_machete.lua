@@ -12,10 +12,11 @@ SWEP.AdminOnly = true
 SWEP.WorldModel = "models/weapons/rin/fc3/melee/machetefc3.mdl"
 SWEP.WorldModelExchange = "models/weapons/rin/fc3/melee/machetefc3.mdl"
 
--- кость 94 анимаций NMRiH: рукоять вдоль x (вверх - к -x), кромка в -y, плоскость клинка - z;
--- низ рукояти там же, где низ рукояти топорика (weapon_hatchet), остриё вверх, кромка вперёд
-SWEP.weaponPos = Vector(5.40, -2.00, -1.20)
-SWEP.weaponAng = Angle(-90, 0, 0)
+-- кость 94 у v_me_machete - "Machete" (у v_me_hatchet это другая кость, "LeadPipe", поэтому по топорику клинок вставал наоборот):
+-- родной мачете NMRiH лежит на ней рукоятью от x=-2.9 до ~3, остриё в +x, кромка в -y, плоскость клинка - xy.
+-- Клинок FC3 (в модели остриё в +z, кромка в -y) поставлен так же: середина рукояти на середине родной рукояти, обух на обухе
+SWEP.weaponPos = Vector(-3.60, -3.44, -3.67)
+SWEP.weaponAng = Angle(90, 0, 0)
 
 SWEP.IconOverride = "entities/weapon_fc3_machete.png"
 if CLIENT then

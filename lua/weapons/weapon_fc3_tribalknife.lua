@@ -10,8 +10,9 @@ SWEP.AdminOnly = true
 SWEP.WorldModel = "models/weapons/rin/fc3/melee/tribalknifefc3.mdl"
 SWEP.WorldModelExchange = "models/weapons/rin/fc3/melee/tribalknifefc3.mdl"
 
-SWEP.weaponPos = Vector(5.42, -2.40, -7.30)
-SWEP.weaponAng = Angle(-90, 0, 0)
+-- как у FC3 Machete (кость "Machete" v_me_machete): середина рукояти на середине родной рукояти, остриё в +x, кромка в -y
+SWEP.weaponPos = Vector(-3.50, -3.77, 2.47)
+SWEP.weaponAng = Angle(90, 0, 0)
 
 -- шире и тяжелее обычного мачете: чуть медленнее, но сильнее
 SWEP.AttackTime = 0.4
