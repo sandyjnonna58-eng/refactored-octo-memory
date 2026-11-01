@@ -101,23 +101,6 @@ local function ChooseKind(ply)
 	return "syringe"
 end
 
--- руки для c_-моделей (если у игрока их ещё нет)
-local function EnsureHands(ply)
-	if IsValid(ply:GetHands()) then return end
-	local hands = ents.Create("gmod_hands")
-	if not IsValid(hands) then return end
-	hands:DoSetup(ply, ply:GetViewModel(0))
-	if not hands:GetModel() or hands:GetModel() == "" then
-		local info = player_manager.TranslatePlayerHands(player_manager.TranslateToPlayerModelName(ply:GetModel()))
-		if info then
-			hands:SetModel(info.model)
-			hands:SetSkin(info.skin or 0)
-			hands:SetBodyGroups(info.body or "")
-		end
-	end
-	hands:Spawn()
-end
-
 -- само лечение
 local function ApplyHeal(ply, kind)
 	local org = ply.organism
@@ -166,7 +149,6 @@ function FH.Start(ply)
 	local class = "rem_fcheal_" .. kind
 	local org = ply.organism
 
-	EnsureHands(ply)
 	local st = {kind = kind, class = class, prev = ply:GetActiveWeapon(), seq = data.seqs[math.random(#data.seqs)],
 		allowholster = org and org.allowholster, start = CurTime()}
 	ply.rem_fcheal = st
@@ -181,6 +163,10 @@ function FH.Start(ply)
 		return false
 	end
 	ply:SelectWeapon(class)
+	-- руки лечения рисует клиент сам (cl_fcheal.lua): вид, анимация и когда началась
+	ply:SetNW2String("rem_fcheal_kind", kind)
+	ply:SetNW2String("rem_fcheal_seq", st.seq)
+	ply:SetNW2Float("rem_fcheal_start", CurTime())
 	ply:SetNW2Bool("rem_fcheal", true)
 
 	for _, s in ipairs(data.snd) do

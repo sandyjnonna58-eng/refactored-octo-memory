@@ -30,16 +30,16 @@ FH.Kinds = {
 		snd = {{0.1, "movement"}, {0.9, "movement"}, {1.6, "bone"}, {2.2, "bone"}, {2.9, "movement"}}},
 }
 
--- временное "оружие" с руками лечения на каждый вид (выдаётся на время анимации и забирается)
+-- временное "оружие" на каждый вид лечения (выдаётся на время анимации и забирается; руки рисует клиент)
 local function Register(kind, data)
 	local SWEP = {
 		Base = "weapon_base",
 		PrintName = "Healing",
 		Spawnable = false,
 		AdminOnly = true,
-		ViewModel = data.model,
+		ViewModel = "",
 		WorldModel = "",
-		UseHands = true,
+		UseHands = false,
 		ViewModelFOV = 80,
 		ViewModelFlip = false,
 		DrawCrosshair = false,
@@ -55,25 +55,8 @@ local function Register(kind, data)
 		FCHealKind = kind,
 	}
 	function SWEP:Initialize() self:SetHoldType("normal") end
-	function SWEP:Deploy()
-		if SERVER then
-			local function play()
-				if not IsValid(self) then return end
-				local ply = self:GetOwner()
-				local st = IsValid(ply) and ply.rem_fcheal
-				local vm = IsValid(ply) and ply:GetViewModel()
-				if not st or not IsValid(vm) then return end
-				local id = vm:LookupSequence(st.seq)
-				if id and id >= 0 then
-					vm:SendViewModelMatchingSequence(id)
-					vm:SetPlaybackRate(1)
-				end
-			end
-			play()
-			timer.Simple(0, play)
-		end
-		return true
-	end
+	-- руки с анимацией рисует cl_fcheal.lua (обычный viewmodel в homigrad не виден: своё тело рисуется от первого лица)
+	function SWEP:Deploy() return true end
 	function SWEP:PrimaryAttack() end
 	function SWEP:SecondaryAttack() end
 	function SWEP:Reload() end
