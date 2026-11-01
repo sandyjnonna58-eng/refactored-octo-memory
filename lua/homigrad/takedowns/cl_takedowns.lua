@@ -281,8 +281,9 @@ function TD.FilterView(ply, view, origin, angles, fov)
 			origin = LerpVector(k, base.origin or pos, pos),
 			angles = LerpAngle(k, base.angles or ang, ang),
 			fov = bfov + FOV_ADD * k,
-			znear = 1,
-			drawviewer = false,
+			znear = 0.7,
+			-- своё тело рисуется (как в обычном виде homigrad), голова у себя сжата в DrawPlayerRagdoll - видно руки
+			drawviewer = true,
 		}
 		lastView = {pos = out.origin, ang = out.angles, fov = out.fov, time = CurTime()}
 		return out
