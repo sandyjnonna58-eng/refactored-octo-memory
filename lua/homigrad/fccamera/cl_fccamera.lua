@@ -144,14 +144,22 @@ hook.Add("Think", "rem_fccam_cl", function()
 			end
 		elseif CAM.LocalUp then
 			SetUp(false)
+			CAM.UpByItem = nil
 		elseif CAM.Allowed(ply) then
 			SetUp(true)
+			CAM.UpByItem = nil
 		end
 	end
 	wasX = x
 
-	-- камера-предмет в руках: видоискатель поднят сам
-	if always and not CAM.LocalUp and CAM.Allowed(ply) then SetUp(true) end
+	-- камера-предмет в руках: видоискатель поднят сам; убрал её (взял мачете или другое) - опускается
+	if always and not CAM.LocalUp and CAM.Allowed(ply) then
+		SetUp(true)
+		CAM.UpByItem = true
+	elseif CAM.UpByItem and not always then
+		CAM.UpByItem = nil
+		if CAM.LocalUp then SetUp(false) end
+	end
 
 	-- сервер опустил камеру (сменил оружие, упал, тейкдаун...) или сами уже не можем
 	if CAM.LocalUp and (not CAM.Allowed(ply) or (CurTime() - (CAM.UpSince or 0) > 0.6 and not ply:GetNW2Bool("rem_fccam", false))) then

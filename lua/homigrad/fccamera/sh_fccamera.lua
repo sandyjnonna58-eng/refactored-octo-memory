@@ -44,8 +44,11 @@ if SERVER then
 			if not IsValid(ply) or not ply:Alive() or ply:HasWeapon(CAM.CameraClass) then return end
 			local before = ply:GetActiveWeapon()
 			local cam = ply:Give(CAM.CameraClass, true)
-			-- Give может переключить на камеру - возвращаем в руки то, что было
-			if IsValid(cam) and IsValid(before) and before ~= cam and ply:GetActiveWeapon() ~= before then
+			if not IsValid(cam) then return end
+			-- сборка (sh_utility "pickupHuy") через пару тиков сама берёт в руки любой новый предмет - камере это запрещаем,
+			-- она просто лежит в инвентаре, в руках остаётся мачете
+			cam.DontEquipInstantly = true
+			if IsValid(before) and before ~= cam and ply:GetActiveWeapon() ~= before then
 				ply:SelectWeapon(before:GetClass())
 			end
 		end)
@@ -53,12 +56,22 @@ if SERVER then
 	hook.Add("PlayerSwitchWeapon", "rem_fccam_give", function(ply, old, new) GiveCamera(ply, new) end)
 	hook.Add("WeaponEquip", "rem_fccam_give", function(wep, ply) GiveCamera(ply, wep) end)
 
-	-- сменил оружие, упал, умер, начал тейкдаун - камера опускается
+	-- сменил оружие, упал, умер, начал тейкдаун - камера опускается;
+	-- выбросил все мачете FC3 - камера-предмет тоже убирается
+	local function HasMachete(ply)
+		for _, w in ipairs(ply:GetWeapons()) do
+			if w.FCCamera and not w.FCCameraAlways then return true end
+		end
+		return false
+	end
 	local nextCheck = 0
 	hook.Add("Think", "rem_fccam_check", function()
 		if CurTime() < nextCheck then return end
 		nextCheck = CurTime() + 0.2
 		for _, ply in ipairs(player.GetAll()) do
+			if ply:Alive() and ply:HasWeapon(CAM.CameraClass) and not HasMachete(ply) then
+				ply:StripWeapon(CAM.CameraClass)
+			end
 			if ply:GetNW2Bool("rem_fccam", false) and not CAM.Allowed(ply) then
 				ply:SetNW2Bool("rem_fccam", false)
 			end
