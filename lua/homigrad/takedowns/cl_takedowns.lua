@@ -195,10 +195,10 @@ hook.Add("Think", "rem_takedown_cl", function()
 				BloodAt(td)
 			end
 		end
-		-- жертва умерла (сервер убил её в конце её анимации) - дальше рисуется труп
+		-- жертва в конце своей анимации упала рэгдоллом (критические раны) или умерла - дальше рисуется рэгдолл
 		local v = td.victim
 		local e = TD.ByEnt[v]
-		if e and e.td == td and (not IsValid(v) or (v:IsPlayer() and not v:Alive()) or (t > td.info.tgt + 0.5)) then
+		if e and e.td == td and (not IsValid(v) or (v:IsPlayer() and (not v:Alive() or IsValid(v.FakeRagdoll) or IsValid(v:GetNWEntity("FakeRagdoll")))) or (t > td.info.tgt + 0.5)) then
 			TD.ByEnt[v] = nil
 			if IsValid(v) and v.rem_td_cb then
 				v:RemoveCallback("BuildBonePositions", v.rem_td_cb)

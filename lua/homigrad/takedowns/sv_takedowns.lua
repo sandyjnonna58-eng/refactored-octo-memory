@@ -228,6 +228,57 @@ local function PlaceAttackerAtEnd(td)
 	end
 end
 
+-- после приёма жертва не умирает сразу, а остаётся с критическими ранами:
+-- перерезана сонная артерия (хлещет, держать рану/бинтовать), две глубокие раны (шея и спина), большая кровопотеря,
+-- болевой шок - без сознания (как отключка от боли: пока боль не спадёт до 80%), лежит рэгдоллом в позе последнего кадра.
+-- Дальше всё по организму: кровь уходит, без помощи умрёт, с помощью может выжить.
+local CRIT = {
+	artery = 8,          -- сила артериального кровотечения (у сонной артерии от пули/ножа 14)
+	wound = 30,          -- глубокие раны (как от сильного удара ножом)
+	blood = 3000,        -- крови остаётся не больше (из 5000)
+	pain = 185,          -- боль (100% = 120): выше порога отключки 140%
+	painadd = 60,        -- и ещё накатывает
+}
+TD.Critical = CRIT
+
+local function AddWound(owner, org, size, bone, lpos, lang)
+	if hg.organism and hg.organism.AddWoundManual then
+		hg.organism.AddWoundManual(owner, size * 2, lpos, lang, bone, CurTime())
+	else
+		org.wounds = org.wounds or {}
+		table.insert(org.wounds, {size, lpos, lang, bone, CurTime()})
+		owner:SetNetVar("wounds", org.wounds)
+	end
+end
+
+local function CriticalInjuries(victim)
+	local org = victim.organism
+	if not org then return false end
+	local neck = "ValveBiped.Bip01_Neck1"
+
+	-- сонная артерия: рана есть и хлещет; org.arteria не ставим в 1, чтобы не было мгновенного удушья (o2) - только кровь
+	org.arterialwounds = org.arterialwounds or {}
+	table.insert(org.arterialwounds, {CRIT.artery, Vector(0.5, 2.5, 0), Angle(0, 90, 0), neck, CurTime(), Vector(0, 100, 0), "arteria"})
+	victim:SetNetVar("arterialwounds", org.arterialwounds)
+
+	AddWound(victim, org, CRIT.wound, neck, Vector(0.5, 2.5, 1), Angle(0, 90, 0))
+	AddWound(victim, org, CRIT.wound, "ValveBiped.Bip01_Spine2", Vector(2, -3, 0), Angle(0, -90, 0))
+
+	org.blood = math.min(org.blood or 5000, CRIT.blood)
+	org.avgpain = math.max(org.avgpain or 0, CRIT.pain)
+	org.pain = math.max(org.pain or 0, CRIT.pain)
+	org.painadd = math.max(org.painadd or 0, CRIT.painadd)
+
+	-- отключка от боли (как KnockOut в sv_pain.lua)
+	org.painKnockout = true
+	org.painUnconscious = true
+	org.painFadeTime = 0
+	org.needotrub = true
+	org.needfake = true
+	org.consciousness = 0
+	return true
+end
+
 local function KillVictim(td)
 	local victim, ply = td.victim, td.attacker
 	if not IsValid(victim) then return end
@@ -237,8 +288,13 @@ local function KillVictim(td)
 		if not victim:Alive() then return end
 		Unfreeze(victim)
 		victim:SetPos(td.victimStart)
-		victim:Kill()
-		local rag = victim.RagdollDeath or victim.FakeRagdoll
+		if not CriticalInjuries(victim) then
+			victim:Kill()
+		elseif hg.Fake then
+			hg.Fake(victim, nil, nil, true)
+		end
+		local rag = IsValid(victim.FakeRagdoll) and victim.FakeRagdoll or victim.RagdollDeath
+		if not IsValid(rag) then rag = victim:GetNWEntity("FakeRagdoll") end
 		if not IsValid(rag) then rag = victim:GetNWEntity("RagdollDeath") end
 		if IsValid(rag) then
 			td.rag = rag
@@ -247,15 +303,10 @@ local function KillVictim(td)
 		end
 	else
 		Unfreeze(victim)
-		TD.PendingRagPose[victim] = bones
-		local dmg = DamageInfo()
-		dmg:SetDamage(math.max(victim:Health(), 1) * 10 + 1000)
-		dmg:SetDamageType(DMG_SLASH)
-		dmg:SetAttacker(IsValid(ply) and ply or game.GetWorld())
-		dmg:SetInflictor(IsValid(td.wep) and td.wep or (IsValid(ply) and ply or game.GetWorld()))
-		dmg:SetDamagePosition(victim:EyePos())
-		victim:TakeDamageInfo(dmg)
-		timer.Simple(1, function() if IsValid(victim) then TD.PendingRagPose[victim] = nil end end)
+		if not CriticalInjuries(victim) then
+			-- NPC без организма: остаётся при последнем издыхании
+			victim:SetHealth(math.max(1, math.floor((victim:GetMaxHealth() > 0 and victim:GetMaxHealth() or 100) * 0.1)))
+		end
 	end
 end
 
