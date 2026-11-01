@@ -25,6 +25,11 @@ if SERVER then resource.AddSingleFile("materials/entities/weapon_fc3_machete.png
 
 SWEP.HostOnly = true
 
+-- тейкдауны Far Cry 4 (homigrad/takedowns): E со спины / через укрытие / снизу с уступа или лестницы, из воды, прыжок с высоты на цель
+SWEP.Takedowns = true
+-- клинок в руке анимации FC4 (от ValveBiped.Anim_Attachment_RH): низ рукояти там, где у мачете FC4, остриё и лезвие туда же
+SWEP.TakedownOffset = {Vector(3.81, -4.47, 2.93), Angle(0, 0, -90)}
+
 if SERVER then
 	-- хост: создатель локального сервера; на выделенном сервере хоста нет - тогда суперадмин
 	local function IsHost(ply)

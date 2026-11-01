@@ -26,3 +26,4 @@ end
 if SERVER then resource.AddSingleFile("materials/entities/weapon_fc3_tribalknife.png") end
 
 SWEP.HostOnly = true
+SWEP.TakedownOffset = {Vector(-2.30, -4.75, 3.46), Angle(0, 0, -90)}

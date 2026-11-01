@@ -665,6 +665,17 @@ hook.Add( "HG.InputMouseApply", "FreezeTurning", function( tbl )
 
 end )
 
+-- тейкдаун мачете (homigrad/takedowns): камера из глаз по анимации поверх обычного вида
+local CalcViewBase = CalcView
+CalcView = function(ply, origin, angles, fov, znear, zfar)
+	local view = CalcViewBase(ply, origin, angles, fov, znear, zfar)
+	if hg.Takedown and hg.Takedown.FilterView then
+		local ok, td_view = pcall(hg.Takedown.FilterView, ply or LocalPlayer(), view, origin, angles, fov)
+		if ok and td_view then return td_view end
+	end
+	return view
+end
+
 hg.CalcView = CalcView
 hook.Add("CalcView", "homigrad-view", function(ply, origin, angles, fov, znear, zfar)
 	local viewa = viewOverride

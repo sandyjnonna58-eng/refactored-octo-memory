@@ -77,7 +77,13 @@ local IsValid, math_Clamp = IsValid, math.Clamp
 
 		ent:SetupBones()
 
-		hg.MainTPIKFunction(ent, ply, wep)
+		-- тейкдаун мачете (homigrad/takedowns): кости с анимации вместо TPIK, оружие рисует сам приём
+		local takedown = CLIENT and hg.Takedown and hg.Takedown.ByEnt and hg.Takedown.ByEnt[ply]
+		if takedown then
+			hg.Takedown.Pose(ent, ply)
+		else
+			hg.MainTPIKFunction(ent, ply, wep)
+		end
 
 		if IsValid(ply.OldRagdoll) then
 			hg.SmoothUnfake(ent, ply)
@@ -85,7 +91,7 @@ local IsValid, math_Clamp = IsValid, math.Clamp
 
 		if ply:GetNetVar("handcuffed", false) then hg.CuffedAnim(ent, ply) end
 
-		if IsValid(wep) then
+		if IsValid(wep) and not takedown then
 			//if wep.isTPIKBase then hg.RenderTPIKBase(ent, ply, wep) end
 			//if wep.ismelee then hg.RenderMelees(ent, ply, wep) end
 			if wep.DrawWorldModel2 then wep:DrawWorldModel2() end
