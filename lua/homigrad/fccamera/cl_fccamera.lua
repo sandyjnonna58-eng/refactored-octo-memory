@@ -133,11 +133,25 @@ hook.Add("Think", "rem_fccam_cl", function()
 	if not IsValid(ply) then return end
 
 	local free = not ply:IsTyping() and not gui.IsGameUIVisible() and not gui.IsConsoleVisible() and not IsValid(vgui.GetKeyboardFocus())
+	local wep = ply:GetActiveWeapon()
+	local always = IsValid(wep) and wep.FCCameraAlways
 	local x = free and input.IsKeyDown(KEY_X)
 	if x and not wasX then
-		if CAM.LocalUp then SetUp(false) elseif CAM.Allowed(ply) then SetUp(true) end
+		if always then
+			-- с камерой в руках X - обратно к мачете
+			for _, w in ipairs(ply:GetWeapons()) do
+				if w.FCCamera and not w.FCCameraAlways then input.SelectWeapon(w) break end
+			end
+		elseif CAM.LocalUp then
+			SetUp(false)
+		elseif CAM.Allowed(ply) then
+			SetUp(true)
+		end
 	end
 	wasX = x
+
+	-- камера-предмет в руках: видоискатель поднят сам
+	if always and not CAM.LocalUp and CAM.Allowed(ply) then SetUp(true) end
 
 	-- сервер опустил камеру (сменил оружие, упал, тейкдаун...) или сами уже не можем
 	if CAM.LocalUp and (not CAM.Allowed(ply) or (CurTime() - (CAM.UpSince or 0) > 0.6 and not ply:GetNW2Bool("rem_fccam", false))) then

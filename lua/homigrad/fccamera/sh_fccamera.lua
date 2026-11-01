@@ -1,5 +1,6 @@
 -- Камера Far Cry для мачете (идея из аддона "FAR CRY Camera / NPC Tagging", сделано своё, без его модели):
--- с оружием, у которого SWEP.FCCamera = true (мачете FC3), X - поднять/опустить камеру.
+-- с оружием, у которого SWEP.FCCamera = true (мачете FC3), X - поднять/опустить камеру; когда достаёшь мачете,
+-- в инвентарь даётся и сама камера (weapon_fc3_camera) - с ней в руках видоискатель поднят всегда, X - обратно к мачете.
 -- В камере: ПКМ - зум (3 ступени), навести на игрока или NPC - через полсекунды он отмечен, ЛКМ - отметить/снять сразу.
 -- Отмеченные видны сквозь стены (силуэт) с меткой и расстоянием, пока живы. Отметки свои у каждого.
 -- Пока камера поднята, мачете не бьёт и не блокирует, бегать нельзя.
@@ -33,6 +34,24 @@ if SERVER then
 		if up and not CAM.Allowed(ply) then up = false end
 		ply:SetNW2Bool("rem_fccam", up)
 	end)
+
+	-- достал мачете FC3 - в инвентарь даётся камера-предмет (weapon_fc3_camera), если её ещё нет
+	CAM.CameraClass = "weapon_fc3_camera"
+	local function GiveCamera(ply, wep)
+		if not IsValid(ply) or not ply:IsPlayer() or not IsValid(wep) then return end
+		if not wep.FCCamera or wep.FCCameraAlways then return end
+		timer.Simple(0, function()
+			if not IsValid(ply) or not ply:Alive() or ply:HasWeapon(CAM.CameraClass) then return end
+			local before = ply:GetActiveWeapon()
+			local cam = ply:Give(CAM.CameraClass, true)
+			-- Give может переключить на камеру - возвращаем в руки то, что было
+			if IsValid(cam) and IsValid(before) and before ~= cam and ply:GetActiveWeapon() ~= before then
+				ply:SelectWeapon(before:GetClass())
+			end
+		end)
+	end
+	hook.Add("PlayerSwitchWeapon", "rem_fccam_give", function(ply, old, new) GiveCamera(ply, new) end)
+	hook.Add("WeaponEquip", "rem_fccam_give", function(wep, ply) GiveCamera(ply, wep) end)
 
 	-- сменил оружие, упал, умер, начал тейкдаун - камера опускается
 	local nextCheck = 0
