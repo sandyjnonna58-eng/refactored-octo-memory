@@ -28,6 +28,8 @@ SWEP.HostOnly = true
 
 -- тейкдауны Far Cry 4 (homigrad/takedowns): E со спины / через укрытие / снизу с уступа или лестницы, из воды, прыжок с высоты на цель
 SWEP.Takedowns = true
+-- камера Far Cry (homigrad/fccamera): X - поднять камеру, наводиться на игроков и NPC - отмечаются
+SWEP.FCCamera = true
 -- клинок в руке анимации FC4 (от ValveBiped.Anim_Attachment_RH): низ рукояти там, где у мачете FC4, остриё и лезвие туда же
 SWEP.TakedownOffset = {Vector(3.81, -4.47, 2.93), Angle(0, 0, -90)}
 

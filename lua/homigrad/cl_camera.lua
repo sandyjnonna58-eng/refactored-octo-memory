@@ -673,6 +673,11 @@ CalcView = function(ply, origin, angles, fov, znear, zfar)
 		local ok, td_view = pcall(hg.Takedown.FilterView, ply or LocalPlayer(), view, origin, angles, fov)
 		if ok and td_view then return td_view end
 	end
+	-- камера Far Cry у мачете (homigrad/fccamera): зум
+	if hg.FCCamera and hg.FCCamera.FilterView then
+		local ok, cam_view = pcall(hg.FCCamera.FilterView, ply or LocalPlayer(), view)
+		if ok and cam_view then return cam_view end
+	end
 	return view
 end
 
