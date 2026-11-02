@@ -79,6 +79,7 @@ module[1] = function(org)
 	org.exertion = 0
 	org.heatbuff = 30 -- seconds of heat supply
 	org.needed_temp = 36.7
+	org.vessels = 0
 end
 
 function hg.organism.should_gain_fear(org)
@@ -103,6 +104,8 @@ module[2] = function(owner, org, timeValue)
 	local bloodVolume = getBloodVolume(org)
 	local oxygenation = Clamp(o2, 0, 1)
 	local vascularTone = Clamp(1 + min(org.adrenaline, 3) * 0.12 + max(org.fear, 0) * 0.08 + Clamp(org.shock, 0, 45) / 360, 0.65, 1.55)
+	-- сужение сосудов поднимает давление, расширение роняет (modules/sv_vessels.lua)
+	vascularTone = vascularTone * (1 - (org.vessels or 0) * 0.18)
 	local pressureBase = 92 * bloodVolume * heart * vascularTone * Clamp(Remap(org.temperature, 28, 36.7, 0.55, 1), 0.45, 1.1)
 	local rhythmMul = org.fibrillation and 0.18 or Clamp(1 - (org.arrhythmia or 0) * 0.22, 0.5, 1)
 	local defibGrace = (org.defibDeathGrace or 0) > CurTime()
@@ -208,6 +211,10 @@ module[2] = function(owner, org, timeValue)
 		changeRate = changeRate * heatRate
 	end
 	changeRate = changeRate * (org.temperature < needed_temp and math.Clamp(org.heatbuff / 60, 1, 2) or 1)
+	-- сосуды: расширенные отдают тепло (остываем быстрее, жар от нагрузки меньше), суженные держат тепло
+	local vessels = org.vessels or 0
+	needed_temp = needed_temp - math.max(vessels, 0) * 0.3
+	if org.temperature > needed_temp then changeRate = changeRate * (1 + vessels * 0.6) end
 	if math.abs(org.tempchanging) < changeRate then
 		org.temperature = math.Approach(org.temperature, needed_temp, changeRate)
 	else
