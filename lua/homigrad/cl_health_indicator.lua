@@ -1,13 +1,12 @@
 -- Индикатор здоровья (из MELEECITY): слева снизу выезжает белый силуэт твоего персонажа,
 -- сломанные/вывихнутые конечности мигают красным, отрубленные исчезают, силуэт темнеет вместе с сознанием.
--- По центру снизу - иконки состояний (materials/sef_icons): раны, кровотечение, сотрясение, переломы и т.д.
+-- По центру снизу - плитки состояний (materials/rem_affl, в стиле Neurotrauma): красный квадрат, чем тяжелее - тем ярче,
+-- критические в белой рамке; наведи курсор (когда он виден) - подпись.
 -- Включается пунктом "Afflictions" в радиальном меню или командой rem_afflictions (можно забиндить).
 hg.HealthIndicator = hg.HealthIndicator or {}
 local HI = hg.HealthIndicator
 
 local whiteMat = Material("models/debug/debugwhite")
-local statusCircleMat = Material("sef_icons/statuseffectcircle.png", "smooth")
-local statusIconCache = {}
 
 local IND_SIZE = 120
 local BACKDROP_OFFSET_X = -20
@@ -199,141 +198,210 @@ local function Num(value)
 	return 0
 end
 
-local function GetStatusIcon(iconName)
-	local cached = statusIconCache[iconName]
+-- значки состояний: квадратные плитки (materials/rem_affl, белые значки Tabler Icons + свои),
+-- фон от тёмно-красного (лёгкое) до ярко-красного (тяжёлое), у критических - белая рамка
+local afflIconCache = {}
+local function AfflIcon(name)
+	local cached = afflIconCache[name]
 	if cached ~= nil then return cached or nil end
-
-	local mat = Material("sef_icons/" .. iconName .. ".png", "smooth")
-	statusIconCache[iconName] = not mat:IsError() and mat or false
-	return statusIconCache[iconName] or nil
+	local mat = Material("rem_affl/" .. name .. ".png", "smooth mips")
+	afflIconCache[name] = not mat:IsError() and mat or false
+	return afflIconCache[name] or nil
 end
 
 local function CollectAfflictionIcons(ply, org)
 	local icons, seen = {}, {}
-	local function add(iconName, severity)
+	local function add(iconName, severity, label)
 		severity = math.Clamp(severity or 0.5, 0.05, 1)
-		if seen[iconName] then
-			seen[iconName].severity = math.max(seen[iconName].severity, severity)
+		local e = seen[iconName]
+		if e then
+			e.severity = math.max(e.severity, severity)
 			return
 		end
-		local mat = GetStatusIcon(iconName)
+		local mat = AfflIcon(iconName)
 		if not mat then return end
-		local entry = {mat = mat, severity = severity}
-		seen[iconName] = entry
-		icons[#icons + 1] = entry
+		e = {mat = mat, severity = severity, label = label or iconName}
+		seen[iconName] = e
+		icons[#icons + 1] = e
 	end
 
 	if not org then return icons end
 
+	-- раны и кровь
 	local wounds = ply.wounds or ply:GetNetVar("wounds")
 	local arterialwounds = ply.arterialwounds or ply:GetNetVar("arterialwounds")
 	local woundsCount = istable(wounds) and #wounds or 0
 	local arterialCount = istable(arterialwounds) and #arterialwounds or 0
-
-	if woundsCount > 0 then add("open-wound", woundsCount / 6) end
-	if arterialCount > 0 then add("deepwound", 0.7 + arterialCount * 0.2) end
-
+	if arterialCount > 0 then add("arterial", 0.75 + arterialCount * 0.15, "Arterial bleeding") end
 	local bleed = Num(org.bleed)
-	if bleed > 0 then add("bleed", bleed / 8) end
+	if bleed > 0 then add("bleeding", bleed / 8, "Bleeding") end
+	if woundsCount > 0 then add("wound", woundsCount / 6, "Open wounds") end
+	local blood = Num(org.blood)
+	if blood > 0 and blood < 4500 then add("bloodloss", (4500 - blood) / 2500, "Blood loss") end
+	if Num(org.internalBleed) > 0.5 then add("internal", Num(org.internalBleed) / 10, "Internal bleeding") end
 
-	local hasBrokenLimb = Num(org.lleg) >= 1 or Num(org.rleg) >= 1 or Num(org.larm) >= 1 or Num(org.rarm) >= 1
-	local hasDislocation = org.llegdislocation or org.rlegdislocation or org.larmdislocation or org.rarmdislocation or org.jawdislocation
-	local hasAmputation = org.llegamputated or org.rlegamputated or org.larmamputated or org.rarmamputated or org.headamputated
-	if hasBrokenLimb or hasDislocation or hasAmputation then
-		add("vuln", hasAmputation and 1 or (hasDislocation and 0.65 or 0.5))
+	-- кости и конечности
+	if org.llegamputated or org.rlegamputated or org.larmamputated or org.rarmamputated then add("amputation", 1, "Amputation") end
+	local broken = {}
+	for limb, name in pairs({lleg = "left leg", rleg = "right leg", larm = "left arm", rarm = "right arm"}) do
+		if Num(org[limb]) >= 1 and not org[limb .. "amputated"] then broken[#broken + 1] = name end
 	end
+	if #broken > 0 then add("fracture", 0.55 + #broken * 0.1, "Fracture: " .. table.concat(broken, ", ")) end
+	if org.llegdislocation or org.rlegdislocation or org.larmdislocation or org.rarmdislocation or org.jawdislocation then
+		add("dislocation", 0.55, "Dislocation")
+	end
+	if Num(org.skull) >= 1 then add("skull", 1, "Skull fracture") end
 
-	if Num(org.skull) >= 1 then add("broken", 1) end
-
+	-- голова и сознание
 	local concussion = Num(org.concussion)
-	if concussion > 0 then add("concussion", concussion) end
-
+	if concussion > 0 then add("concussion", concussion / 5, "Concussion") end
 	local brain = Num(org.brain)
-	if brain > 0.05 then add("exposed", brain / 0.6) end
+	if brain > 0.05 then add("brain", brain / 0.6, "Brain damage") end
+	if org.seizureActive then add("seizure", 1, "Seizure") end
+	if org.otrub then add("unconscious", 1, "Unconscious") end
+	if org.blindness then add("blind", 0.7, "Blindness") end
 
-	if org.seizureActive then add("discharge", 1) end
-	if org.blindness then add("blind", 0.7) end
+	-- боль и шок
+	local pain = Num(org.pain)
+	if pain > 20 then add("pain", pain / 120, "Pain") end
+	local shock = Num(org.shock)
+	if shock > 10 then add("shock", shock / 40, "Shock") end
+	if org.critical then add("critical", 1, "Critical condition") end
 
-	local assimilated = Num(org.assimilated)
-	if assimilated > 0 then add("wither", assimilated) end
-
-	if org.incapacitated then add("incap", 1) end
-	if org.berserkActive2 then add("bloodlust", 0.45) end
-	if org.noradrenalineActive then add("haste", 0.45) end
-	if Num(org.adrenaline) > 0.5 then add("endurance", Num(org.adrenaline) / 2) end
-	if Num(org.analgesia) > 0.3 then add("healing-shield", Num(org.analgesia)) end
-
-	local depression = Num(org.depression)
-	if depression > 0.25 then add("anagenthasdied", depression) end
-
-	local fear = Num(org.fear)
-	if fear > 0.3 then add("darkvision", fear) end
-
-	if org.critical then add("warning", 1) end
-
-	if org.canmove == false or Num(org.immobilization) > 0 then add("hindered", 0.65) end
-
-	local pain, shock = Num(org.pain), Num(org.shock)
-	if pain > 60 or shock > 0.5 then add("stunned", math.max(pain / 120, shock)) end
-
-	if Num(org.CO) > 0.1 then add("poison-gas", Num(org.CO) / 4) end
-
-	local o2 = Num(org.o2)
-	if o2 > 0 and o2 < 20 then add("exhaust", (20 - o2) / 20) end
-
-	local stamina = Num(org.stamina)
-	if stamina > 0 and stamina < 50 then add("fatigue", (50 - stamina) / 50) end
-
-	local temperature = Num(org.temperature)
-	if temperature > 39 then
-		add("discharge", (temperature - 39) / 2)
-	elseif temperature > 0 and temperature < 34.5 then
-		add("frozen", (34.5 - temperature) / 3)
+	-- сердце и давление
+	if org.heartstop then
+		add("cardiac_arrest", 1, "Cardiac arrest")
+	elseif org.fibrillation then
+		add("fibrillation", 1, "Fibrillation")
+	elseif Num(org.arrhythmia) > 0.1 then
+		add("arrhythmia", Num(org.arrhythmia), "Arrhythmia")
 	end
+	if Num(org.heart) > 0.1 then add("heart", Num(org.heart), "Heart damage") end
+	if Num(org.hypotension) > 0.2 then add("pressure_low", Num(org.hypotension), "Low blood pressure") end
+	if Num(org.hypertension) > 0.2 then add("pressure_high", Num(org.hypertension), "High blood pressure") end
 
+	-- лёгкие и кислород
+	if org.lungsfunction == false then add("lung_failure", 1, "Lung failure") end
+	if Num(org.pneumothorax) > 0.05 or Num(org.lungsL) > 0.3 or Num(org.lungsR) > 0.3 then
+		add("lungs", math.max(Num(org.pneumothorax), Num(org.lungsL), Num(org.lungsR)), "Lung damage")
+	end
+	local o2 = Num(org.o2)
+	if o2 > 0 and o2 < 20 then add("hypoxia", (20 - o2) / 20, "Hypoxia") end
+	if Num(org.CO) > 0.1 then add("gas", Num(org.CO) / 4, "Carbon monoxide") end
+
+	-- температура и сосуды (modules/sv_vessels.lua)
+	local temperature = Num(org.temperature)
+	if temperature > 38 then
+		add("hot", (temperature - 38) / 2.5, "Fever / overheating")
+	elseif temperature > 0 and temperature < 33.5 then
+		add("freezing", (35.5 - temperature) / 4, "Hypothermia")
+	elseif temperature > 0 and temperature < 35.5 then
+		add("cold", (35.5 - temperature) / 3, "Cold")
+	end
+	if ply:IsOnFire() then add("burning", 1, "Burning") end
+	local vessels = ply:GetNW2Float("rem_vessels", 0)
+	if vessels < -0.4 then add("vessels_narrow", -vessels, "Constricted vessels") end
+	if vessels > 0.4 then add("vessels_wide", vessels, "Dilated vessels") end
+
+	-- органы, вещества, настроение
+	if Num(org.liver) > 0.2 then add("liver", Num(org.liver), "Liver damage") end
+	local bac = ply:GetNW2Float("rem_bac", 0)
+	if bac > 0.3 then add("alcohol", bac / 3, string.format("Drunk (%.1f‰)", bac)) end
+	if Num(org.wantToVomit) > 0.3 or bac > 2.2 then add("nausea", math.max(Num(org.wantToVomit), (bac - 2.2) / 1.5), "Nausea") end
+	if Num(org.analgesia) > 0.3 then add("painkillers", Num(org.analgesia), "Painkillers") end
+	if Num(org.adrenaline) > 0.5 then add("adrenaline", Num(org.adrenaline) / 2, "Adrenaline") end
+	if org.noradrenalineActive then add("haste", 0.45, "Noradrenaline") end
+	if org.berserkActive2 then add("rage", 0.6, "Rage") end
+	local fear = Num(org.fear)
+	if fear > 0.3 then add("fear", fear, "Fear") end
+	local depression = Num(org.depression)
+	if depression > 0.25 then add("depression", depression, "Depression") end
+	local assimilated = Num(org.assimilated)
+	if assimilated > 0 then add("infection", assimilated, "Infection") end
+
+	-- движение и силы
+	if org.incapacitated then add("incapacitated", 1, "Incapacitated") end
+	if org.canmove == false or Num(org.immobilization) > 0 then add("immobilized", 0.65, "Immobilized") end
+	local stamina = Num(org.stamina)
+	if stamina > 0 and stamina < 50 then add("fatigue", (50 - stamina) / 50, "Exhausted") end
+
+	table.sort(icons, function(a, b) return a.severity > b.severity end)
 	return icons
 end
 
+local gradDown = Material("vgui/gradient-d")
 local function DrawAfflictionIcons(iconEntries, centerX, bottomY, visibility, appearTime, timeNow)
 	if #iconEntries == 0 or visibility <= 0.01 then return end
 
-	local iconSize = math.max(math.floor(ScreenScaleFixed(26)), 18)
-	local bgSize = math.max(math.floor(iconSize * 1.35), iconSize + 8)
-	local spacing = math.max(math.floor(ScreenScaleFixed(2)), 1)
+	local tile = math.max(math.floor(ScreenScaleFixed(25)), 22)
+	local spacing = math.max(math.floor(ScreenScaleFixed(2.5)), 2)
+	local border = math.max(math.floor(tile / 26), 1)
 	local horizontalSpace = ScrW() - ScreenScaleFixed(ICONS_SCREEN_EDGE_MARGIN) * 2
-	local maxPerRow = math.max(1, math.floor((horizontalSpace + spacing) / (bgSize + spacing)))
+	local maxPerRow = math.max(1, math.floor((horizontalSpace + spacing) / (tile + spacing)))
 	local rows = math.ceil(#iconEntries / maxPerRow)
-	local appearFrac = math.Clamp((timeNow - appearTime) / 0.35, 0, 1)
-	local shakeMul = (1 - appearFrac) * visibility
-	local baseAlpha = math.floor(255 * visibility)
+	local appearFrac = math.Clamp((timeNow - appearTime) / 0.3, 0, 1)
+	local alphaMul = visibility
+	local cursor = vgui.CursorVisible()
+	local mx, my = input.GetCursorPos()
+	local hovered
 
 	for row = 1, rows do
 		local rowStart = (row - 1) * maxPerRow + 1
 		local rowCount = math.min(maxPerRow, #iconEntries - rowStart + 1)
-		local rowWidth = rowCount * bgSize + (rowCount - 1) * spacing
-		local x = centerX - rowWidth * 0.5
-		local y = bottomY - row * bgSize - (row - 1) * spacing
+		local rowWidth = rowCount * tile + (rowCount - 1) * spacing
+		local x0 = centerX - rowWidth * 0.5
+		local y = bottomY - row * tile - (row - 1) * spacing + (1 - appearFrac) * tile * 0.6
 		if y < 0 then break end
 
 		for col = 1, rowCount do
 			local idx = rowStart + col - 1
-			local entry = iconEntries[idx]
-			local severity = entry.severity
-			local pulse = 1 + math.sin(timeNow * (4 + severity * 9) + idx * 1.4) * (0.05 + severity * 0.08) * visibility
-			local shakeAmp = ScreenScaleFixed(2 + severity * 2) * shakeMul
-			local cx = x + (col - 1) * (bgSize + spacing) + bgSize * 0.5 + math.sin(timeNow * (95 + idx * 7)) * shakeAmp
-			local cy = y + bgSize * 0.5 + math.cos(timeNow * (110 + idx * 9)) * shakeAmp
-			local bgDrawSize = bgSize * pulse
-			local iconDrawSize = iconSize * pulse
+			local e = iconEntries[idx]
+			local sev = e.severity
+			local x = math.floor(x0 + (col - 1) * (tile + spacing))
+			local yy = math.floor(y)
+			-- тяжёлые чуть пульсируют яркостью
+			local pulse = sev > 0.7 and (math.sin(timeNow * (3 + sev * 4) + idx) * 0.5 + 0.5) * 0.25 * sev or 0
+			local a = math.floor(235 * alphaMul)
 
-			surface.SetMaterial(statusCircleMat)
-			surface.SetDrawColor(8, 8, 8, math.floor((160 + severity * 95) * visibility))
-			surface.DrawTexturedRect(cx - bgDrawSize * 0.5, cy - bgDrawSize * 0.5, bgDrawSize, bgDrawSize)
+			-- фон: снизу тёмный, сверху ярче; цвет от тяжести
+			surface.SetDrawColor(18 + 70 * sev, 0, 0, a)
+			surface.DrawRect(x, yy, tile, tile)
+			surface.SetMaterial(gradDown)
+			surface.SetDrawColor(math.min(255, 70 + 170 * sev + 40 * pulse), 6 + 12 * sev, 6 + 12 * sev, a)
+			surface.DrawTexturedRect(x, yy, tile, tile)
 
-			surface.SetMaterial(entry.mat)
-			surface.SetDrawColor(255, 255, 255, baseAlpha)
-			surface.DrawTexturedRect(cx - iconDrawSize * 0.5, cy - iconDrawSize * 0.5, iconDrawSize, iconDrawSize)
+			-- рамка
+			if sev >= 0.9 then
+				surface.SetDrawColor(255, 255, 255, a)
+			else
+				surface.SetDrawColor(140 + 100 * sev, 55 + 50 * sev, 55 + 50 * sev, a)
+			end
+			surface.DrawOutlinedRect(x, yy, tile, tile, border)
+
+			-- значок
+			local pad = math.floor(tile * 0.1)
+			surface.SetMaterial(e.mat)
+			surface.SetDrawColor(255, 235 + 20 * sev, 235 + 20 * sev, math.floor(255 * alphaMul))
+			surface.DrawTexturedRect(x + pad, yy + pad, tile - pad * 2, tile - pad * 2)
+
+			if cursor and mx >= x and mx <= x + tile and my >= yy and my <= yy + tile then
+				hovered = {e.label, x + tile * 0.5, yy}
+			end
 		end
+	end
+
+	-- подпись под курсором (когда курсор виден - меню, чат, контекст)
+	if hovered then
+		surface.SetFont("HomigradFontSmall")
+		local tw, th = surface.GetTextSize(hovered[1])
+		local tx, ty = hovered[2] - tw * 0.5 - 6, hovered[3] - th - 10
+		surface.SetDrawColor(10, 0, 0, 220)
+		surface.DrawRect(tx, ty, tw + 12, th + 4)
+		surface.SetDrawColor(200, 60, 60, 255)
+		surface.DrawOutlinedRect(tx, ty, tw + 12, th + 4, 1)
+		surface.SetTextColor(255, 255, 255, 255)
+		surface.SetTextPos(tx + 6, ty + 2)
+		surface.DrawText(hovered[1])
 	end
 end
 
