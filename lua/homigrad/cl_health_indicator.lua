@@ -330,6 +330,10 @@ local function CollectAfflictionIcons(ply, org)
 end
 
 local gradDown = Material("vgui/gradient-d")
+-- прыжки плиток (доля размера плитки, секунды между прыжками) - от лёгкого к тяжёлому
+local BOUNCE_MIN = 0.25
+local BOUNCE_HEIGHT_LIGHT, BOUNCE_HEIGHT_HEAVY = 0.06, 0.32
+local BOUNCE_PERIOD_LIGHT, BOUNCE_PERIOD_HEAVY = 2.4, 0.45
 local function DrawAfflictionIcons(iconEntries, centerX, bottomY, visibility, appearTime, timeNow)
 	if #iconEntries == 0 or visibility <= 0.01 then return end
 
@@ -358,7 +362,16 @@ local function DrawAfflictionIcons(iconEntries, centerX, bottomY, visibility, ap
 			local e = iconEntries[idx]
 			local sev = e.severity
 			local x = math.floor(x0 + (col - 1) * (tile + spacing))
-			local yy = math.floor(y)
+			-- подпрыгивают по тяжести: лёгкие стоят, чем тяжелее - тем чаще и выше прыжки (у критических - почти без пауз)
+			local hop = 0
+			if sev >= BOUNCE_MIN then
+				local k = (sev - BOUNCE_MIN) / (1 - BOUNCE_MIN)
+				local period = Lerp(k, BOUNCE_PERIOD_LIGHT, BOUNCE_PERIOD_HEAVY)
+				local u = ((timeNow + idx * 0.37) / period) % 1
+				local air = Lerp(k, 0.3, 0.7) -- доля периода в воздухе
+				if u < air then hop = math.sin(math.pi * u / air) * tile * Lerp(k, BOUNCE_HEIGHT_LIGHT, BOUNCE_HEIGHT_HEAVY) end
+			end
+			local yy = math.floor(y - hop * alphaMul)
 			-- тяжёлые чуть пульсируют яркостью
 			local pulse = sev > 0.7 and (math.sin(timeNow * (3 + sev * 4) + idx) * 0.5 + 0.5) * 0.25 * sev or 0
 			local a = math.floor(235 * alphaMul)
