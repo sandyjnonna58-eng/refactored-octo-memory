@@ -639,6 +639,8 @@ hook.Add("Org Think", "Main", function(owner, org, timeValue)
 
 	--module.blood[3](owner,org,timeValue)--arteria
 	-- тонус сосудов (сужение/расширение) - до крови, он меняет силу кровотечения (modules/sv_vessels.lua)
+	-- алкоголь (modules/sv_alcohol.lua) - до сосудов, он их расширяет
+	if hg.organism.Alcohol then hg.organism.Alcohol(owner, org, timeValue) end
 	if hg.organism.Vessels then hg.organism.Vessels(owner, org, timeValue) end
 	module.blood[2](owner, org, timeValue)
 
