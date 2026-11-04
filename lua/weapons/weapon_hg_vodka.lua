@@ -13,6 +13,9 @@ if CLIENT then SWEP.WepSelectIcon = Material("entities/weapon_hg_vodka.png") end
 if SERVER then resource.AddSingleFile("materials/entities/weapon_hg_vodka.png") end
 SWEP.offsetVec = Vector(3, -2.5, 1)
 SWEP.offsetAng = Angle(-90, 0, 0)
+-- как бутылка стоит в руке (от кости кисти: x - к пальцам, -z - из ладони): дном на ладони, горлышком вверх из ладони
+SWEP.BottleHoldPos = Vector(2.6, 0, -0.7)
+SWEP.BottleHoldAng = Angle(0, 0, 180)
 
 SWEP.Sips = 8              -- глотков в бутылке
 SWEP.SipAlcohol = 0.35     -- промилле за глоток
@@ -161,8 +164,7 @@ if CLIENT then
 			local bone = char:LookupBone(left and "ValveBiped.Bip01_L_Hand" or "ValveBiped.Bip01_R_Hand")
 			local m = bone and char:GetBoneMatrix(bone)
 			if not m then return end
-			pos, ang = LocalToWorld(self.offsetVec, self.offsetAng, m:GetTranslation(), m:GetAngles())
-			pos = pos - ang:Up() * b.grip
+			pos, ang = LocalToWorld(self.BottleHoldPos, self.BottleHoldAng, m:GetTranslation(), m:GetAngles())
 		else
 			ang = self:GetAngles()
 			local top = phMat and ph.H or (b.cap and b.cap[2] or b.profile[#b.profile][1])

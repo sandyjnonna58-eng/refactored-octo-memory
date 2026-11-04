@@ -14,6 +14,10 @@ SWEP.IconOverride = "entities/weapon_hg_cigarettes.png"
 if CLIENT then SWEP.WepSelectIcon = Material("entities/weapon_hg_cigarettes.png") end
 if SERVER then resource.AddSingleFile("materials/entities/weapon_hg_cigarettes.png") end
 
+-- сигарета между пальцами (от кости кисти: x - к пальцам, -z - из ладони): фильтром к ладони, тлеющим концом вперёд
+SWEP.CigHoldPos = Vector(2.2, 0, -0.4)
+SWEP.CigHoldAng = Angle(90, 0, 0)
+
 SWEP.Cigarettes = 10
 SWEP.Puffs = 6
 SWEP.PuffNicotine = 0.18
@@ -151,7 +155,7 @@ if CLIENT then
 		return {faces = faces, plain = plain, filters = c:Finish(filterMat)}
 	end
 
-	-- сигарета вдоль оси "вверх" руки (как флакон таблеток - тот же хват), сгорает от затяжек;
+	-- сигарета вдоль пальцев (CigHoldPos/Ang), сгорает от затяжек;
 	-- на земле - пачка
 	function SWEP:DrawWorldModel2(nodraw)
 		if nodraw then return end
@@ -178,7 +182,7 @@ if CLIENT then
 		local bone = char:LookupBone("ValveBiped.Bip01_R_Hand")
 		local m = bone and char:GetBoneMatrix(bone)
 		if not m then return end
-		local pos, ang = LocalToWorld(self.offsetVec, self.offsetAng, m:GetTranslation(), m:GetAngles())
+		local pos, ang = LocalToWorld(self.CigHoldPos, self.CigHoldAng, m:GetTranslation(), m:GetAngles())
 		local dir = ang:Up()
 
 		local burnt = self:GetNW2Int("puffs", 0) / self.Puffs
