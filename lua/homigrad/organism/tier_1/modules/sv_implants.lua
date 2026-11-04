@@ -1,4 +1,4 @@
--- Импланты (ставятся предметами weapon_implant_*; на себя - ЛКМ, лежащему - ПКМ). Живут в организме: после смерти их нет.
+-- Импланты (ставятся предметами weapon_implant_*; на себя - ЛКМ, лежащему - ПКМ). После смерти их нет (ClearImplants).
 --   heart    - искусственное сердце: не останавливается и не сбивается с ритма (нет аритмии, фибрилляции, остановки
 --              от холода, кровопотери и т.п.), ровно качает ~80 ударов; останавливается только если его разбить
 --              (повреждение сердца 100%) или при смерти мозга;
@@ -79,7 +79,23 @@ function hg.organism.Implants(owner, org, timeValue)
 	end
 end
 
--- после возрождения имплантов нет
-hook.Add("PlayerSpawn", "rem_implants_reset", function(ply)
+-- умер - имплантов больше нет (организм при возрождении не всегда создаётся заново, поэтому чистим сами:
+-- и при смерти, и при возрождении, и на тик позже - если организм пересобирается после хука)
+function hg.organism.ClearImplants(ply)
+	if not IsValid(ply) then return end
+	local org = ply.organism
+	if org then
+		org.implants = {}
+		org.implantBleedMul = 1
+		org.implantPainMul = 1
+		org.implantAdrenalNext = nil
+	end
 	for _, id in ipairs(hg.organism.ImplantList) do ply:SetNW2Bool("rem_implant_" .. id, false) end
+end
+
+hook.Add("PlayerDeath", "rem_implants_reset", hg.organism.ClearImplants)
+hook.Add("PlayerSilentDeath", "rem_implants_reset", hg.organism.ClearImplants)
+hook.Add("PlayerSpawn", "rem_implants_reset", function(ply)
+	hg.organism.ClearImplants(ply)
+	timer.Simple(0, function() hg.organism.ClearImplants(ply) end)
 end)
