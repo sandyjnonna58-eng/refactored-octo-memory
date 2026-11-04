@@ -346,11 +346,41 @@ local function CollectAfflictionIcons(ply, org)
 end
 
 local gradDown = Material("vgui/gradient-d")
--- прыжки плиток (доля размера плитки, секунды между прыжками) - от лёгкого к тяжёлому
-local BOUNCE_MIN = 0.25
-local BOUNCE_HEIGHT_LIGHT, BOUNCE_HEIGHT_HEAVY = 0.06, 0.32
-local BOUNCE_PERIOD_LIGHT, BOUNCE_PERIOD_HEAVY = 2.4, 0.45
-local function DrawAfflictionIcons(iconEntries, centerX, bottomY, visibility, appearTime, timeNow)
+-- прыжки плиток в такт сердцу: на каждый удар двойной толчок "тук-тук" (второй слабее), все плитки вместе с лёгкой
+-- волной слева направо; высота по тяжести (лёгкие чуть вздрагивают, критические подскакивают на треть плитки).
+-- Фибрилляция - вразнобой и часто, сердце остановилось - стоят.
+local BEAT_HEIGHT_LIGHT, BEAT_HEIGHT_HEAVY = 0.05, 0.34
+local BEAT_HOP = 0.11    -- длительность одного толчка, с
+local BEAT_GAP = 0.17    -- через сколько после первого толчка второй, с
+local BEAT_WAVE = 0.025  -- задержка волны на плитку, с
+local beatPhase, lastBeatTime, beatPrevTime = 0, -10, 0
+
+-- считает удары по пульсу организма; возвращает время последнего удара
+local function UpdateHeartbeat(org, now)
+	local dt = math.Clamp(now - beatPrevTime, 0, 0.2)
+	beatPrevTime = now
+	local bpm = org and (org.heartbeat or org.pulse) or 70
+	if not org or org.heartstop or bpm < 10 then return lastBeatTime, false end
+	local fib = org.fibrillation
+	if fib then bpm = math.Rand(240, 360) end
+	beatPhase = beatPhase + dt * math.Clamp(bpm, 10, 400) / 60
+	if beatPhase >= 1 then
+		beatPhase = beatPhase % 1
+		lastBeatTime = now
+	end
+	return lastBeatTime, fib
+end
+
+local function BeatHop(t)
+	-- t - секунды после удара: первый толчок и второй (слабее)
+	if t >= 0 and t < BEAT_HOP then return math.sin(math.pi * t / BEAT_HOP) end
+	local t2 = t - BEAT_GAP
+	if t2 >= 0 and t2 < BEAT_HOP then return math.sin(math.pi * t2 / BEAT_HOP) * 0.55 end
+	return 0
+end
+
+local function DrawAfflictionIcons(iconEntries, centerX, bottomY, visibility, appearTime, timeNow, org)
+	local beatTime, fib = UpdateHeartbeat(org, timeNow)
 	if #iconEntries == 0 or visibility <= 0.01 then return end
 
 	local tile = math.max(math.floor(ScreenScaleFixed(25)), 22)
@@ -378,15 +408,11 @@ local function DrawAfflictionIcons(iconEntries, centerX, bottomY, visibility, ap
 			local e = iconEntries[idx]
 			local sev = e.severity
 			local x = math.floor(x0 + (col - 1) * (tile + spacing))
-			-- подпрыгивают по тяжести: лёгкие стоят, чем тяжелее - тем чаще и выше прыжки (у критических - почти без пауз)
-			local hop = 0
-			if sev >= BOUNCE_MIN then
-				local k = (sev - BOUNCE_MIN) / (1 - BOUNCE_MIN)
-				local period = Lerp(k, BOUNCE_PERIOD_LIGHT, BOUNCE_PERIOD_HEAVY)
-				local u = ((timeNow + idx * 0.37) / period) % 1
-				local air = Lerp(k, 0.3, 0.7) -- доля периода в воздухе
-				if u < air then hop = math.sin(math.pi * u / air) * tile * Lerp(k, BOUNCE_HEIGHT_LIGHT, BOUNCE_HEIGHT_HEAVY) end
-			end
+			-- подпрыгивают в такт сердцу (высота по тяжести)
+			local since = timeNow - beatTime - idx * BEAT_WAVE
+			local hop = BeatHop(since)
+			if fib then hop = math.max(hop, math.abs(math.sin(timeNow * (23 + idx * 3.1) + idx)) * 0.5) end
+			hop = hop * tile * Lerp(sev, BEAT_HEIGHT_LIGHT, BEAT_HEIGHT_HEAVY)
 			local yy = math.floor(y - hop * alphaMul)
 			-- тяжёлые чуть пульсируют яркостью
 			local pulse = sev > 0.7 and (math.sin(timeNow * (3 + sev * 4) + idx) * 0.5 + 0.5) * 0.25 * sev or 0
@@ -532,7 +558,7 @@ hook.Add("HUDPaint", "rem_health_indicator", function()
 	iconsTargetVisible = shown
 
 	if iconsVisibility > 0.01 and #cachedAfflictionIcons > 0 then
-		DrawAfflictionIcons(cachedAfflictionIcons, ScrW() * 0.5, ScrH() - ScreenScaleFixed(ICONS_SCREEN_MARGIN_Y), iconsVisibility, iconsAppearTime, time)
+		DrawAfflictionIcons(cachedAfflictionIcons, ScrW() * 0.5, ScrH() - ScreenScaleFixed(ICONS_SCREEN_MARGIN_Y), iconsVisibility, iconsAppearTime, time, org)
 	elseif not shown and iconsVisibility <= 0.01 then
 		cachedAfflictionIcons = {}
 	end
