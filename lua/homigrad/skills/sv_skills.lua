@@ -257,3 +257,95 @@ COMMANDS.givexp = {function(ply, args)
 	SK.GiveXP(target, amount)
 	ply:ChatPrint("Gave " .. amount .. " XP to " .. target:Nick())
 end, 1, "amount; player"}
+
+-- выдача уровней и очков навыков (админ, суперадмин, хост локального сервера или консоль сервера):
+--   чат: !givelevel <сколько> [игрок|*], !givepoints <сколько> [игрок|*], !setlevel <уровень> [игрок|*]
+--   (можно отрицательное - забрать), консоль: rem_givelevel / rem_givepoints / rem_setlevel <сколько> [игрок|*],
+--   вкладка Admin в меню навыков. Уровень даёт и очко навыка (как при обычной прокачке).
+util.AddNetworkString("rem_skills_admin")
+
+local function CanManage(ply)
+	if not IsValid(ply) then return true end -- консоль сервера
+	if game.SinglePlayer() or ply:IsListenServerHost() then return true end
+	return COMMAND_GETACCES and COMMAND_GETACCES(ply) >= 1 or ply:IsAdmin()
+end
+
+function SK.AddLevels(ply, n)
+	local data = Data(ply)
+	n = math.max(n, -data.level)
+	data.level = data.level + n
+	data.points = math.max(data.points + n, 0)
+	if n < 0 then data.xp = 0 end
+	Sync(ply)
+	Save(ply)
+	if n > 0 then
+		net.Start("rem_skills_levelup")
+			net.WriteUInt(data.level, 16)
+		net.Send(ply)
+	end
+end
+
+function SK.AddPoints(ply, n)
+	local data = Data(ply)
+	data.points = math.max(data.points + n, 0)
+	Sync(ply)
+	Save(ply)
+end
+
+function SK.SetLevel(ply, level)
+	SK.AddLevels(ply, math.max(math.floor(level), 0) - Data(ply).level)
+end
+
+local function Targets(caller, name)
+	if not name or name == "" or name == "^" then return {caller} end
+	if name == "*" then return player.GetAll() end
+	local found = {}
+	for _, other in ipairs(player.GetAll()) do
+		if other:SteamID() == name or other:SteamID64() == name or string.find(string.lower(other:Nick()), string.lower(name), 1, true) then
+			found[#found + 1] = other
+		end
+	end
+	return found
+end
+
+local actions = {
+	level = {SK.AddLevels, "level(s)"},
+	points = {SK.AddPoints, "skill point(s)"},
+	setlevel = {SK.SetLevel, "set level"},
+}
+
+local function Run(caller, kind, amount, name, reply)
+	amount = tonumber(amount)
+	if not amount then reply("Usage: <amount> [player|*]") return end
+	amount = math.Round(amount)
+	local targets = Targets(caller, name)
+	if #targets == 0 or not IsValid(targets[1]) then reply("Player not found.") return end
+	for _, t in ipairs(targets) do
+		actions[kind][1](t, amount)
+		if t ~= caller and IsValid(t) then
+			t:ChatPrint((IsValid(caller) and caller:Nick() or "Server") .. ": " .. actions[kind][2] .. " " .. (amount > 0 and kind ~= "setlevel" and "+" or "") .. amount)
+		end
+	end
+	reply(string.format("%s %s%d for %d player(s).", actions[kind][2], (amount > 0 and kind ~= "setlevel") and "+" or "", amount, #targets))
+end
+
+for cmd, kind in pairs({givelevel = "level", givepoints = "points", setlevel = "setlevel"}) do
+	COMMANDS[cmd] = {function(ply, args)
+		Run(ply, kind, args[1], args[2], function(msg) ply:ChatPrint(msg) end)
+	end, 1, "amount; player or * for everyone (default - you)"}
+
+	concommand.Add("rem_" .. cmd, function(ply, _, args)
+		if not CanManage(ply) then return end
+		Run(IsValid(ply) and ply or nil, kind, args[1], args[2], function(msg)
+			if IsValid(ply) then ply:ChatPrint(msg) else print(msg) end
+		end)
+	end)
+end
+
+net.Receive("rem_skills_admin", function(_, ply)
+	if not CanManage(ply) then return end
+	local target, kind, amount = net.ReadEntity(), net.ReadString(), net.ReadInt(16)
+	if not IsValid(target) or not target:IsPlayer() or not actions[kind] then return end
+	actions[kind][1](target, amount)
+	if target ~= ply then target:ChatPrint(ply:Nick() .. ": " .. actions[kind][2] .. " " .. (amount > 0 and "+" or "") .. amount) end
+end)

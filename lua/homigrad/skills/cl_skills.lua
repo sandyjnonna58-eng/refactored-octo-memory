@@ -138,6 +138,12 @@ local function Header(scroll, getText, col)
 end
 
 -- общая начинка: окно (!skills) и вкладка Skills в главном меню
+-- кнопки вкладки Admin: надпись, что, сколько
+SK.AdminButtons = {
+	{"+1 lvl", "level", 1}, {"+5 lvl", "level", 5}, {"-1 lvl", "level", -1},
+	{"+1 pt", "points", 1}, {"+5 pts", "points", 5}, {"-1 pt", "points", -1},
+}
+
 function SK.BuildPanel(parent)
 	local UI = hg.RemUI
 	local U = UI.U
@@ -206,12 +212,42 @@ function SK.BuildPanel(parent)
 			for _, perk in ipairs(SK.Perks) do
 				if perk.bad then PerkRow(scroll, ply, perk) end
 			end
+		elseif tab == "admin" then
+			-- выдача уровней и очков (sv_skills.lua: rem_skills_admin, проверка прав на сервере)
+			Header(scroll, function() return "Give levels and skill points  -  a level also gives a point" end, UI.Accent)
+			for _, other in ipairs(player.GetAll()) do
+				Row(scroll, "fastlearner", UI.White, function()
+					if not IsValid(other) then return "(left)" end
+					return other:Nick() .. "  -  level " .. other:GetNWInt("skill_level", 0) .. ", " .. other:GetNWInt("skill_points", 0) .. " points"
+				end, UI.Text, other:SteamID(), function(row)
+					for i = #SK.AdminButtons, 1, -1 do
+						local b = SK.AdminButtons[i]
+						local btn = UI.TextButton(row, b[1], {
+							font = "RemUI_Small",
+							color = function() return b[3] < 0 and UI.Accent or UI.White end,
+							onClick = function()
+								if not IsValid(other) then return end
+								net.Start("rem_skills_admin")
+									net.WriteEntity(other)
+									net.WriteString(b[2])
+									net.WriteInt(b[3], 16)
+								net.SendToServer()
+							end,
+						})
+						btn:Dock(RIGHT)
+						btn:DockMargin(0, U(12), U(10), U(12))
+					end
+				end)
+			end
 		else
 			for _, skill in ipairs(SK.List) do SkillRow(scroll, ply, skill) end
 		end
 	end
 
-	for _, tab in ipairs({{"skills", "Skills"}, {"perks", "Perks"}}) do
+	local tabList = {{"skills", "Skills"}, {"perks", "Perks"}}
+	if ply:IsAdmin() or ply:IsListenServerHost() or game.SinglePlayer() then tabList[#tabList + 1] = {"admin", "Admin"} end
+	if SK.Tab == "admin" and #tabList < 3 then SK.Tab = "skills" end
+	for _, tab in ipairs(tabList) do
 		local btn = UI.TextButton(tabs, tab[2], {
 			font = "RemUI_Medium",
 			color = function() return SK.Tab == tab[1] and UI.White or UI.TextDim end,
