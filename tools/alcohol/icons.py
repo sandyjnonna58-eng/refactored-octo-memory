@@ -1,4 +1,4 @@
-# Иконки для weapon_hg_vodka / weapon_hg_beer / weapon_hg_cigarettes: нарисованы фигурами. Запуск: python3 tools/alcohol/icons.py
+# Иконки для weapon_hg_vodka / weapon_hg_beer / weapon_hg_wine / weapon_hg_cigarettes: нарисованы фигурами. Запуск: python3 tools/alcohol/icons.py
 from PIL import Image, ImageDraw, ImageFilter
 
 def bottle(path, glass, liquid, label, label_text_col, neck_len, cap):
@@ -64,3 +64,6 @@ def cig_pack(path):
     out.save(path)
 
 cig_pack('materials/entities/weapon_hg_cigarettes.png')
+
+# вино (weapon_hg_wine): тёмно-зелёная бутылка, длинная бордовая фольга на горлышке, светлая этикетка
+bottle('materials/entities/weapon_hg_wine.png', (30, 66, 36, 235), (120, 12, 30, 230), (238, 230, 210, 255), (120, 20, 35, 255), 54, (125, 16, 32, 255))

@@ -14,3 +14,15 @@ SWEP.Sips = 4
 SWEP.SipAlcohol = 0.12
 SWEP.EmptyGivesBottle = true
 SWEP.modeValuesdef = {[1] = 4}
+
+-- коричневая бутылка, золотая крышка, кремовая этикетка
+SWEP.Bottle = {
+	profile = {{0, 1.3}, {0.25, 1.42}, {7.2, 1.42}, {8.3, 1.1}, {9.6, 0.6}, {12.2, 0.55}, {12.4, 0.62}},
+	glass = Color(105, 50, 14, 205),
+	liquid = Color(210, 130, 35, 170), liquidTop = 7.2, liquidR = 1.32,
+	cap = {12.3, 12.9, 0.64, Color(205, 175, 75)},
+	label = {2.6, 6.2, Color(232, 206, 122), -100, 100},
+	stripe = {5.5, 5.9, Color(170, 30, 25)},
+	ink = {Color(110, 40, 20), {3.4, 4.0, 4.6}},
+	grip = 4.5,
+}

@@ -2,7 +2,8 @@ if SERVER then AddCSLuaFile() end
 -- Сигареты: пачка на 10 штук, в каждой 6 затяжек. ЛКМ - затяжка (первая - прикурить).
 -- Никотин - organism/tier_1/modules/sv_nicotine.lua, привыкание и ломка - sv_addiction.lua.
 -- Некурящий от затяжки кашляет; курящему (зависимость) - нет, и ломку снимает.
--- Сигарета рисуется в руке сама (белая с фильтром, тлеет кончик), изо рта после затяжки идёт дым.
+-- Модели свои (homigrad/libraries/cl_remmesh.lua): в руке сигарета (фильтр, бумага сгорает, пепел, тлеет кончик),
+-- на земле - пачка; изо рта после затяжки идёт дым.
 SWEP.Base = "weapon_painkillers"
 SWEP.PrintName = "Cigarettes"
 SWEP.Instructions = "A pack of 10 cigarettes. Calms the nerves, constricts the vessels.\nIt's addictive: smoke enough and you'll crave it.\nLMB to take a drag."
@@ -81,60 +82,96 @@ if SERVER then
 end
 
 if CLIENT then
-	local matColor = Material("color")
 	local matGlow = Material("sprites/light_glow02_add")
-	local cWhite, cFilter, cAsh, cEmber = Color(240, 238, 230), Color(200, 130, 60), Color(110, 105, 100), Color(255, 120, 40)
-	local LENGTH, RADIUS = 3.2, 0.32
+	local cEmber = Color(255, 120, 40)
+	local FILTER, PAPER, RADIUS = 1.1, 3.1, 0.16
+	local RM
 
-	-- сигарета: вдоль оси "вверх" руки (как флакон таблеток - тот же хват), сгорает от затяжек
+	-- сигарета: фильтр + бумага (бумага построена высотой 1 и растягивается по оставшейся длине) + пепел
+	local function BuildCig()
+		local f = RM.Builder()
+		f:Cylinder(0, FILTER, RADIUS, Color(212, 148, 70), {bottom = Color(225, 200, 160)})
+		for _, z in ipairs({0.25, 0.6, 0.9}) do
+			f:Cylinder(z, z + 0.06, RADIUS + 0.005, Color(170, 105, 45), {a0 = 20, a1 = 160, seg = 6})
+		end
+		f:Cylinder(FILTER - 0.06, FILTER, RADIUS + 0.008, Color(200, 170, 70))
+		local p = RM.Builder()
+		p:Cylinder(0, 1, RADIUS - 0.004, Color(244, 242, 236))
+		local a = RM.Builder()
+		a:Cylinder(0, 0.22, RADIUS - 0.01, Color(95, 90, 86), {top = Color(70, 66, 62)})
+		return {filter = f:Finish(RM.SolidMat), paper = p:Finish(RM.SolidMat), ash = a:Finish(RM.SolidMat)}
+	end
+
+	-- пачка: белый низ, красный верх, открытая крышка, торчат три фильтра
+	local function BuildPack()
+		local b = RM.Builder()
+		local w, d = 1.45, 0.575
+		local white, red, dark = Color(238, 236, 230), Color(196, 28, 32), Color(45, 32, 26)
+		b:Box(Vector(-w, -d, 0), Vector(w, d, 2.7), white, {top = true})
+		b:Box(Vector(-w, -d, 2.7), Vector(w, d, 4.4), red, {top = true, bottom = true})
+		b:Box(Vector(-w + 0.05, -d + 0.05, 4.1), Vector(w - 0.05, d - 0.05, 4.11), dark)
+		-- открытая крышка, откинута назад
+		b:Box(Vector(-w, d, 4.4), Vector(w, d + 0.12, 5.9), red)
+		-- красный "клин" на белом спереди и золотая полоска
+		b:Quad(Vector(-w, -d - 0.01, 2.7), Vector(w, -d - 0.01, 2.7), Vector(0, -d - 0.01, 1.6), Vector(0, -d - 0.01, 1.6), red, Vector(0, -1, 0))
+		b:Box(Vector(-w, -d - 0.012, 2.66), Vector(w, -d - 0.002, 2.74), Color(205, 175, 80), {back = true})
+		for i, x in ipairs({-0.7, 0, 0.7}) do
+			b:Lathe({{3.9, 0.17}, {i == 2 and 5.1 or 4.8, 0.17}}, Color(212, 148, 70), {top = Color(225, 200, 160), seg = 10, offset = Vector(x, 0, 0)})
+		end
+		return {pack = b:Finish(RM.SolidMat)}
+	end
+
+	-- сигарета вдоль оси "вверх" руки (как флакон таблеток - тот же хват), сгорает от затяжек;
+	-- на земле - пачка
 	function SWEP:DrawWorldModel2(nodraw)
 		if nodraw then return end
+		RM = RM or hg.RemMesh
+		if not RM then return end
 		local owner = self:GetOwner()
 		local char = IsValid(owner) and hg.GetCurrentCharacter(owner) or nil
 		if not IsValid(char) then
-			self:DrawModel()
+			local pack = RM.Get("rem_cigpack", BuildPack)
+			if not pack then return end
+			local ang = self:GetAngles()
+			RM.Draw({{pack.pack, RM.SolidMat}}, self:LocalToWorld(self:OBBCenter()) - ang:Up() * 2.2, ang)
 			return
 		end
-		if (self.modeValues and self.modeValues[1] or 1) <= 0 then return end
+		local cig = RM.Get("rem_cigarette", BuildCig)
+		if not cig then return end
 		local bone = char:LookupBone("ValveBiped.Bip01_R_Hand")
 		local m = bone and char:GetBoneMatrix(bone)
 		if not m then return end
 		local pos, ang = LocalToWorld(self.offsetVec, self.offsetAng, m:GetTranslation(), m:GetAngles())
 		local dir = ang:Up()
 
-		local puffs = self:GetNW2Int("puffs", 0)
-		local burnt = puffs / self.Puffs
-		local len = LENGTH * (1 - burnt * 0.7)
-		local filterEnd = pos + dir * 0.9
-		local tip = pos + dir * len
+		local burnt = self:GetNW2Int("puffs", 0) / self.Puffs
+		local paper = PAPER * (1 - burnt * 0.8)
 		local lit = CurTime() - self:GetNW2Float("lit", 0) < 25
-
-		render.SetMaterial(matColor)
-		render.DrawBeam(pos, filterEnd, RADIUS, 0, 1, cFilter)
-		render.DrawBeam(filterEnd, tip, RADIUS, 0, 1, cWhite)
-		if lit then
-			render.DrawBeam(tip, tip + dir * 0.18, RADIUS, 0, 1, cAsh)
-			local glow = 0.7 + math.sin(CurTime() * 3) * 0.15 + (CurTime() - (owner:GetNW2Float("rem_smoke_puff", 0)) < 1 and 0.5 or 0)
-			render.SetMaterial(matGlow)
-			render.DrawSprite(tip + dir * 0.2, 1.6 * glow, 1.6 * glow, cEmber)
-			-- тонкая струйка с кончика
-			if (self.nextWisp or 0) < CurTime() then
-				self.nextWisp = CurTime() + 0.25
-				local em = ParticleEmitter(tip)
-				if em then
-					local p = em:Add("particle/smokesprites_000" .. math.random(1, 9), tip)
-					if p then
-						p:SetVelocity(Vector(0, 0, 8) + VectorRand() * 2)
-						p:SetDieTime(1.6)
-						p:SetStartAlpha(60)
-						p:SetEndAlpha(0)
-						p:SetStartSize(0.5)
-						p:SetEndSize(4)
-						p:SetRoll(math.Rand(0, 360))
-						p:SetColor(200, 200, 200)
-					end
-					em:Finish()
+		RM.Draw({{cig.filter, RM.SolidMat}}, pos, ang)
+		RM.Draw({{cig.paper, RM.SolidMat, paper}}, pos + dir * FILTER, ang)
+		local tip = pos + dir * (FILTER + paper)
+		if not lit then return end
+		RM.Draw({{cig.ash, RM.SolidMat}}, tip, ang)
+		local glow = 0.7 + math.sin(CurTime() * 3) * 0.15 + (CurTime() - owner:GetNW2Float("rem_smoke_puff", 0) < 1 and 0.5 or 0)
+		render.SetMaterial(matGlow)
+		render.DrawSprite(tip + dir * 0.2, 1.4 * glow, 1.4 * glow, cEmber)
+		-- тонкая струйка с кончика
+		if (self.nextWisp or 0) < CurTime() then
+			self.nextWisp = CurTime() + 0.25
+			local em = ParticleEmitter(tip)
+			if em then
+				local p = em:Add("particle/smokesprites_000" .. math.random(1, 9), tip)
+				if p then
+					p:SetVelocity(Vector(0, 0, 8) + VectorRand() * 2)
+					p:SetDieTime(1.6)
+					p:SetStartAlpha(60)
+					p:SetEndAlpha(0)
+					p:SetStartSize(0.5)
+					p:SetEndSize(4)
+					p:SetRoll(math.Rand(0, 360))
+					p:SetColor(200, 200, 200)
 				end
+				em:Finish()
 			end
 		end
 	end
