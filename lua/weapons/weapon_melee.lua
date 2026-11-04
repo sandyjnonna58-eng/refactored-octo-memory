@@ -1637,14 +1637,16 @@ function SWEP:Attack(owner, ent, vellen, attacktype, inattackLength)
     
     local trace
 
-    local amt = 6
+    -- AttackRays - сколько лучей в веере (по умолчанию 6), AttackRaySpread - градусов между ними
+    local amt = self.AttackRays or 6
+    local spread = self.AttackRaySpread or 1
 
     for i = 0, amt do
         local normal = eyetr.Normal:Angle()
 
         normal:RotateAroundAxis(normal:Forward(), self:GetAttackConfigValue(self.SwingAng, self.SwingAng2, self.ChargeSwingAng, attacktype) or -90)
         normal:RotateAroundAxis(normal:Up(), ((0.5 - inattackLength) * (self:GetAttackConfigValue(self.AttackRads, self.AttackRads2, self.ChargeAttackRads, attacktype) or 65)))
-        normal:RotateAroundAxis(normal:Up(), (i - amt * 0.5) * 1)
+        normal:RotateAroundAxis(normal:Up(), (i - amt * 0.5) * spread)
         
         --debugoverlay.Line(eyetr.StartPos, eyetr.StartPos + normal:Forward() * (self:GetAttackLength() + vellen), 3, color_white)
 
@@ -1653,6 +1655,8 @@ function SWEP:Attack(owner, ent, vellen, attacktype, inattackLength)
         tr.start = eyetr.StartPos
         tr.endpos = eyetr.StartPos + normal:Forward() * (secondary and 1 or math.max(0.5, 1 - math.abs((0.5 - inattackLength) * 2))) * (self:GetAttackLength() + vellen)
         tr.filter = (secondary and self.MultiDmg2 or charge and self.MultiDmgCharge or self.MultiDmg1) and {owner, ent} or self.HitEnts
+        -- AttackMask = MASK_SHOT: попадание по настоящим хитбоксам тела, а не по габаритному ящику игрока
+        if self.AttackMask then tr.mask = self.AttackMask end
 
         local size = 0.15
 

@@ -148,6 +148,43 @@ SWEP.Attack2TimeLength = 0.05
 SWEP.AttackRads = 65
 SWEP.AttackRads2 = 35
 
+-- удар катаны: по настоящим хитбоксам (руки, ноги, голова), а не по ящику игрока; веер лучей плотнее и шире;
+-- плоскость взмаха - почти горизонтальная, как в анимации swing_l (по умолчанию у ближнего боя - сверху вниз)
+SWEP.AttackMask = MASK_SHOT
+SWEP.AttackRays = 12
+SWEP.AttackRaySpread = 1.2
+SWEP.SwingAng = -15
+
+-- лезвием (ЛКМ) с шансом 5% отрубает руку или ногу, по которой попал
+SWEP.SeverChance = 0.05
+local hitgroupLimb = {[HITGROUP_LEFTARM] = "larm", [HITGROUP_RIGHTARM] = "rarm", [HITGROUP_LEFTLEG] = "lleg", [HITGROUP_RIGHTLEG] = "rleg"}
+local boneLimb = {
+	["ValveBiped.Bip01_L_UpperArm"] = "larm", ["ValveBiped.Bip01_L_Forearm"] = "larm", ["ValveBiped.Bip01_L_Hand"] = "larm",
+	["ValveBiped.Bip01_R_UpperArm"] = "rarm", ["ValveBiped.Bip01_R_Forearm"] = "rarm", ["ValveBiped.Bip01_R_Hand"] = "rarm",
+	["ValveBiped.Bip01_L_Thigh"] = "lleg", ["ValveBiped.Bip01_L_Calf"] = "lleg", ["ValveBiped.Bip01_L_Foot"] = "lleg",
+	["ValveBiped.Bip01_R_Thigh"] = "rleg", ["ValveBiped.Bip01_R_Calf"] = "rleg", ["ValveBiped.Bip01_R_Foot"] = "rleg",
+}
+
+function SWEP:PrimaryAttackAdd(ent, trace)
+	if CLIENT or not IsValid(ent) or not trace then return end
+	if self.DamageType ~= DMG_SLASH or math.Rand(0, 1) >= (self.SeverChance or 0) then return end
+	if not hg.organism or not hg.organism.AmputateLimb then return end
+
+	local victim = ent
+	if ent:IsRagdoll() then victim = hg.RagdollOwner and hg.RagdollOwner(ent) or ent end
+	local org = (IsValid(victim) and victim.organism) or ent.organism
+	if not org then return end
+
+	local limb = hitgroupLimb[trace.HitGroup or 0]
+	if not limb then
+		local bone = ent:IsRagdoll() and ent:TranslatePhysBoneToBone(trace.PhysicsBone or 0) or nil
+		if (not bone or bone < 0) and trace.HitBox and ent.GetHitBoxBone then bone = ent:GetHitBoxBone(trace.HitBox, ent:GetHitboxSet() or 0) end
+		limb = bone and bone >= 0 and boneLimb[ent:GetBoneName(bone)]
+	end
+	if not limb or org[limb .. "amputated"] ~= false then return end
+	hg.organism.AmputateLimb(org, limb)
+end
+
 SWEP.SwingAng = -15
 SWEP.SwingAng2 = 0
 
