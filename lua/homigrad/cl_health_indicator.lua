@@ -307,7 +307,8 @@ local function CollectAfflictionIcons(ply, org)
 	if Num(org.liver) > 0.2 then add("liver", Num(org.liver), "Liver damage") end
 	local bac = ply:GetNW2Float("rem_bac", 0)
 	if bac > 0.3 then add("alcohol", bac / 3, string.format("Drunk (%.1f‰)", bac)) end
-	if Num(org.wantToVomit) > 0.3 or bac > 2.2 then add("nausea", math.max(Num(org.wantToVomit), (bac - 2.2) / 1.5), "Nausea") end
+	local bacEff = ply:GetNW2Float("rem_bac_eff", bac)
+	if Num(org.wantToVomit) > 0.3 or bacEff > 2.2 then add("nausea", math.max(Num(org.wantToVomit), (bacEff - 2.2) / 1.5), "Nausea") end
 	if Num(org.analgesia) > 0.3 then add("painkillers", Num(org.analgesia), "Painkillers") end
 	if Num(org.adrenaline) > 0.5 then add("adrenaline", Num(org.adrenaline) / 2, "Adrenaline") end
 	if org.noradrenalineActive then add("haste", 0.45, "Noradrenaline") end
@@ -318,6 +319,21 @@ local function CollectAfflictionIcons(ply, org)
 	if depression > 0.25 then add("depression", depression, "Depression") end
 	local assimilated = Num(org.assimilated)
 	if assimilated > 0 then add("infection", assimilated, "Infection") end
+
+	-- никотин, привыкание и ломка (modules/sv_nicotine.lua, sv_addiction.lua)
+	local nic = ply:GetNW2Float("rem_nicotine", 0)
+	if nic > 0.2 then add("nicotine", nic / 2.5, "Nicotine") end
+	for _, kind in ipairs({"nicotine", "alcohol"}) do
+		local name = kind == "nicotine" and "Nicotine" or "Alcohol"
+		local wd, dep = ply:GetNW2Float("rem_wd_" .. kind, 0), ply:GetNW2Float("rem_dep_" .. kind, 0)
+		if wd > 0.1 then
+			add(kind .. "_wd", wd, name .. " withdrawal")
+		elseif dep > 0.25 then
+			add(kind .. "_wd", 0.12, string.format("%s dependence (%d%%)", name, math.Round(dep * 100)))
+		end
+	end
+	local tremor = ply:GetNW2Float("rem_wd_alcohol", 0)
+	if tremor > 0.3 then add("tremor", tremor, "Tremor") end
 
 	-- движение и силы
 	if org.incapacitated then add("incapacitated", 1, "Incapacitated") end

@@ -1,4 +1,4 @@
-# Иконки для weapon_hg_vodka / weapon_hg_beer: бутылка, нарисованная фигурами. Запуск: python3 tools/alcohol/icons.py
+# Иконки для weapon_hg_vodka / weapon_hg_beer / weapon_hg_cigarettes: нарисованы фигурами. Запуск: python3 tools/alcohol/icons.py
 from PIL import Image, ImageDraw, ImageFilter
 
 def bottle(path, glass, liquid, label, label_text_col, neck_len, cap):
@@ -35,3 +35,32 @@ def bottle(path, glass, liquid, label, label_text_col, neck_len, cap):
 
 bottle('materials/entities/weapon_hg_vodka.png', (215, 230, 235, 150), (235, 245, 250, 120), (236, 236, 228, 255), (190, 30, 30, 255), 46, (200, 30, 30, 255))
 bottle('materials/entities/weapon_hg_beer.png', (110, 60, 20, 235), (150, 85, 25, 220), (232, 206, 120, 255), (90, 40, 20, 255), 40, (190, 160, 60, 255))
+
+# пачка сигарет (weapon_hg_cigarettes): красно-белая пачка, открыта, торчат три сигареты
+def cig_pack(path):
+    S = 4
+    W = H = 256 * S
+    im = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    x0, x1, y0, y1 = 70 * S, 186 * S, 92 * S, 236 * S
+    # сигареты (за крышкой)
+    for i, (cx, top) in enumerate(((100, 40), (128, 26), (156, 48))):
+        d.rectangle([(cx - 11) * S, top * S, (cx + 11) * S, 110 * S], fill=(244, 242, 234, 255))
+        d.rectangle([(cx - 11) * S, top * S, (cx + 11) * S, (top + 26) * S], fill=(214, 150, 70, 255))
+        for k in range(3):
+            d.ellipse([(cx - 6 + k * 5) * S, (top + 6 + (k % 2) * 8) * S, (cx - 3 + k * 5) * S, (top + 9 + (k % 2) * 8) * S], fill=(170, 105, 45, 255))
+    # пачка
+    d.rounded_rectangle([x0, y0, x1, y1], radius=6 * S, fill=(236, 234, 228, 255))
+    d.rectangle([x0, y0, x1, y0 + 44 * S], fill=(196, 28, 32, 255))
+    d.polygon([(x0, y0 + 44 * S), (x1, y0 + 44 * S), (x1, y0 + 66 * S), ((x0 + x1) // 2, y0 + 86 * S), (x0, y0 + 66 * S)], fill=(196, 28, 32, 255))
+    d.rectangle([x0, y0 - 6 * S, x1, y0 + 4 * S], fill=(170, 20, 24, 255))
+    for i, w in enumerate((60, 44)):
+        d.rectangle([(128 - w // 2) * S, (190 + i * 14) * S, (128 + w // 2) * S, (196 + i * 14) * S], fill=(60, 60, 64, 255))
+    d.rectangle([x0 + 8 * S, y0 + 10 * S, x0 + 16 * S, y1 - 12 * S], fill=(255, 255, 255, 90))
+    im = im.resize((256, 256), Image.LANCZOS)
+    shadow = Image.new('RGBA', im.size, (0, 0, 0, 0))
+    shadow.paste((0, 0, 0, 120), (3, 4), im.split()[3])
+    out = Image.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(3)), im)
+    out.save(path)
+
+cig_pack('materials/entities/weapon_hg_cigarettes.png')

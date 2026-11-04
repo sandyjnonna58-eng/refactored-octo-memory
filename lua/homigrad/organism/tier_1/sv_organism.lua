@@ -641,6 +641,9 @@ hook.Add("Org Think", "Main", function(owner, org, timeValue)
 	-- тонус сосудов (сужение/расширение) - до крови, он меняет силу кровотечения (modules/sv_vessels.lua)
 	-- алкоголь (modules/sv_alcohol.lua) - до сосудов, он их расширяет
 	if hg.organism.Alcohol then hg.organism.Alcohol(owner, org, timeValue) end
+	-- никотин и привыкание/ломка (modules/sv_nicotine.lua, sv_addiction.lua)
+	if hg.organism.Nicotine then hg.organism.Nicotine(owner, org, timeValue) end
+	if hg.organism.Addiction then hg.organism.Addiction(owner, org, timeValue) end
 	if hg.organism.Vessels then hg.organism.Vessels(owner, org, timeValue) end
 	module.blood[2](owner, org, timeValue)
 
