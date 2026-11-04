@@ -121,6 +121,36 @@ if CLIENT then
 		return {pack = b:Finish(RM.SolidMat)}
 	end
 
+	-- по фото (личный пак materials/rem_drinks_private): белая пачка с золотой полоской - картинка на всех четырёх
+	-- боковых гранях, открытая белая крышка, внутри белая фольга, торчат шесть пробковых фильтров
+	local PACK_TEX, FILTER_TEX = "rem_drinks_private/pack_front.png", "rem_drinks_private/filter.png"
+	local function BuildPackPhoto(packMat, filterMat)
+		local w, d, h = 1.45, 0.575, 4.4
+		local f = RM.Builder()
+		local full = {0, 1, 1, 1, 1, 0, 0, 0} -- a(низ-лево) b(низ-право) c(верх-право) d(верх-лево)
+		f:Quad(Vector(-w, -d, 0), Vector(w, -d, 0), Vector(w, -d, h), Vector(-w, -d, h), color_white, Vector(0, -1, 0), full)
+		f:Quad(Vector(w, d, 0), Vector(-w, d, 0), Vector(-w, d, h), Vector(w, d, h), color_white, Vector(0, 1, 0), full)
+		f:Quad(Vector(-w, d, 0), Vector(-w, -d, 0), Vector(-w, -d, h), Vector(-w, d, h), color_white, Vector(-1, 0, 0), full)
+		f:Quad(Vector(w, -d, 0), Vector(w, d, 0), Vector(w, d, h), Vector(w, -d, h), color_white, Vector(1, 0, 0), full)
+		local faces = f:Finish(packMat)
+
+		local b = RM.Builder()
+		local white, foil = Color(240, 240, 236), Color(225, 225, 228)
+		b:Box(Vector(-w, -d, -0.01), Vector(w, d, 0), white, {top = true})
+		b:Box(Vector(-w + 0.05, -d + 0.05, 3.9), Vector(w - 0.05, d - 0.05, 3.91), foil)
+		b:Box(Vector(-w, d, h), Vector(w, d + 0.12, h + 1.5), white) -- откинутая крышка
+		local plain = b:Finish(RM.SolidMat)
+
+		local c = RM.Builder()
+		local tops = {4.9, 5.15, 4.95, 5.2, 4.85, 5.05}
+		for i = 1, 6 do
+			local x = -w + 0.26 + (i - 1) * ((2 * w - 0.52) / 5)
+			c:Lathe({{3.7, 0.2}, {tops[i], 0.2}}, color_white, {seg = 10, offset = Vector(x, -0.1, 0), top = color_white,
+				uv = function(p) return (math.atan2(p.y, p.x) / (2 * math.pi)) % 1, 1 - (p.z - 3.7) / 1.5 end})
+		end
+		return {faces = faces, plain = plain, filters = c:Finish(filterMat)}
+	end
+
 	-- сигарета вдоль оси "вверх" руки (как флакон таблеток - тот же хват), сгорает от затяжек;
 	-- на земле - пачка
 	function SWEP:DrawWorldModel2(nodraw)
@@ -130,10 +160,17 @@ if CLIENT then
 		local owner = self:GetOwner()
 		local char = IsValid(owner) and hg.GetCurrentCharacter(owner) or nil
 		if not IsValid(char) then
+			local ang = self:GetAngles()
+			local at = self:LocalToWorld(self:OBBCenter()) - ang:Up() * 2.2
+			local packMat, filterMat = RM.TexMat(PACK_TEX), RM.TexMat(FILTER_TEX)
+			if packMat and filterMat then
+				local pp = RM.Get("rem_cigpack_photo", function() return BuildPackPhoto(packMat, filterMat) end)
+				if pp then RM.Draw({{pp.faces, packMat}, {pp.plain, RM.SolidMat}, {pp.filters, filterMat}}, at, ang) end
+				return
+			end
 			local pack = RM.Get("rem_cigpack", BuildPack)
 			if not pack then return end
-			local ang = self:GetAngles()
-			RM.Draw({{pack.pack, RM.SolidMat}}, self:LocalToWorld(self:OBBCenter()) - ang:Up() * 2.2, ang)
+			RM.Draw({{pack.pack, RM.SolidMat}}, at, ang)
 			return
 		end
 		local cig = RM.Get("rem_cigarette", BuildCig)
@@ -147,7 +184,18 @@ if CLIENT then
 		local burnt = self:GetNW2Int("puffs", 0) / self.Puffs
 		local paper = PAPER * (1 - burnt * 0.8)
 		local lit = CurTime() - self:GetNW2Float("lit", 0) < 25
-		RM.Draw({{cig.filter, RM.SolidMat}}, pos, ang)
+		local filterMat = RM.TexMat(FILTER_TEX)
+		if filterMat then
+			local tf = RM.Get("rem_cigfilter_photo", function()
+				local b = RM.Builder()
+				b:Cylinder(0, FILTER, RADIUS + 0.002, color_white, {seg = 12, bottom = color_white,
+					uv = function(p) return (math.atan2(p.y, p.x) / (2 * math.pi)) % 1, 1 - p.z / FILTER end})
+				return {filter = b:Finish(filterMat)}
+			end)
+			if tf then RM.Draw({{tf.filter, filterMat}}, pos, ang) end
+		else
+			RM.Draw({{cig.filter, RM.SolidMat}}, pos, ang)
+		end
 		RM.Draw({{cig.paper, RM.SolidMat, paper}}, pos + dir * FILTER, ang)
 		local tip = pos + dir * (FILTER + paper)
 		if not lit then return end

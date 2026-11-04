@@ -89,6 +89,12 @@ SWEP.Bottle = {
 	stripe = {6.4, 7.0, Color(196, 28, 32)},
 	ink = {Color(30, 30, 34), {4.0, 4.6, 5.2}},
 	grip = 5,
+	-- по фото (tools/drink_textures/make.py): форма снята с силуэта, фото натягивается спереди и сзади;
+	-- картинка из личного пака materials/rem_drinks_private (нет её - рисуется цветная модель выше)
+	photo = {
+		tex = "rem_drinks_private/vodka.png", H = 13.6, R = 2.19, flat = 0.62,
+		profile = {{0, 1.75}, {0.33, 2.06}, {0.66, 2.14}, {1.04, 2.16}, {1.36, 2.16}, {1.69, 2.19}, {2.02, 2.19}, {2.4, 2.19}, {2.73, 2.19}, {3.06, 2.19}, {3.39, 2.19}, {3.72, 2.19}, {4.09, 2.19}, {4.42, 2.19}, {4.75, 2.19}, {5.08, 2.19}, {5.46, 2.19}, {5.79, 2.19}, {6.12, 2.19}, {6.45, 2.19}, {6.78, 2.19}, {7.15, 2.19}, {7.48, 2.19}, {7.81, 2.19}, {8.14, 2.19}, {8.52, 2.12}, {8.85, 2.01}, {9.18, 1.79}, {9.51, 1.48}, {9.88, 1.09}, {10.21, 0.95}, {10.54, 0.92}, {10.87, 0.92}, {11.2, 0.96}, {11.58, 0.94}, {11.91, 0.94}, {12.24, 0.92}, {12.56, 0.94}, {12.94, 0.92}, {13.27, 0.94}, {13.6, 0.72}},
+	},
 }
 
 if CLIENT then
@@ -122,12 +128,28 @@ if CLIENT then
 		return {solid = solid, liquid = liquid, glass = glass}
 	end
 
+	-- модель по фото: силуэт вращается, картинка проецируется спереди (u - по x, v - по высоте)
+	local function BuildPhoto(ph, mat)
+		local g = RM.Builder()
+		local function uv(p) return 0.5 + p.x / (2 * ph.R), 1 - p.z / ph.H end
+		g:Lathe(ph.profile, color_white, {uv = uv, seg = 32, top = color_white, bottom = color_white})
+		if ph.flat then g:FlattenY(ph.flat) end
+		return {photo = g:Finish(mat)}
+	end
+
 	function SWEP:DrawWorldModel2(nodraw)
 		if nodraw then return end
 		RM = RM or hg.RemMesh
 		if not RM then return end
 		local b = self.Bottle
-		local model = RM.Get(self:GetClass(), function() return Build(b) end)
+		local ph = b.photo
+		local phMat = ph and RM.TexMat(ph.tex)
+		local model
+		if phMat then
+			model = RM.Get(self:GetClass() .. "_photo", function() return BuildPhoto(ph, phMat) end)
+		else
+			model = RM.Get(self:GetClass(), function() return Build(b) end)
+		end
 		if not model then return end
 
 		local owner = self:GetOwner()
@@ -143,8 +165,13 @@ if CLIENT then
 			pos = pos - ang:Up() * b.grip
 		else
 			ang = self:GetAngles()
-			local top = b.cap and b.cap[2] or b.profile[#b.profile][1]
+			local top = phMat and ph.H or (b.cap and b.cap[2] or b.profile[#b.profile][1])
 			pos = self:LocalToWorld(self:OBBCenter()) - ang:Up() * top * 0.5
+		end
+
+		if phMat then
+			RM.Draw({{model.photo, phMat}}, pos, ang)
+			return
 		end
 
 		local full = math.Clamp(self:GetNW2Int("sips", self.Sips) / self.Sips, 0, 1)

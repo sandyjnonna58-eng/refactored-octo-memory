@@ -17,15 +17,39 @@ function RM.Builder()
 	return setmetatable({verts = {}}, B)
 end
 
-function B:Quad(a, b, c, d, col, n)
+-- uv - необязательно: {ua, va, ub, vb, uc, vc, ud, vd} для вершин a, b, c, d
+function B:Quad(a, b, c, d, col, n, uv)
 	local off = self.offset
 	if off then a, b, c, d = a + off, b + off, c + off, d + off end
 	local k = 0.45 + 0.55 * math.max(0, n:Dot(LIGHT))
 	local vc = Color(math.min(255, col.r * k), math.min(255, col.g * k), math.min(255, col.b * k), col.a)
 	local v = self.verts
-	for _, p in ipairs({a, b, c, a, c, d}) do
-		v[#v + 1] = {pos = p, normal = n, color = vc, u = 0, v = 0}
+	local pts = {a, b, c, a, c, d}
+	local idx = {1, 2, 3, 1, 3, 4}
+	for i = 1, 6 do
+		local j = idx[i]
+		v[#v + 1] = {pos = pts[i], normal = n, color = vc, u = uv and uv[j * 2 - 1] or 0, v = uv and uv[j * 2] or 0}
 	end
+end
+
+-- сплющить модель по y (плоская фляжка): k - доля толщины
+function B:FlattenY(k)
+	for _, vert in ipairs(self.verts) do
+		vert.pos = Vector(vert.pos.x, vert.pos.y * k, vert.pos.z)
+	end
+end
+
+-- материал с картинкой (png из materials/) для текстурированной сетки; нет картинки - nil
+local texMats = {}
+function RM.TexMat(png)
+	local m = texMats[png]
+	if m ~= nil then return m or nil end
+	local src = Material(png, "smooth mips")
+	if src:IsError() then texMats[png] = false return nil end
+	m = CreateMaterial("rem_mesh_tex_" .. util.CRC(png), "UnlitGeneric", {["$basetexture"] = "color/white", ["$vertexcolor"] = 1, ["$nocull"] = 1, ["$alphatest"] = 1})
+	m:SetTexture("$basetexture", src:GetTexture("$basetexture"))
+	texMats[png] = m
+	return m
 end
 
 -- тело вращения: profile = {{z, r}, ...} снизу вверх; a0..a1 - дуга в градусах (по умолчанию круг);
@@ -43,21 +67,37 @@ function B:Lathe(profile, col, opts)
 			local c0, s0, c1, s1 = math.cos(u0), math.sin(u0), math.cos(u1), math.sin(u1)
 			local um = (u0 + u1) / 2
 			local n = Vector(math.cos(um), math.sin(um), slope):GetNormalized()
-			self:Quad(Vector(r0 * c0, r0 * s0, z0), Vector(r0 * c1, r0 * s1, z0), Vector(r1 * c1, r1 * s1, z1), Vector(r1 * c0, r1 * s0, z1), col, n)
+			local pa, pb, pc, pd = Vector(r0 * c0, r0 * s0, z0), Vector(r0 * c1, r0 * s1, z0), Vector(r1 * c1, r1 * s1, z1), Vector(r1 * c0, r1 * s0, z1)
+			local uv
+			if opts.uv then
+				local ua, va = opts.uv(pa)
+				local ub, vb = opts.uv(pb)
+				local uc, vcc = opts.uv(pc)
+				local ud, vd = opts.uv(pd)
+				uv = {ua, va, ub, vb, uc, vcc, ud, vd}
+			end
+			self:Quad(pa, pb, pc, pd, col, n, uv)
 		end
 	end
-	if opts.top then self:Disc(profile[#profile][1], profile[#profile][2], opts.top, 1, a0, a1, seg) end
-	if opts.bottom then self:Disc(profile[1][1], profile[1][2], opts.bottom, -1, a0, a1, seg) end
+	if opts.top then self:Disc(profile[#profile][1], profile[#profile][2], opts.top, 1, a0, a1, seg, opts.uv) end
+	if opts.bottom then self:Disc(profile[1][1], profile[1][2], opts.bottom, -1, a0, a1, seg, opts.uv) end
 	self.offset = prevOff
 end
 
-function B:Disc(z, r, col, dir, a0, a1, seg)
+function B:Disc(z, r, col, dir, a0, a1, seg, uvf)
 	a0, a1, seg = a0 or 0, a1 or 360, seg or 24
 	for s = 0, seg - 1 do
 		local u0, u1 = math.rad(a0 + (a1 - a0) * s / seg), math.rad(a0 + (a1 - a0) * (s + 1) / seg)
 		local p0, p1 = Vector(r * math.cos(u0), r * math.sin(u0), z), Vector(r * math.cos(u1), r * math.sin(u1), z)
 		local c = Vector(0, 0, z)
-		if dir > 0 then self:Quad(c, p0, p1, c, col, Vector(0, 0, 1)) else self:Quad(c, p1, p0, c, col, Vector(0, 0, -1)) end
+		local uv
+		if uvf then
+			local cu, cv = uvf(c)
+			local au, av = uvf(p0)
+			local bu, bv = uvf(p1)
+			uv = dir > 0 and {cu, cv, au, av, bu, bv, cu, cv} or {cu, cv, bu, bv, au, av, cu, cv}
+		end
+		if dir > 0 then self:Quad(c, p0, p1, c, col, Vector(0, 0, 1), uv) else self:Quad(c, p1, p0, c, col, Vector(0, 0, -1), uv) end
 	end
 end
 
