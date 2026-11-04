@@ -24,6 +24,8 @@ TABLER = {
     'blind': 'eye-off', 'burning': 'flame', 'gas': 'cloud-fog', 'infection': 'virus',
     'immobilized': 'link', 'incapacitated': 'wheelchair', 'internal': 'stethoscope', 'rage': 'swords',
     'nicotine': 'smoking', 'nicotine_wd': 'smoking-no', 'alcohol_wd': 'glass-off', 'tremor': 'hand-move',
+    'implant_heart': 'heart-bolt', 'implant_lungs': 'lungs', 'implant_nanites': 'droplet-bolt',
+    'implant_painblock': 'shield-check', 'implant_adrenal': 'battery-charging-2',
 }
 
 def tabler(name, out):

@@ -211,7 +211,7 @@ end
 
 local function CollectAfflictionIcons(ply, org)
 	local icons, seen = {}, {}
-	local function add(iconName, severity, label)
+	local function add(iconName, severity, label, good)
 		severity = math.Clamp(severity or 0.5, 0.05, 1)
 		local e = seen[iconName]
 		if e then
@@ -220,7 +220,7 @@ local function CollectAfflictionIcons(ply, org)
 		end
 		local mat = AfflIcon(iconName)
 		if not mat then return end
-		e = {mat = mat, severity = severity, label = label or iconName}
+		e = {mat = mat, severity = severity, label = label or iconName, good = good}
 		seen[iconName] = e
 		icons[#icons + 1] = e
 	end
@@ -341,7 +341,15 @@ local function CollectAfflictionIcons(ply, org)
 	local stamina = Num(org.stamina)
 	if stamina > 0 and stamina < 50 then add("fatigue", (50 - stamina) / 50, "Exhausted") end
 
-	table.sort(icons, function(a, b) return a.severity > b.severity end)
+	-- импланты (modules/sv_implants.lua) - синие плитки, в конце ряда
+	for _, imp in ipairs({{"heart", "Artificial heart"}, {"lungs", "Synthetic lungs"}, {"nanites", "Blood nanites"}, {"painblock", "Pain blocker"}, {"adrenal", "Adrenal implant"}}) do
+		if ply:GetNW2Bool("rem_implant_" .. imp[1], false) then add("implant_" .. imp[1], 0.3, imp[2], true) end
+	end
+
+	table.sort(icons, function(a, b)
+		if (a.good or false) ~= (b.good or false) then return not a.good end
+		return a.severity > b.severity
+	end)
 	return icons
 end
 
@@ -418,15 +426,25 @@ local function DrawAfflictionIcons(iconEntries, centerX, bottomY, visibility, ap
 			local pulse = sev > 0.7 and (math.sin(timeNow * (3 + sev * 4) + idx) * 0.5 + 0.5) * 0.25 * sev or 0
 			local a = math.floor(235 * alphaMul)
 
-			-- фон: снизу тёмный, сверху ярче; цвет от тяжести
-			surface.SetDrawColor(18 + 70 * sev, 0, 0, a)
-			surface.DrawRect(x, yy, tile, tile)
-			surface.SetMaterial(gradDown)
-			surface.SetDrawColor(math.min(255, 70 + 170 * sev + 40 * pulse), 6 + 12 * sev, 6 + 12 * sev, a)
-			surface.DrawTexturedRect(x, yy, tile, tile)
+			-- фон: снизу тёмный, сверху ярче; цвет от тяжести (импланты - синие)
+			if e.good then
+				surface.SetDrawColor(6, 18, 40, a)
+				surface.DrawRect(x, yy, tile, tile)
+				surface.SetMaterial(gradDown)
+				surface.SetDrawColor(30, 110, 190, a)
+				surface.DrawTexturedRect(x, yy, tile, tile)
+			else
+				surface.SetDrawColor(18 + 70 * sev, 0, 0, a)
+				surface.DrawRect(x, yy, tile, tile)
+				surface.SetMaterial(gradDown)
+				surface.SetDrawColor(math.min(255, 70 + 170 * sev + 40 * pulse), 6 + 12 * sev, 6 + 12 * sev, a)
+				surface.DrawTexturedRect(x, yy, tile, tile)
+			end
 
 			-- рамка
-			if sev >= 0.9 then
+			if e.good then
+				surface.SetDrawColor(90, 180, 240, a)
+			elseif sev >= 0.9 then
 				surface.SetDrawColor(255, 255, 255, a)
 			else
 				surface.SetDrawColor(140 + 100 * sev, 55 + 50 * sev, 55 + 50 * sev, a)
