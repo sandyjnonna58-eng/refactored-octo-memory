@@ -36,11 +36,6 @@ local wastedPhrases = {
 	"Who moved the ground...",
 	"*hic* ...where am I going...",
 }
-local sickPhrases = {
-	"I'm gonna be sick...",
-	"Ugh... my stomach...",
-	"Too much... way too much...",
-}
 
 local function Tolerance(owner)
 	return hg.Addiction and hg.Addiction.Get and hg.Addiction.Get(owner, "alcohol") or 0
@@ -100,16 +95,9 @@ function hg.organism.Alcohol(owner, org, timeValue)
 		if bac > 2 and org.liver then org.liver = math.min(org.liver + timeValue * (bac - 2) / 4000, 1) end
 
 		-- тошнота и рвота
-		if eff > A.vomitStart then
-			org.alcoholVomit = (org.alcoholVomit or 0) + timeValue * (eff - A.vomitStart) * 0.035 * math.Rand(0.5, 1.5)
-			if org.alcoholVomit > 1 and hg.organism.Vomit then
-				org.alcoholVomit = 0
-				if org.isPly and not org.otrub then owner:Notify(table.Random(sickPhrases), true, "alcohol", 0) end
-				local blood = org.blood
-				hg.organism.Vomit(owner)
-				org.blood = blood -- Vomit отнимает кровь (рвота кровью), тут рвёт просто выпитым
-				org.alcoholStomach = org.alcoholStomach * 0.3
-			end
+		-- обычная рвота (sv_vomit.lua), не кровью
+		if eff > A.vomitStart and hg.organism.AddNausea then
+			hg.organism.AddNausea(owner, org, timeValue * (eff - A.vomitStart) * 0.035 * math.Rand(0.5, 1.5))
 		end
 
 		if eff > A.otrub then

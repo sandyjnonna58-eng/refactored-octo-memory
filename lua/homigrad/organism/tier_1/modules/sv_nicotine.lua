@@ -27,7 +27,7 @@ function hg.organism.Nicotine(owner, org, timeValue)
 		local dep = hg.Addiction and hg.Addiction.Get and hg.Addiction.Get(owner, "nicotine") or 0
 		local over = nic - N.dizzy * (1 + dep * 2)
 		if over > 0 then
-			org.wantToVomit = (org.wantToVomit or 0) + timeValue * over * 0.01
+			if hg.organism.AddNausea then hg.organism.AddNausea(owner, org, timeValue * over * 0.01) end
 			org.consciousness = math.min(org.consciousness or 1, 1 - math.min(over * 0.15, 0.4))
 		end
 	end

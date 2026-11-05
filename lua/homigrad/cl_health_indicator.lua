@@ -308,7 +308,8 @@ local function CollectAfflictionIcons(ply, org)
 	local bac = ply:GetNW2Float("rem_bac", 0)
 	if bac > 0.3 then add("alcohol", bac / 3, string.format("Drunk (%.1f‰)", bac)) end
 	local bacEff = ply:GetNW2Float("rem_bac_eff", bac)
-	if Num(org.wantToVomit) > 0.3 or bacEff > 2.2 then add("nausea", math.max(Num(org.wantToVomit), (bacEff - 2.2) / 1.5), "Nausea") end
+	local nausea = ply:GetNW2Float("rem_nausea", 0)
+	if Num(org.wantToVomit) > 0.3 or nausea > 0.2 or bacEff > 2.2 then add("nausea", math.max(Num(org.wantToVomit), nausea, (bacEff - 2.2) / 1.5), "Nausea") end
 	if Num(org.analgesia) > 0.3 then add("painkillers", Num(org.analgesia), "Painkillers") end
 	if Num(org.adrenaline) > 0.5 then add("adrenaline", Num(org.adrenaline) / 2, "Adrenaline") end
 	if org.noradrenalineActive then add("haste", 0.45, "Noradrenaline") end

@@ -54,12 +54,9 @@ local function Withdrawal(owner, org, kind, d, timeValue)
 	if kind == "alcohol" then
 		org.painadd = (org.painadd or 0) + timeValue * wd * 0.4 -- голова раскалывается
 		if org.depression then org.depression = math.min(org.depression + timeValue * wd * 0.002, 1) end -- и тоска
-		d.vomit = (d.vomit or 0) + timeValue * math.max(wd - 0.4, 0) * 0.006 * math.Rand(0.5, 1.5)
-		if d.vomit > 1 and hg.organism.Vomit then
-			d.vomit = 0
-			local blood = org.blood
-			hg.organism.Vomit(owner)
-			org.blood = blood
+		-- тошнит и рвёт (обычная рвота, sv_vomit.lua)
+		if hg.organism.AddNausea then
+			hg.organism.AddNausea(owner, org, timeValue * math.max(wd - 0.4, 0) * 0.006 * math.Rand(0.5, 1.5))
 		end
 		-- белая горячка: судороги при тяжёлой зависимости
 		if wd > 0.75 and d.dep > 0.6 and hg.organism.AddSeizure then
