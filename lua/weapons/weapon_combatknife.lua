@@ -294,3 +294,6 @@ function SWEP:DrawWorldModel2()
     self.BaseClass.DrawWorldModel2(self)
     self.WorldModelExchange = oldExchange
 end
+
+-- E + ПКМ - метнуть (homigrad/meleethrow)
+SWEP.CanThrow = true

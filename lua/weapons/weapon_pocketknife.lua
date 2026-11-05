@@ -268,3 +268,6 @@ SWEP.SwingAng2 = 0
 
 SWEP.MultiDmg1 = false
 SWEP.MultiDmg2 = true
+
+-- E + ПКМ - метнуть (homigrad/meleethrow)
+SWEP.CanThrow = true

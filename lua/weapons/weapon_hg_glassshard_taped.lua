@@ -147,3 +147,5 @@ SWEP.AttackRads2 = 0
 
 SWEP.SwingAng = -35
 SWEP.SwingAng2 = 0
+-- E + ПКМ - метнуть (homigrad/meleethrow)
+SWEP.CanThrow = true

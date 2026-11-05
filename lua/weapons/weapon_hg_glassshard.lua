@@ -204,3 +204,5 @@ hook.Add("radialOptions","tape_shard",function()
 		hg.radialOptions[#hg.radialOptions + 1] = tbl
 	end
 end)
+-- E + ПКМ - метнуть (homigrad/meleethrow)
+SWEP.CanThrow = true

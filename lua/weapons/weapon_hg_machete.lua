@@ -199,3 +199,5 @@ function SWEP:SecondaryAttackAdd(ent, trace)
 end
 
 SWEP.MinSensivity = 0.25
+-- E + ПКМ - метнуть (homigrad/meleethrow)
+SWEP.CanThrow = true

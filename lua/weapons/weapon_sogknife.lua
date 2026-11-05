@@ -305,3 +305,5 @@ function SWEP:DrawPostWorldModel()
         wm:SetBoneMatrix(boneIndex, boneMatrix)
     end
 end
+-- E + ПКМ - метнуть (homigrad/meleethrow)
+SWEP.CanThrow = true

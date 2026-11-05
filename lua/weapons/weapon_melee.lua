@@ -2868,7 +2868,7 @@ function SWEP:CustomThink()
 
     //if SERVER then
         local oldblocking = self:GetBlocking()
-        local blocking = self:GetBlockDisabledUntil() < CurTime() and owner.organism and owner.organism.stamina[1] >= (self.BlockMinStamina or 90) and !self:GetInAttack() and (self:GetAttackTime() - CurTime() - 0) < 0 and self:CanBlock() and hg.KeyDown(owner, IN_ATTACK2) and not (self.Canselfharm and self:IsSelfHarming())
+        local blocking = self:GetBlockDisabledUntil() < CurTime() and owner.organism and owner.organism.stamina[1] >= (self.BlockMinStamina or 90) and !self:GetInAttack() and (self:GetAttackTime() - CurTime() - 0) < 0 and self:CanBlock() and hg.KeyDown(owner, IN_ATTACK2) and not (self.Canselfharm and self:IsSelfHarming()) and not (self.CanThrow and hg.KeyDown(owner, IN_USE))
         --if self:CutDuct() then return end
         self:SetBlocking(blocking)
         
@@ -3574,6 +3574,8 @@ end
 function SWEP:SecondaryAttack(override)
     local ply = self:GetOwner()
     if ply.organism and ply.organism.larmamputated and self.TwoHanded then return end
+    -- E + ПКМ у метательного оружия - бросок (homigrad/meleethrow), не удар и не блок
+    if self.CanThrow and hg.KeyDown(ply, IN_USE) then return end
 
     if self.Canselfharm and self:IsSelfHarming() then return end
 

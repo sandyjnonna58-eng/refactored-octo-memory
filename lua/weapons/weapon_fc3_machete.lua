@@ -73,3 +73,6 @@ if SERVER then
 		end
 	end
 end
+
+-- E + ПКМ - метнуть (homigrad/meleethrow)
+SWEP.CanThrow = true
