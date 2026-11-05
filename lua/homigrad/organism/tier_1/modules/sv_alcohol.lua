@@ -4,7 +4,7 @@
 -- зато без выпивки начинается ломка.
 -- Что делает (по действующему опьянению, промилле):
 --   любое  - расширяет сосуды (sv_vessels.lua: тепло уходит быстрее - в холоде замёрзнешь, раны кровят сильнее),
---            притупляет боль (immediatepain.lua) и страх;
+--            притупляет боль (immediatepain.lua) и страх, снимает депрессию и панику (панические атаки);
 --   ~0.5+  - на экране плывёт, качает, взгляд гуляет, походку ведёт (cl_alcohol.lua, sh_alcohol.lua);
 --   1.8+   - сильно мотает: на ходу бросает в стороны;
 --   2.2+   - тошнит, рвёт (выблеванное из желудка уже не всосётся); без сознания на спине - можно захлебнуться;
@@ -15,6 +15,8 @@ local A = {
 	absorb = 0.02,       -- промилле в секунду из желудка в кровь
 	eliminate = 0.0035,  -- промилле в секунду выводит здоровая печень
 	painRelief = 0.12,   -- на промилле (до 0.4 боли)
+	depressionRelief = 0.006, -- снятие депрессии в секунду на промилле (1.5 промилле - полная депрессия уходит за ~2 минуты)
+	panicRelief = 0.05,  -- снятие паники в секунду на промилле
 	tolerance = 0.4,     -- насколько привыкание снижает действие (при полной зависимости)
 	lurchStart = 1.8,    -- с этого бросает в стороны на ходу
 	fallStart = 2.5,     -- с этого может свалить с ног
@@ -87,6 +89,13 @@ function hg.organism.Alcohol(owner, org, timeValue)
 	if org.alive ~= false then
 		-- пьяному не так страшно
 		if org.fear and org.fear > -1 then org.fear = math.max(org.fear - timeValue * 0.08 * math.min(eff, 2), -1) end
+		-- и не так тоскливо: депрессия уходит, паника (панические атаки) снимается
+		if eff > 0.2 then
+			local k = math.min(eff, 2.5)
+			if org.depression then org.depression = math.max(org.depression - timeValue * A.depressionRelief * k, 0) end
+			if org.panicattackadd then org.panicattackadd = math.max(org.panicattackadd - timeValue * A.panicRelief * k, 0) end
+			if org.panicattack then org.panicattack = math.max(org.panicattack - timeValue * A.panicRelief * 0.6 * k, 0) end
+		end
 		-- долгое тяжёлое опьянение бьёт по печени (по реальному количеству)
 		if bac > 2 and org.liver then org.liver = math.min(org.liver + timeValue * (bac - 2) / 4000, 1) end
 

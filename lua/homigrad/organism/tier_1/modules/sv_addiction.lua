@@ -53,6 +53,7 @@ local function Withdrawal(owner, org, kind, d, timeValue)
 
 	if kind == "alcohol" then
 		org.painadd = (org.painadd or 0) + timeValue * wd * 0.4 -- голова раскалывается
+		if org.depression then org.depression = math.min(org.depression + timeValue * wd * 0.002, 1) end -- и тоска
 		d.vomit = (d.vomit or 0) + timeValue * math.max(wd - 0.4, 0) * 0.006 * math.Rand(0.5, 1.5)
 		if d.vomit > 1 and hg.organism.Vomit then
 			d.vomit = 0
