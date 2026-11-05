@@ -41,6 +41,10 @@ local DEFAULT_CAUSE = DEATH_CAUSES.player
 -- а если умер в последние моменты - свой
 local DEATH_SOUND = "rem_deathost.mp3"
 local LAST_MOMENTS_DEATH_SOUND = "rem_oneandonly.mp3"
+-- звук смерти выбирается в настройках (Gameplay -> "Death sound: heart stop"): 0 - обычный, 1 - остановка сердца;
+-- в последние моменты всё равно свой
+local HEARTSTOP_DEATH_SOUND = "rem_heartstop.ogg"
+local cv_death_sound = CreateClientConVar("rem_deathsound", "0", true, false, "death sound: 0 - default, 1 - heart stop", 0, 1)
 
 -- пока играет звук смерти, всё остальное затихает: игровые звуки (soundfade) и музыка (hg.RemAudio)
 local DEATH_SOUND_FADE = 1.5
@@ -352,7 +356,8 @@ end
 local function StartDeathSound(cause)
     deathSoundPending = false
     local lastMoments = deathLastMoments and deathCauseTime >= deathTime - 2
-    sound.PlayFile("sound/" .. (lastMoments and LAST_MOMENTS_DEATH_SOUND or DEATH_SOUND), "noplay", function(station)
+    local snd = lastMoments and LAST_MOMENTS_DEATH_SOUND or (cv_death_sound:GetInt() == 1 and HEARTSTOP_DEATH_SOUND or DEATH_SOUND)
+    sound.PlayFile("sound/" .. snd, "noplay", function(station)
         if not IsValid(station) then return end
         if not isDead then station:Stop() return end
         deathSoundChannels[#deathSoundChannels + 1] = station
