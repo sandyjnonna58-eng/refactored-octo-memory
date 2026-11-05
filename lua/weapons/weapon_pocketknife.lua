@@ -1,5 +1,8 @@
 if SERVER then AddCSLuaFile() end
 SWEP.Base = "weapon_melee"
+-- основа берётся явно: self.BaseClass у оружия-наследника (например, канцелярского ножа) указывает на это же
+-- оружие, и вызов "базы" уходил сам в себя - бесконечная рекурсия, переполнение стека и вылет игры
+local BaseClassRem = baseclass.Get("weapon_melee")
 SWEP.PrintName = "Switchblade"
 SWEP.Instructions = "A small knife which can be easily hidden in your pockets.\n\nLMB to attack.\nR + LMB to change attack mode.\nRMB to block."
 SWEP.Category = "Weapons - Melee"
@@ -199,7 +202,7 @@ end
 
 function SWEP:Deploy()
     self:SyncModeAnimList(true)
-    return self.BaseClass.Deploy(self)
+    return BaseClassRem.Deploy(self)
 end
 
 function SWEP:ThinkAdd()
@@ -214,7 +217,7 @@ function SWEP:PlayAnim(anim, time, cycling, callback, reverse, sendtoclient)
     anim = self:ResolveAnimName(anim)
     if not anim then return end
 
-    return self.BaseClass.PlayAnim(self, anim, time, cycling, callback, reverse, sendtoclient)
+    return BaseClassRem.PlayAnim(self, anim, time, cycling, callback, reverse, sendtoclient)
 end
 
 function SWEP:CanPrimaryAttack()

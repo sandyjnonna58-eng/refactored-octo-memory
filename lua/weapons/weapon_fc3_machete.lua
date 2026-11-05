@@ -3,6 +3,9 @@ if SERVER then AddCSLuaFile() end
 -- Анимации, удары, звуки и урон - как у обычного мачете (weapon_hg_machete, v_me_machete), виден клинок FC3.
 -- Взять может только хост сервера (на выделенном - суперадмин).
 SWEP.Base = "weapon_hg_machete"
+-- основа берётся явно: self.BaseClass у оружия-наследника (например, канцелярского ножа) указывает на это же
+-- оружие, и вызов "базы" уходил сам в себя - бесконечная рекурсия, переполнение стека и вылет игры
+local BaseClassRem = baseclass.Get("weapon_hg_machete")
 SWEP.PrintName = "FC3 Machete"
 SWEP.Instructions = "A heavy jungle machete with a saw-backed spine. Host only.\n\nLMB to attack.\nRMB to block."
 SWEP.Category = "Weapons - Melee"
@@ -64,7 +67,7 @@ if SERVER then
 
 	-- если всё же попало в руки не хосту (выдача, лут) - забираем
 	function SWEP:Equip(owner)
-		if self.BaseClass.Equip then self.BaseClass.Equip(self, owner) end
+		if BaseClassRem.Equip then BaseClassRem.Equip(self, owner) end
 		if not IsHost(owner) then
 			local class = self:GetClass()
 			timer.Simple(0, function()

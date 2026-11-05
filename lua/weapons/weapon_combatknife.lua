@@ -1,5 +1,8 @@
 if SERVER then AddCSLuaFile() end
 SWEP.Base = "weapon_melee"
+-- основа берётся явно: self.BaseClass у оружия-наследника (например, канцелярского ножа) указывает на это же
+-- оружие, и вызов "базы" уходил сам в себя - бесконечная рекурсия, переполнение стека и вылет игры
+local BaseClassRem = baseclass.Get("weapon_melee")
 SWEP.PrintName = "M7 Bayonet"
 SWEP.Instructions = "This is your trusty carbon-steel fixed-blade knife.\n\nLMB to attack.\nR + LMB to change attack mode.\nRMB to block."
 SWEP.Category = "Weapons - Melee"
@@ -190,7 +193,7 @@ end
 
 if CLIENT then
     function SWEP:ModelAnim(model)
-        local pos, ang = self.BaseClass.ModelAnim(self, model)
+        local pos, ang = BaseClassRem.ModelAnim(self, model)
         local isCutting = self.Canselfharm and self:IsSelfHarming() and self.SelfHarmStart and self.SelfHarmStart + self.SelfHarmTime > CurTime()
         local cutTarget = 0
 
@@ -291,7 +294,7 @@ end
 function SWEP:DrawWorldModel2()
     local oldExchange = self.WorldModelExchange
     self.WorldModelExchange = not IsValid(self:GetOwner()) and self.DroppedWorldModel or false
-    self.BaseClass.DrawWorldModel2(self)
+    BaseClassRem.DrawWorldModel2(self)
     self.WorldModelExchange = oldExchange
 end
 
