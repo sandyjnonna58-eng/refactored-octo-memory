@@ -293,7 +293,7 @@ if CLIENT then
 	--   боль / адреналин - speech_fast.ogg, текст бежит быстрее
 	local speechSounds = {normal = "rem_speech/speech.ogg", bad = "rem_speech/speech_bad.ogg", fast = "rem_speech/speech_fast.ogg"}
 	for kind, path in pairs(speechSounds) do
-		sound.Add({name = "rem_speech_" .. kind, channel = CHAN_AUTO, volume = 0.7, level = 30, pitch = {95, 105}, sound = path})
+		sound.Add({name = "rem_speech_" .. kind, channel = CHAN_AUTO, volume = 1, level = 75, pitch = {95, 105}, sound = path})
 	end
 
 	local function SpeechState(org)
@@ -371,7 +371,7 @@ if CLIENT then
 						if utf8.sub(umsg, c, c) ~= " " then letter = true break end
 					end
 					if letter then
-						sound.Play("rem_speech_" .. speech, render.GetViewSetup().origin - vector_up * 10)
+						sound.Play("rem_speech_" .. speech, render.GetViewSetup().origin, 75, math.random(95, 105), 1)
 					end
 					oldclick = click
 				end
@@ -505,7 +505,7 @@ if CLIENT then
 				if shown > last then
 					for c = last + 1, shown do
 						if utf8.sub(umsg, c, c) ~= " " then
-							sound.Play("rem_speech_" .. speech, render.GetViewSetup().origin - vector_up * 10)
+							sound.Play("rem_speech_" .. speech, render.GetViewSetup().origin, 75, math.random(95, 105), 1)
 							break
 						end
 					end
