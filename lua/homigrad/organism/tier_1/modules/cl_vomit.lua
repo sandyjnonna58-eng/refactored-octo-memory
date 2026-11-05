@@ -60,3 +60,13 @@ hook.Add("Think", "rem_vomit_stream", function()
 		end
 	end
 end)
+
+-- кнопка в C-меню (значки сверху слева): вызвать рвоту самому
+list.Set("DesktopWindows", "RemVomit", {
+	title = "Vomit",
+	icon = "rem_misc/vomit.png",
+	init = function(icon, window)
+		if IsValid(window) then window:Remove() end
+		RunConsoleCommand("rem_vomit")
+	end,
+})

@@ -4,6 +4,7 @@
 -- лужи на полу, звук, на пару секунд замедляет; если лежит без сознания на спине - может захлебнуться (как в сборке).
 -- Клиенту - NW2 "rem_nausea" (значок тошноты в осмотре).
 util.AddNetworkString("rem_vomit")
+resource.AddSingleFile("sound/rem_puke.wav")
 
 local phrases = {
 	"I'm gonna be sick...",
@@ -33,9 +34,13 @@ function hg.organism.VomitNormal(owner)
 	if org.alcoholStomach then org.alcoholStomach = org.alcoholStomach * 0.3 end
 	org.painadd = (org.painadd or 0) + 2
 
-	local female = ThatPlyIsFemale and ThatPlyIsFemale(ent)
-	ent:EmitSound("zcitysnd/real_sonar/" .. (female and "female" or "male") .. "_cough" .. math.random(4) .. ".mp3", 65)
-	if not onSpine then ent:EmitSound("vomit/vomit5.mp3", 70, math.random(95, 108)) end
+	if onSpine then
+		-- на спине - давится, а не выплёвывает
+		local female = ThatPlyIsFemale and ThatPlyIsFemale(ent)
+		ent:EmitSound("zcitysnd/real_sonar/" .. (female and "female" or "male") .. "_cough" .. math.random(4) .. ".mp3", 65)
+	else
+		ent:EmitSound("rem_puke.wav", 70, math.random(96, 104))
+	end
 
 	if not onSpine then
 		net.Start("rem_vomit")
@@ -59,3 +64,13 @@ function hg.organism.AddNausea(owner, org, amount)
 		end
 	end
 end
+
+-- вызвать рвоту самому (кнопка "Vomit" в C-меню - cl_vomit.lua): два пальца в рот
+local VOMIT_COOLDOWN = 20
+concommand.Add("rem_vomit", function(ply)
+	if not IsValid(ply) or not ply:Alive() then return end
+	local org = ply.organism
+	if not org or org.otrub or (ply.rem_vomit_next or 0) > CurTime() then return end
+	ply.rem_vomit_next = CurTime() + VOMIT_COOLDOWN
+	hg.organism.VomitNormal(ply)
+end)
