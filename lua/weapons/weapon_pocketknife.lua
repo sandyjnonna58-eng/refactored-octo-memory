@@ -1,6 +1,6 @@
 if SERVER then AddCSLuaFile() end
 SWEP.Base = "weapon_melee"
--- основа берётся явно: self.BaseClass у оружия-наследника (например, канцелярского ножа) указывает на это же
+-- основа берётся явно: self.BaseClass у оружия-наследника указывает на это же
 -- оружие, и вызов "базы" уходил сам в себя - бесконечная рекурсия, переполнение стека и вылет игры
 local BaseClassRem = baseclass.Get("weapon_melee")
 SWEP.PrintName = "Switchblade"

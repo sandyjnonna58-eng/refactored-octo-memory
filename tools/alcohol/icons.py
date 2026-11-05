@@ -75,31 +75,3 @@ bottle('materials/entities/weapon_hg_rum.png', (80, 45, 20, 235), (110, 50, 15, 
 bottle('materials/entities/weapon_hg_moonshine.png', (225, 235, 230, 110), (235, 240, 225, 90), (214, 196, 150, 255), (60, 50, 40, 255), 40, (150, 120, 80, 255))
 bottle('materials/entities/weapon_hg_champagne.png', (30, 70, 40, 235), (235, 215, 140, 230), (240, 232, 205, 255), (210, 175, 70, 255), 58, (210, 175, 70, 255))
 bottle('materials/entities/weapon_hg_absinthe.png', (220, 235, 220, 120), (90, 200, 70, 220), (240, 238, 220, 255), (30, 110, 40, 255), 44, (20, 60, 25, 255))
-
-# канцелярский нож (weapon_hg_boxcutter): жёлтый корпус, чёрные вставки и ползунок, сегментное лезвие, по диагонали
-def box_cutter(path):
-    S = 4
-    W = H = 256 * S
-    im = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
-    def R(x0, y0, x1, y1, col, r=0):
-        if r: d.rounded_rectangle([x0 * S, y0 * S, x1 * S, y1 * S], radius=r * S, fill=col)
-        else: d.rectangle([x0 * S, y0 * S, x1 * S, y1 * S], fill=col)
-    # лезвие слева, скошенный кончик, линии сегментов
-    d.polygon([(30 * S, 122 * S), (78 * S, 112 * S), (78 * S, 140 * S), (20 * S, 140 * S)], fill=(198, 202, 208))
-    for x in (40, 52, 64):
-        d.line([(x * S, 140 * S), ((x + 8) * S, 116 * S)], fill=(120, 122, 128), width=2 * S)
-    R(70, 106, 236, 146, (245, 205, 20), 10)            # корпус
-    R(70, 132, 92, 146, (30, 30, 32))                   # нос снизу
-    R(110, 100, 200, 112, (30, 30, 32), 4)              # чёрная накладка
-    R(140, 92, 166, 104, (30, 30, 32), 3)               # ползунок
-    for x in range(144, 164, 5): R(x, 94, x + 2, 102, (80, 80, 84))
-    R(206, 118, 228, 134, (0, 0, 0, 0), 6)
-    d.rounded_rectangle([206 * S, 118 * S, 228 * S, 134 * S], radius=6 * S, outline=(190, 150, 10), width=3 * S)  # петля
-    R(80, 110, 230, 114, (255, 230, 120))               # блик
-    im = im.rotate(28, resample=Image.BICUBIC, center=(W // 2, H // 2)).resize((256, 256), Image.LANCZOS)
-    shadow = Image.new('RGBA', im.size, (0, 0, 0, 0))
-    shadow.paste((0, 0, 0, 120), (3, 4), im.split()[3])
-    Image.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(3)), im).save(path)
-
-box_cutter('materials/entities/weapon_hg_boxcutter.png')
