@@ -30,8 +30,10 @@ if SERVER then
 		if (self.nextTry or 0) > CurTime() then return end
 		self.nextTry = CurTime() + 1
 
-		local patient = org.owner
-		if org.implants and org.implants[self.ImplantId] then
+		-- организм лежащего принадлежит рэгдоллу - имплант ставится самому человеку
+		local patient = hg.organism.ImplantPerson and hg.organism.ImplantPerson(org.owner) or org.owner
+		if not IsValid(patient) then return end
+		if hg.organism.HasImplant and hg.organism.HasImplant(patient, self.ImplantId) then
 			if owner.Notify then owner:Notify("They already have a " .. self.ImplantName .. ".", true, "implant", 0) end
 			return
 		end

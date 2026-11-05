@@ -9,12 +9,34 @@
 --   adrenal  - адреналиновый имплант: когда совсем плохо (мало крови, сильная боль, мало здоровья), сам впрыскивает
 --              адреналин (не чаще раза в 2.5 минуты).
 -- Клиенту - NW2 "rem_implant_<id>" (значки в осмотре).
+-- Хранятся на самом человеке (ply.rem_implants), а не в организме: пока человек лежит рэгдоллом, владелец организма -
+-- рэгдолл, и раньше имплант записывался на него (значка не было, а после смерти он оставался).
 hg.organism.ImplantList = {"heart", "lungs", "nanites", "painblock", "adrenal"}
 
+-- человек за этим телом: игрок / NPC; для рэгдолла - его хозяин
+local function Person(ent)
+	if not IsValid(ent) then return nil end
+	if ent:IsPlayer() or ent:IsNPC() then return ent end
+	if ent:IsRagdoll() then
+		local p = hg.RagdollOwner and hg.RagdollOwner(ent)
+		if not IsValid(p) then p = ent:GetNWEntity("ply") end
+		if IsValid(p) then return p end
+	end
+	return ent
+end
+hg.organism.ImplantPerson = Person
+
+function hg.organism.HasImplant(ent, id)
+	local p = Person(ent)
+	return IsValid(p) and p.rem_implants and p.rem_implants[id] or false
+end
+
 function hg.organism.InstallImplant(owner, org, id)
-	org.implants = org.implants or {}
-	if org.implants[id] then return false end
-	org.implants[id] = true
+	local person = Person(owner)
+	if not IsValid(person) then return false end
+	person.rem_implants = person.rem_implants or {}
+	if person.rem_implants[id] then return false end
+	person.rem_implants[id] = true
 	if id == "heart" then
 		org.heart = 0
 		org.heartstop = false
@@ -23,14 +45,15 @@ function hg.organism.InstallImplant(owner, org, id)
 	elseif id == "lungs" then
 		org.pneumothorax = 0
 	end
-	if IsValid(owner) then owner:SetNW2Bool("rem_implant_" .. id, true) end
+	person:SetNW2Bool("rem_implant_" .. id, true)
 	return true
 end
 
 local function Approach(a, b, d) return math.Approach(a or b, b, d) end
 
 function hg.organism.Implants(owner, org, timeValue)
-	local imp = org.implants
+	local person = Person(owner)
+	local imp = IsValid(person) and person.rem_implants or nil
 	org.implantBleedMul = imp and imp.nanites and 0.5 or 1
 	org.implantPainMul = imp and imp.painblock and 0.5 or 1
 	if not imp or org.alive == false then return end
@@ -70,11 +93,11 @@ function hg.organism.Implants(owner, org, timeValue)
 	end
 
 	if imp.adrenal and (org.implantAdrenalNext or 0) < CurTime() then
-		local bad = (org.blood or 5000) < 3500 or (org.pain or 0) > 90 or (owner:IsPlayer() and owner:Health() < 30)
+		local bad = (org.blood or 5000) < 3500 or (org.pain or 0) > 90 or (person:IsPlayer() and person:Health() < 30)
 		if bad then
 			org.implantAdrenalNext = CurTime() + 150
 			org.adrenalineAdd = (org.adrenalineAdd or 0) + 1.5
-			if org.isPly and not org.otrub then owner:Notify("Adrenal implant engaged.", true, "implant", 0) end
+			if org.isPly and not org.otrub and person.Notify then person:Notify("Adrenal implant engaged.", true, "implant", 0) end
 		end
 	end
 end
@@ -83,9 +106,10 @@ end
 -- и при смерти, и при возрождении, и на тик позже - если организм пересобирается после хука)
 function hg.organism.ClearImplants(ply)
 	if not IsValid(ply) then return end
+	ply.rem_implants = nil
 	local org = ply.organism
 	if org then
-		org.implants = {}
+		org.implants = nil
 		org.implantBleedMul = 1
 		org.implantPainMul = 1
 		org.implantAdrenalNext = nil
