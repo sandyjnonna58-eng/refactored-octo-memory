@@ -288,6 +288,23 @@ if CLIENT then
 		sound = "snd_jack_peep.wav"
 	})
 
+	-- голос фраз: звук на каждое слово (не на букву), по состоянию:
+	--   обычное - speech.ogg; плохое (депрессия, уходит сознание, мало крови, мозг повреждён) - speech_bad.ogg, медленнее;
+	--   боль / адреналин - speech_fast.ogg, текст бежит быстрее
+	local speechSounds = {normal = "rem_speech/speech.ogg", bad = "rem_speech/speech_bad.ogg", fast = "rem_speech/speech_fast.ogg"}
+	for kind, path in pairs(speechSounds) do
+		sound.Add({name = "rem_speech_" .. kind, channel = CHAN_AUTO, volume = 0.7, level = 30, pitch = {95, 105}, sound = path})
+	end
+
+	local function SpeechState(org)
+		if (org.consciousness or 1) < 0.55 or (org.depression or 0) > 0.35 or (org.brain or 0) > 0.1
+			or (org.blood or 5000) < 3300 or (org.pulse or 70) < 50 then
+			return "bad"
+		end
+		if (org.pain or 0) > 50 or (org.adrenaline or 0) > 0.6 then return "fast" end
+		return "normal"
+	end
+
 	local last_message
 	local last_time
 
@@ -328,7 +345,9 @@ if CLIENT then
 		if tbl and istable(tbl) and not table.IsEmpty(tbl) then
 			local msg, time, timeshow, clr, shaky = tbl[1], tbl[2], tbl[3], tbl[4], tbl[5]
 
+			local speech = SpeechState(org)
 			local mul = ((org.brain > 0.1 or org.pulse < 50) and 3 or 1)// * (org.fear > 0 and math.max(1 - org.fear, 0.6) or 1)
+			if speech == "fast" then mul = mul * 0.6 end
 			local time_one_symbol = 0.06 * mul//(lply.organism and lply.organism.fear >= 0.5 and 0.5 or 1)
 			local time_to_read = (utf8.len(msg) * time_one_symbol)
 			local wait = math.Clamp(time_to_read / 3 * math.Clamp(1 - #hg.notifications / 1, 0.25, 1), 1, 4) + timeshow
@@ -344,8 +363,18 @@ if CLIENT then
 				end
 
 				if click != oldclick and not last_message then
-					sound.Play("peepsnd", render.GetViewSetup().origin - vector_up * 10)
-					//surface.PlaySound("peepsnd")
+					-- звук на начало каждого слова (среди букв, появившихся с прошлого кадра)
+					local umsg = utf8.force(msg)
+					local wordStart = false
+					-- новая фраза (click меньше прошлого) - считаем с начала
+					for c = (click < oldclick) and 1 or math.max(oldclick + 1, 1), click do
+						local ch = utf8.sub(umsg, c, c)
+						local prev = c > 1 and utf8.sub(umsg, c - 1, c - 1) or " "
+						if ch ~= " " and (prev == " " or c == 1) then wordStart = true break end
+					end
+					if wordStart then
+						sound.Play("rem_speech_" .. speech, render.GetViewSetup().origin - vector_up * 10)
+					end
 					oldclick = click
 				end
 
