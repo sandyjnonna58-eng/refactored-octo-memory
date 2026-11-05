@@ -1,4 +1,4 @@
--- голос фраз (sh_notification.lua): звук на каждое слово, по состоянию
+-- голос мыслей (sh_notification.lua): звук на каждую букву, по состоянию
 for _, f in ipairs({"speech", "speech_bad", "speech_fast"}) do resource.AddSingleFile("sound/rem_speech/" .. f .. ".ogg") end
 util.AddNetworkString("HGNotificate")
 util.AddNetworkString("HGNotificateBerserk")

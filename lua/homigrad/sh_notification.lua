@@ -288,7 +288,7 @@ if CLIENT then
 		sound = "snd_jack_peep.wav"
 	})
 
-	-- голос фраз: звук на каждое слово (не на букву), по состоянию:
+	-- голос мыслей (фразы внизу экрана): звук на каждую букву, по состоянию:
 	--   обычное - speech.ogg; плохое (депрессия, уходит сознание, мало крови, мозг повреждён) - speech_bad.ogg, медленнее;
 	--   боль / адреналин - speech_fast.ogg, текст бежит быстрее
 	local speechSounds = {normal = "rem_speech/speech.ogg", bad = "rem_speech/speech_bad.ogg", fast = "rem_speech/speech_fast.ogg"}
@@ -363,16 +363,14 @@ if CLIENT then
 				end
 
 				if click != oldclick and not last_message then
-					-- звук на начало каждого слова (среди букв, появившихся с прошлого кадра)
+					-- звук на каждую новую букву (пробелы молчат; если за кадр появилось несколько - один звук)
 					local umsg = utf8.force(msg)
-					local wordStart = false
+					local letter = false
 					-- новая фраза (click меньше прошлого) - считаем с начала
 					for c = (click < oldclick) and 1 or math.max(oldclick + 1, 1), click do
-						local ch = utf8.sub(umsg, c, c)
-						local prev = c > 1 and utf8.sub(umsg, c - 1, c - 1) or " "
-						if ch ~= " " and (prev == " " or c == 1) then wordStart = true break end
+						if utf8.sub(umsg, c, c) ~= " " then letter = true break end
 					end
-					if wordStart then
+					if letter then
 						sound.Play("rem_speech_" .. speech, render.GetViewSetup().origin - vector_up * 10)
 					end
 					oldclick = click
