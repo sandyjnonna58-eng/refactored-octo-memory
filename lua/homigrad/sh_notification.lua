@@ -483,6 +483,12 @@ if CLIENT then
 		for i = #hg.thoughts, 1, -1 do
 			local tbl = hg.thoughts[i]
 			local delta = time - tbl[2]
+			local speech = SpeechState(lply.organism or {})
+			local perChar = speech == "fast" and 0.036 or 0.06
+			local umsg = utf8.force(tbl[1])
+			local len = utf8.len(umsg) or #umsg
+			-- длинная мысль висит, пока не допечатается, + 3 секунды
+			local duration = math.max(duration, len * perChar + 3)
 
 			if delta >= duration then
 				local clr = tbl[3]
@@ -493,8 +499,21 @@ if CLIENT then
 				local alpha = math.min(delta / fade, 1, (duration - delta) / fade) * 255
 				local y = ScrH() - ScrH() / 4 - (i - 1) * ScreenScale(14)
 
+				-- печатается по буквам, на каждую новую букву - звук голоса (по состоянию)
+				local shown = math.min(math.floor(delta / perChar) + 1, len)
+				local last = tbl[4] or 0
+				if shown > last then
+					for c = last + 1, shown do
+						if utf8.sub(umsg, c, c) ~= " " then
+							sound.Play("rem_speech_" .. speech, render.GetViewSetup().origin - vector_up * 10)
+							break
+						end
+					end
+					tbl[4] = shown
+				end
+
 				thoughtBrown.a = alpha
-				draw.SimpleTextOutlined(tbl[1], "ThoughtFont", ScrW() / 2, y, Color(clr.r, clr.g, clr.b, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER, 1, thoughtBrown)
+				draw.SimpleTextOutlined(utf8.sub(umsg, 1, shown), "ThoughtFont", ScrW() / 2, y, Color(clr.r, clr.g, clr.b, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER, 1, thoughtBrown)
 			end
 		end
 	end
