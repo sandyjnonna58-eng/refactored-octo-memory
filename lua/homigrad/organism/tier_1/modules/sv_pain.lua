@@ -1,5 +1,5 @@
 local max, min, Clamp, Approach = math.max, math.min, math.Clamp, math.Approach
-resource.AddSingleFile("sound/rem_excruciatingpain.ogg") -- невыносимая боль с 120% (cl_excruciatingpain.lua)
+resource.AddSingleFile("sound/rem_excruciatingpain.ogg") -- невыносимая боль с 110% (cl_excruciatingpain.lua)
 --local Organism = hg.organism
 hg.organism.module.pain = {}
 local module = hg.organism.module.pain
@@ -8,17 +8,17 @@ local consciousness_fake_threshold = 0.38
 local consciousness_recovery_speed = 12
 local low_consciousness_recovery_speed = 16
 local otrub_consciousness_recovery_speed = 20
--- 100% боли = 120. С 100% сознание за 10 с уходит и человек вырубается, с 140% (168) - почти сразу;
--- в отключке от боли лежит, пока боль не спадёт до 80% (96). С 120% звучит rem_excruciatingpain.ogg (cl_excruciatingpain.lua)
-local pain_tolerance = 168
+-- 100% боли = 120. С 110% (132) сознание за 10 с медленно уходит и человек вырубается, с 130% (156) - почти сразу;
+-- в отключке от боли лежит, пока боль не спадёт до 80% (96). С 110% звучит rem_excruciatingpain.ogg (cl_excruciatingpain.lua)
+local pain_tolerance = 156
 local otrub_pain_tolerance = 90
 local pain_fake_threshold = 1
 local pain_drain_base = 20
 local pain_drain_otrub_mul = 4.5
-local pain_unconscious_threshold = 168
+local pain_unconscious_threshold = 156 -- 130%: вырубает почти сразу
 local pain_unconscious_time = 1.5
 local pain_unconscious_cooldown = 12
-local pain_fade_threshold = 120 -- 100%: с этой боли сознание начинает уходить
+local pain_fade_threshold = 132 -- 110%: с этой боли сознание медленно уходит
 local pain_fade_time = 10       -- за столько секунд - до отключки
 local pain_wake_threshold = 96  -- 80%: ниже этого из болевой отключки можно очнуться
 local shock_stage_thresholds = {15, 35, 60, 80}
