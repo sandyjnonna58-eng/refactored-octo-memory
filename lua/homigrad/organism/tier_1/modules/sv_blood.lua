@@ -196,7 +196,7 @@ module[2] = function(owner, org, mulTime)
 		for i, wound in pairs(org.wounds) do
 			local rand1 = math.Rand(4, 10) * 1
 			local rand2 = math.Rand(0.5, 1) * 1
-			local bleed = rand1 * wound[1] * mulTime * math.max(org.pulse, 20) / 70 * 2.0 * (1 - math.min(adrenaline / 6, 0.5)) * org.bleedingmul * (org.skillBleedMul or 1) * (org.vesselBleedMul or 1) * (org.implantBleedMul or 1) * 0.02
+			local bleed = rand1 * wound[1] * mulTime * math.max(org.pulse, 20) / 70 * 2.0 * (1 - math.min(adrenaline / 6, 0.5)) * org.bleedingmul * (org.skillBleedMul or 1) * (org.vesselBleedMul or 1) * 0.02
 			bleed = bleed * getHeldWoundBleedMul(org, wound)
 			local coagulate = 2 * mulTime * rand2 * (adrenaline * 0.1 + 1) * 0.04-- / #org.wounds
 			bleedoutspeed = bleedoutspeed + bleed / rand1 * 3--we pray for the luck of it being in the center
@@ -240,7 +240,7 @@ module[2] = function(owner, org, mulTime)
 		end
 
 		local arterialBleed = wound[1] * mulTime * 0.2 * math.max(org.pulse, 20) / 80
-		arterialBleed = arterialBleed * holdMul * (org.vesselArteryMul or 1) * (org.implantBleedMul or 1)
+		arterialBleed = arterialBleed * holdMul * (org.vesselArteryMul or 1)
 		bleedoutspeed2 = bleedoutspeed2 + arterialBleed
 
 		if wound[5] + next_arterypump * 2 < time then
@@ -251,7 +251,7 @@ module[2] = function(owner, org, mulTime)
 			end
 			wound[5] = time
 			local pumpBleed = wound[1] * mulTime * 4.5 * math.max(org.pulse, 20) / 80
-			pumpBleed = pumpBleed * getHeldWoundBleedMul(org, wound) * (org.vesselArteryMul or 1) * (org.implantBleedMul or 1)
+			pumpBleed = pumpBleed * getHeldWoundBleedMul(org, wound) * (org.vesselArteryMul or 1)
 			org.blood = max(org.blood - pumpBleed, 1)
 			if (owner:IsPlayer() and owner:Alive()) or not owner:IsPlayer() then
 				local dir = wound[6]

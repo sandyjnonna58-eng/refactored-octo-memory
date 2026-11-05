@@ -341,11 +341,6 @@ local function CollectAfflictionIcons(ply, org)
 	local stamina = Num(org.stamina)
 	if stamina > 0 and stamina < 50 then add("fatigue", (50 - stamina) / 50, "Exhausted") end
 
-	-- импланты (modules/sv_implants.lua) - синие плитки, в конце ряда
-	for _, imp in ipairs({{"heart", "Artificial heart"}, {"lungs", "Synthetic lungs"}, {"nanites", "Blood nanites"}, {"painblock", "Pain blocker"}, {"adrenal", "Adrenal implant"}}) do
-		if ply:GetNW2Bool("rem_implant_" .. imp[1], false) then add("implant_" .. imp[1], 0.3, imp[2], true) end
-	end
-
 	table.sort(icons, function(a, b)
 		if (a.good or false) ~= (b.good or false) then return not a.good end
 		return a.severity > b.severity

@@ -653,8 +653,6 @@ hook.Add("Org Think", "Main", function(owner, org, timeValue)
 		module.random_events[2](owner, org, timeValue)
 	end
 	module.pulse[2](owner, org, timeValue)
-	-- импланты (modules/sv_implants.lua) - после сердца, искусственное его подменяет
-	if hg.organism.Implants then hg.organism.Implants(owner, org, timeValue) end
 
 	module.depression[2](owner, org, timeValue)
 	module.concussion[2](owner, org, timeValue)

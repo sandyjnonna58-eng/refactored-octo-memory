@@ -83,7 +83,6 @@ module[1] = function(org)
 	org.alcohol = 0
 	org.alcoholStomach = 0
 	org.nicotine = 0
-	org.implants = {}
 end
 
 function hg.organism.should_gain_fear(org)
