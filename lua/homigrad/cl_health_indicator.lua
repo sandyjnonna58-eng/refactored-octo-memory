@@ -350,42 +350,26 @@ local function CollectAfflictionIcons(ply, org)
 end
 
 local gradDown = Material("vgui/gradient-d")
--- прыжки плиток в такт сердцу: на каждый удар двойной толчок "тук-тук" (второй слабее), все плитки вместе с лёгкой
--- волной слева направо; высота по тяжести (лёгкие чуть вздрагивают, критические подскакивают на треть плитки).
--- Фибрилляция - вразнобой и часто, сердце остановилось - стоят.
-local BEAT_HEIGHT_LIGHT, BEAT_HEIGHT_HEAVY = 0.05, 0.34
-local BEAT_HOP = 0.11    -- длительность одного толчка, с
-local BEAT_GAP = 0.17    -- через сколько после первого толчка второй, с
-local BEAT_WAVE = 0.025  -- задержка волны на плитку, с
-local beatPhase, lastBeatTime, beatPrevTime = 0, -10, 0
+-- как в Fading Vitality: тяжёлые плитки приподняты над рядом (чем тяжелее - тем выше) и над ними горит красный
+-- столб свечения, тающий кверху, со слабым знаком тревоги; все плитки мелко трясутся рывками (тяжёлые - сильнее)
+local gradUp = Material("vgui/gradient-u")
+local LIFT_START = 0.45                   -- с какой тяжести плитка поднимается
+local LIFT_MAX = 0.55                     -- на сколько плиток поднимается самая тяжёлая
+local GLOW_HEIGHT = 1.7                   -- высота столба свечения (в плитках) у самой тяжёлой
+local SHAKE_LIGHT, SHAKE_HEAVY = 0.6, 2.6 -- тряска, пикселей
+local SHAKE_RATE = 18                     -- раз в секунду меняется положение (рывками)
+local warnIcon
 
--- считает удары по пульсу организма; возвращает время последнего удара
-local function UpdateHeartbeat(org, now)
-	local dt = math.Clamp(now - beatPrevTime, 0, 0.2)
-	beatPrevTime = now
-	local bpm = org and (org.heartbeat or org.pulse) or 70
-	if not org or org.heartstop or bpm < 10 then return lastBeatTime, false end
-	local fib = org.fibrillation
-	if fib then bpm = math.Rand(240, 360) end
-	beatPhase = beatPhase + dt * math.Clamp(bpm, 10, 400) / 60
-	if beatPhase >= 1 then
-		beatPhase = beatPhase % 1
-		lastBeatTime = now
-	end
-	return lastBeatTime, fib
-end
-
-local function BeatHop(t)
-	-- t - секунды после удара: первый толчок и второй (слабее)
-	if t >= 0 and t < BEAT_HOP then return math.sin(math.pi * t / BEAT_HOP) end
-	local t2 = t - BEAT_GAP
-	if t2 >= 0 and t2 < BEAT_HOP then return math.sin(math.pi * t2 / BEAT_HOP) * 0.55 end
-	return 0
+local function Shake(idx, timeNow, amp)
+	local step = math.floor(timeNow * SHAKE_RATE)
+	local sx = math.sin(step * 12.9898 + idx * 78.233) * 43758.5453
+	local sy = math.sin(step * 39.346 + idx * 11.135) * 24634.6345
+	return (sx - math.floor(sx) - 0.5) * 2 * amp, (sy - math.floor(sy) - 0.5) * 2 * amp
 end
 
 local function DrawAfflictionIcons(iconEntries, centerX, bottomY, visibility, appearTime, timeNow, org)
-	local beatTime, fib = UpdateHeartbeat(org, timeNow)
 	if #iconEntries == 0 or visibility <= 0.01 then return end
+	warnIcon = warnIcon or AfflIcon("critical")
 
 	local tile = math.max(math.floor(ScreenScaleFixed(25)), 22)
 	local spacing = math.max(math.floor(ScreenScaleFixed(2.5)), 2)
@@ -412,12 +396,31 @@ local function DrawAfflictionIcons(iconEntries, centerX, bottomY, visibility, ap
 			local e = iconEntries[idx]
 			local sev = e.severity
 			local x = math.floor(x0 + (col - 1) * (tile + spacing))
-			-- подпрыгивают в такт сердцу (высота по тяжести)
-			local since = timeNow - beatTime - idx * BEAT_WAVE
-			local hop = BeatHop(since)
-			if fib then hop = math.max(hop, math.abs(math.sin(timeNow * (23 + idx * 3.1) + idx)) * 0.5) end
-			hop = hop * tile * Lerp(sev, BEAT_HEIGHT_LIGHT, BEAT_HEIGHT_HEAVY)
-			local yy = math.floor(y - hop * alphaMul)
+			-- тяжёлые подняты, все трясутся рывками
+			local lift = 0
+			if sev > LIFT_START and not e.good then
+				local k = (sev - LIFT_START) / (1 - LIFT_START)
+				lift = tile * LIFT_MAX * k * k * (3 - 2 * k)
+			end
+			local sx, sy = Shake(idx, timeNow, Lerp(sev, SHAKE_LIGHT, SHAKE_HEAVY))
+			x = math.floor(x + sx * alphaMul)
+			local yy = math.floor(y - lift * alphaMul + sy * alphaMul)
+
+			-- столб красного свечения над поднятой плиткой
+			if lift > 1 then
+				local k = lift / (tile * LIFT_MAX)
+				local gh = tile * GLOW_HEIGHT * k
+				local flick = 0.85 + math.sin(timeNow * 9 + idx * 2.3) * 0.1 + math.sin(timeNow * 23 + idx) * 0.05
+				surface.SetMaterial(gradUp)
+				surface.SetDrawColor(255, 20, 20, math.floor(200 * flick * k * alphaMul))
+				surface.DrawTexturedRect(x - 1, yy - gh, tile + 2, gh + tile * 0.5)
+				if warnIcon then
+					local ws = tile * 0.6
+					surface.SetMaterial(warnIcon)
+					surface.SetDrawColor(255, 120, 120, math.floor(55 * k * flick * alphaMul))
+					surface.DrawTexturedRect(x + (tile - ws) / 2, yy - gh * 0.6 - ws / 2, ws, ws)
+				end
+			end
 			-- тяжёлые чуть пульсируют яркостью
 			local pulse = sev > 0.7 and (math.sin(timeNow * (3 + sev * 4) + idx) * 0.5 + 0.5) * 0.25 * sev or 0
 			local a = math.floor(235 * alphaMul)
