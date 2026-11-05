@@ -201,20 +201,12 @@ end
 -- значки состояний: квадратные плитки (materials/rem_affl, белые значки Tabler Icons + свои),
 -- фон от тёмно-красного (лёгкое) до ярко-красного (тяжёлое), у критических - белая рамка
 local afflIconCache = {}
--- готовые плитки (materials/rem_affl_tiles - иконки автора сборки, вырезаны со скриншотов) рисуются
--- целиком, со своим фоном; нет такой - значок из materials/rem_affl на нашем красном фоне
-local afflFullCache = {}
 local function AfflIcon(name)
 	local cached = afflIconCache[name]
-	if cached ~= nil then return cached or nil, afflFullCache[name] end
-	local full = Material("rem_affl_tiles/" .. name .. ".png", "smooth mips")
-	if not full:IsError() then
-		afflIconCache[name], afflFullCache[name] = full, true
-		return full, true
-	end
+	if cached ~= nil then return cached or nil end
 	local mat = Material("rem_affl/" .. name .. ".png", "smooth mips")
 	afflIconCache[name] = not mat:IsError() and mat or false
-	return afflIconCache[name] or nil, false
+	return afflIconCache[name] or nil
 end
 
 local function CollectAfflictionIcons(ply, org)
@@ -226,9 +218,9 @@ local function CollectAfflictionIcons(ply, org)
 			e.severity = math.max(e.severity, severity)
 			return
 		end
-		local mat, full = AfflIcon(iconName)
+		local mat = AfflIcon(iconName)
 		if not mat then return end
-		e = {mat = mat, severity = severity, label = label or iconName, good = good, full = full}
+		e = {mat = mat, severity = severity, label = label or iconName, good = good}
 		seen[iconName] = e
 		icons[#icons + 1] = e
 	end
@@ -433,18 +425,8 @@ local function DrawAfflictionIcons(iconEntries, centerX, bottomY, visibility, ap
 			local pulse = sev > 0.7 and (math.sin(timeNow * (3 + sev * 4) + idx) * 0.5 + 0.5) * 0.25 * sev or 0
 			local a = math.floor(235 * alphaMul)
 
-			-- готовая плитка из пака: рисуется целиком (со своим фоном), сверху - белая рамка у критических
-			if e.full then
-				surface.SetMaterial(e.mat)
-				local br = 200 + 55 * sev + 30 * pulse
-				surface.SetDrawColor(math.min(br, 255), math.min(br, 255), math.min(br, 255), math.floor(255 * alphaMul))
-				surface.DrawTexturedRect(x, yy, tile, tile)
-				if sev >= 0.9 then
-					surface.SetDrawColor(255, 255, 255, a)
-					surface.DrawOutlinedRect(x, yy, tile, tile, border)
-				end
 			-- фон: снизу тёмный, сверху ярче; цвет от тяжести (импланты - синие)
-			elseif e.good then
+			if e.good then
 				surface.SetDrawColor(6, 18, 40, a)
 				surface.DrawRect(x, yy, tile, tile)
 				surface.SetMaterial(gradDown)
@@ -459,8 +441,7 @@ local function DrawAfflictionIcons(iconEntries, centerX, bottomY, visibility, ap
 			end
 
 			-- рамка
-			if e.full then
-			elseif e.good then
+			if e.good then
 				surface.SetDrawColor(90, 180, 240, a)
 			elseif sev >= 0.9 then
 				surface.SetDrawColor(255, 255, 255, a)
@@ -468,14 +449,13 @@ local function DrawAfflictionIcons(iconEntries, centerX, bottomY, visibility, ap
 				surface.SetDrawColor(140 + 100 * sev, 55 + 50 * sev, 55 + 50 * sev, a)
 			end
 
+			surface.DrawOutlinedRect(x, yy, tile, tile, border)
+
 			-- значок
-			if not e.full then
-				surface.DrawOutlinedRect(x, yy, tile, tile, border)
-				local pad = math.floor(tile * 0.1)
-				surface.SetMaterial(e.mat)
-				surface.SetDrawColor(255, 235 + 20 * sev, 235 + 20 * sev, math.floor(255 * alphaMul))
-				surface.DrawTexturedRect(x + pad, yy + pad, tile - pad * 2, tile - pad * 2)
-			end
+			local pad = math.floor(tile * 0.1)
+			surface.SetMaterial(e.mat)
+			surface.SetDrawColor(255, 235 + 20 * sev, 235 + 20 * sev, math.floor(255 * alphaMul))
+			surface.DrawTexturedRect(x + pad, yy + pad, tile - pad * 2, tile - pad * 2)
 
 			if cursor and mx >= x and mx <= x + tile and my >= yy and my <= yy + tile then
 				hovered = {e.label, x + tile * 0.5, yy}
