@@ -8,7 +8,7 @@ local consciousness_fake_threshold = 0.38
 local consciousness_recovery_speed = 12
 local low_consciousness_recovery_speed = 16
 local otrub_consciousness_recovery_speed = 20
--- 100% боли = 120. С 110% (132) сознание за 10 с медленно уходит и человек вырубается, с 130% (156) - почти сразу;
+-- 100% боли = 120. С 110% (132) сознание за 20 с медленно уходит и человек вырубается, с 130% (156) - почти сразу;
 -- в отключке от боли лежит, пока боль не спадёт до 80% (96). С 110% звучит rem_excruciatingpain.ogg (cl_excruciatingpain.lua)
 local pain_tolerance = 156
 local otrub_pain_tolerance = 90
@@ -19,7 +19,7 @@ local pain_unconscious_threshold = 156 -- 130%: вырубает почти ср
 local pain_unconscious_time = 1.5
 local pain_unconscious_cooldown = 12
 local pain_fade_threshold = 132 -- 110%: с этой боли сознание медленно уходит
-local pain_fade_time = 10       -- за столько секунд - до отключки
+local pain_fade_time = 20       -- за столько секунд - до отключки
 local pain_wake_threshold = 96  -- 80%: ниже этого из болевой отключки можно очнуться
 local shock_stage_thresholds = {15, 35, 60, 80}
 -- Викодин: глушит боль, но не трогает пульс и дыхание - умереть от него нельзя
