@@ -12,9 +12,9 @@ SWEP.Spawnable = true
 SWEP.AdminOnly = false
 
 SWEP.WorldModel = "models/cof/weapons/switchblade/w_switchblade.mdl"
--- видимая модель своя: модель-подмена невидимая (масштаб почти 0), рисуем в DrawPostWorldModel
-SWEP.WorldModelExchange = "models/hunter/plates/plate.mdl"
-SWEP.modelscale = 0.001
+-- видимая модель своя: анимированная модель складного ножа не рисуется (её DrawModel заглушен), рисуем свою
+-- в DrawPostWorldModel. Раньше вместо этого подставлялась модель с масштабом 0.001 - это роняло игру.
+SWEP.WorldModelExchange = false
 SWEP.IconOverride = "entities/weapon_hg_boxcutter.png"
 if CLIENT then
 	SWEP.WepSelectIcon = Material("entities/weapon_hg_boxcutter.png")
@@ -93,7 +93,11 @@ if CLIENT then
 		return {cutter = b:Finish(RM.SolidMat)}
 	end
 
+	local function noDraw() end
+
 	function SWEP:DrawPostWorldModel()
+		-- анимированная модель (руки + складной нож) нужна только для хвата, сама не рисуется
+		if IsValid(self.worldModel) and self.worldModel.DrawModel ~= noDraw then self.worldModel.DrawModel = noDraw end
 		RM = RM or hg.RemMesh
 		if not RM then return end
 		local model = RM.Get("rem_boxcutter", Build)
@@ -106,8 +110,8 @@ if CLIENT then
 			local m = bone and char:GetBoneMatrix(bone)
 			if not m then return end
 			pos, ang = LocalToWorld(self.CutterHoldPos, self.CutterHoldAng, m:GetTranslation(), m:GetAngles())
-		elseif IsValid(self.worldModel2) then
-			pos, ang = self.worldModel2:GetPos(), self.worldModel2:GetAngles()
+		elseif IsValid(self.worldModel) then
+			pos, ang = self.worldModel:GetPos(), self.worldModel:GetAngles()
 		else
 			pos, ang = self:GetPos(), self:GetAngles()
 		end
