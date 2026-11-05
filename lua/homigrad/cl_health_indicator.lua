@@ -201,13 +201,13 @@ end
 -- значки состояний: квадратные плитки (materials/rem_affl, белые значки Tabler Icons + свои),
 -- фон от тёмно-красного (лёгкое) до ярко-красного (тяжёлое), у критических - белая рамка
 local afflIconCache = {}
--- плитки из личного пака (materials/rem_affl_private, вырезаны со скриншотов - в репозиторий не кладутся) рисуются
+-- готовые плитки (materials/rem_affl_tiles - иконки автора сборки, вырезаны со скриншотов) рисуются
 -- целиком, со своим фоном; нет такой - значок из materials/rem_affl на нашем красном фоне
 local afflFullCache = {}
 local function AfflIcon(name)
 	local cached = afflIconCache[name]
 	if cached ~= nil then return cached or nil, afflFullCache[name] end
-	local full = Material("rem_affl_private/" .. name .. ".png", "smooth mips")
+	local full = Material("rem_affl_tiles/" .. name .. ".png", "smooth mips")
 	if not full:IsError() then
 		afflIconCache[name], afflFullCache[name] = full, true
 		return full, true
