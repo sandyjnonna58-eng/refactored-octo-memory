@@ -60,6 +60,26 @@ local sharp_pain = {
 
 hg.sharp_pain = sharp_pain
 
+-- крик в мыслях при сильной боли (как в Fading Vitality): одна фраза снова и снова без пробелов,
+-- чем больнее - тем длиннее ("ITHURTSITHURTSOHGODITHURTS!!!")
+local scream_bases = {"ITHURTS", "MAKEITSTOP", "HELPME", "STOP", "PLEASE", "NONONO", "WHYWHY", "FUCK"}
+local scream_inserts = {"OHGOD", "PLEASE", "GOD", "AAA"}
+
+local function scream_phrase(pain)
+	if math.random(6) == 1 then
+		return string.rep("N", math.random(5, 10)) .. string.rep("G", math.random(1, 3)) .. string.rep("H", math.random(3, 7)) .. "!!!"
+	end
+	local base = scream_bases[math.random(#scream_bases)]
+	local n = math.Clamp(math.floor(2 + (pain - 90) / 10), 2, 6)
+	local parts = {}
+	for i = 1, n do
+		parts[#parts + 1] = base
+		if i < n and math.random(4) == 1 then parts[#parts + 1] = scream_inserts[math.random(#scream_inserts)] end
+	end
+	return table.concat(parts) .. (math.random(3) == 1 and "..." or "!!!!")
+end
+hg.scream_phrase = scream_phrase
+
 local random_phrase = {
 	"It's kinda chilly in here...",
 	"Everything seems too quiet...",
@@ -434,6 +454,12 @@ local function get_status_message(ply)
 		most_wanted_phraselist = brain < 0.2 and slight_braindamage_phraselist or braindamage_phraselist
 	end
 	
+	-- очень больно (75%+) - мысль срывается на крик
+	if (most_wanted_phraselist == sharp_pain or most_wanted_phraselist == audible_pain) and pain > 90
+		and math.random() < (pain > 110 and 0.6 or 0.4) then
+		return scream_phrase(pain)
+	end
+
 	if most_wanted_phraselist then
 		str = most_wanted_phraselist[math.random(#most_wanted_phraselist)]
 

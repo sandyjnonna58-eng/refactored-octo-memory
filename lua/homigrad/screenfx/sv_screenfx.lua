@@ -13,7 +13,7 @@ local skull_check_interval = 0.1
 
 resource.AddSingleFile("materials/rem_fx/hit_burst.png")
 resource.AddSingleFile("materials/rem_fx/hit_glow.png")
-for _, name in ipairs({"pain_edge", "pain_dark", "pain_rays"}) do
+for _, name in ipairs({"pain_edge", "pain_dark", "pain_rays", "lids", "tunnel"}) do -- lids, tunnel - уход сознания (cl_fading.lua)
 	resource.AddSingleFile("materials/rem_fx/" .. name .. ".png")
 end
 
