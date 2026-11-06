@@ -1,7 +1,7 @@
 -- Экран умирания "вихрь" (таймер смерти, sv_vortexdeath.lua) под песню rem_death_cfyt.ogg:
 -- чёрный экран, по одному проступают красные "!!!", ниже "Give up"; потом из темноты поднимается красный
--- пиксельный шум, тёмные спиральные рукава вокруг тёмного центра; ничего не вращается - краснота медленно наползает,
--- центр сжимается, а рукава распрямляются в лучи равномерно до самого конца таймера.
+-- пиксельный шум, тёмные спиральные рукава вокруг тёмного центра; ничего не вращается - краснота наползает с краёв
+-- экрана к центру: темнота сначала больше экрана и сжимается, а рукава распрямляются в лучи до самого конца таймера.
 -- Пока он идёт, остальная музыка затихает (hg.RemAudio); зажатый прыжок - "Give up": время смерти (и песня) идёт быстрее.
 hg.VortexDeath = hg.VortexDeath or {}
 local DV = hg.VortexDeath
@@ -10,8 +10,15 @@ local SONG = "sound/rem_death_cfyt.ogg"
 DV.GiveUpSpeed = 4 -- во сколько раз быстрее идёт время, пока зажат "Give up" (так же в sv_vortexdeath.lua)
 local FADE_IN, FADE_OUT = 0.6, 1.5
 
-local RAMP_START, RAMP_TIME = 4, 30 -- когда начинает проступать красный и за сколько доходит до максимума
+local RAMP_START, RAMP_TIME = 4, 12 -- когда начинает проступать красный и за сколько доходит до максимума
 local GROW_TIME = 78                 -- за сколько тёмный центр сжимается, а рукава распрямляются (почти весь таймер, 84 с)
+-- тёмный центр (полуось по горизонтали, в долях высоты экрана): в начале больше экрана - красный только по краям,
+-- к концу - небольшое пятно посередине, как в Fading Vitality
+local CORE_START, CORE_END = 1.25, 0.45
+local CORE_EASE = 6  -- сжатие сначала быстрое, потом еле заметное (больше - резче в начале)
+local CORE_ASPECT = 0.6 -- эллипс: высота / ширина
+local CORE_LAYERS = 3   -- сколько раз накладывать пятно (гуще середина, край остаётся мягким)
+local CORE_TEX_R = 0.22 -- радиус заметной части пятна в vortex_centre.png (в долях ширины текстуры)
 local MARKS_DOT = {0.4, 0.9, 1.4}    -- когда появляются точки
 local MARKS_BANG = {1.2, 2.6, 4.0}   -- когда точка становится "!"
 local GIVEUP_TIME = 7
@@ -78,18 +85,31 @@ function DV.Draw(t, alpha, skipKey, holding)
 		-- рост: равномерно весь таймер
 		local g = math.Clamp((t - RAMP_START) / GROW_TIME, 0, 1)
 
-		-- рукава: сначала закрученные, потом прямые лучи; всё стоит на месте и медленно сжимается
-		local size = math.max(sw, sh) * (1.6 - 0.5 * g)
-		local rays = smooth((g - 0.3) / 0.6)
-		local armsAlpha = math.min(1, k * 3) * mul
-		if rays < 1 then DrawSpun(matSwirl, sw / 2, sh / 2, size, size * 0.72, SWIRL_ANGLE, 242 * (1 - rays) * armsAlpha, 0.72) end
-		if rays > 0 then DrawSpun(matRays, sw / 2, sh / 2, size, size * 0.72, RAYS_ANGLE, 230 * rays * armsAlpha, 0.72) end
+		-- темнота сначала больше экрана (красный виден только по краям и углам) и сжимается к центру - первые ~20 с
+		-- быстро, потом еле заметно (как в видео); красный наползает с краёв; a - полуось тёмного эллипса по горизонтали в пикселях
+		local e = (1 - math.exp(-CORE_EASE * g)) / (1 - math.exp(-CORE_EASE))
+		local a = sh * Lerp(e, CORE_START, CORE_END)
 
-		-- тёмный центр сжимается
-		local cw = sw * (1.3 - 0.7 * g)
+		-- рукава держатся вокруг края темноты и сжимаются вместе с ней: в начале почти целиком за экраном,
+		-- к концу - короткие лучи вокруг маленького тёмного центра
+		local size = a * Lerp(g, 3.4, 2.7)
+		local rays = smooth((g - 0.15) / 0.5)
+		local armsAlpha = math.min(1, k * 3) * mul
+		-- текстура целиком (zoom 1): прямоугольник теперь бывает меньше экрана, а у полной текстуры края прозрачные -
+		-- не видно обрезанных кончиков лучей; масштаб тот же, что у середины 72% при ширине size
+		local aw, ah = size / 0.72, size
+		if rays < 1 then DrawSpun(matSwirl, sw / 2, sh / 2, aw, ah, SWIRL_ANGLE, 242 * (1 - rays) * armsAlpha, 1) end
+		if rays > 0 then DrawSpun(matRays, sw / 2, sh / 2, aw, ah, RAYS_ANGLE, 230 * rays * armsAlpha, 1) end
+
+		-- тёмный центр: заметная часть пятна (из Base44, зернистый край) - ~0.22 ширины текстуры от середины,
+		-- поэтому ширина = a / CORE_TEX_R; рисуем несколько раз, чтобы внутри было глухо-чёрно, а мягкий край - у границы
+		local cw = a / CORE_TEX_R
+		local ch = cw * CORE_ASPECT
 		surface.SetMaterial(matCentre)
-		surface.SetDrawColor(255, 255, 255, math.floor(242 * math.min(1, k * 4) * mul))
-		surface.DrawTexturedRect(sw / 2 - cw / 2, sh / 2 - cw * 0.25, cw, cw * 0.5)
+		surface.SetDrawColor(255, 255, 255, math.floor(255 * mul))
+		for _ = 1, CORE_LAYERS do
+			surface.DrawTexturedRect(sw / 2 - cw / 2, sh / 2 - ch / 2, cw, ch)
+		end
 	end
 
 	-- "!!!": сначала точки, потом по одному восклицательные знаки
@@ -136,7 +156,7 @@ function DV.DrawDeceasedBackground(t, alpha, flash)
 	local size = math.max(sw, sh) * 1.5
 	DrawSpun(matSwirl, sw / 2, sh / 2, size, size * 0.72, SWIRL_ANGLE, 230 * k * mul, 0.72)
 
-	local cw = sw * (0.75 + 0.5 * (1 - flash))
+	local cw = sw * (0.75 + 0.5 * (1 - flash)) * 0.3 / CORE_TEX_R -- размер подогнан под старое пятно (радиус 0.3)
 	surface.SetMaterial(matCentre)
 	surface.SetDrawColor(255, 255, 255, math.floor(242 * k * mul))
 	surface.DrawTexturedRect(sw / 2 - cw / 2, sh / 2 - cw * 0.25, cw, cw * 0.5)
