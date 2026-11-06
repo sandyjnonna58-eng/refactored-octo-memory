@@ -485,8 +485,12 @@ if CLIENT then
 			local delta = time - tbl[2]
 			local speech = SpeechState(lply.organism or {})
 			local perChar = speech == "fast" and 0.036 or 0.06
-			local umsg = utf8.force(tbl[1])
-			local len = utf8.len(umsg) or #umsg
+			-- строку разбираем один раз, а не каждый кадр
+			if not tbl[5] then
+				tbl[5] = utf8.force(tbl[1])
+				tbl[6] = utf8.len(tbl[5]) or #tbl[5]
+			end
+			local umsg, len = tbl[5], tbl[6]
 			-- длинная мысль висит, пока не допечатается, + 3 секунды
 			local duration = math.max(duration, len * perChar + 3)
 

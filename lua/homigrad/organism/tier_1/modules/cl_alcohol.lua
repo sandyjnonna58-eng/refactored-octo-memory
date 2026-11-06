@@ -5,30 +5,36 @@ hg = hg or {}
 hg.Alcohol = hg.Alcohol or {}
 local AL = hg.Alcohol
 
-local lerped = 0
+-- считается один раз за кадр (зовут и эффекты, и камера)
+local lerped, lastFrame, lastK, lastHeavy = 0, -1, 0, 0
 local function Level()
+	local frame = FrameNumber()
+	if frame == lastFrame then return lastK, lastHeavy end
+	lastFrame = frame
 	local ply = LocalPlayer()
-	if not IsValid(ply) or not ply:Alive() then lerped = 0 return 0, 0 end
-	lerped = Lerp(math.min(FrameTime() * 0.8, 1), lerped, ply:GetNW2Float("rem_bac_eff", 0))
-	return math.Clamp((lerped - 0.3) / 2.2, 0, 1), math.Clamp((lerped - 1.8) / 1.2, 0, 1)
+	if not IsValid(ply) or not ply:Alive() then lerped, lastK, lastHeavy = 0, 0, 0 return 0, 0 end
+	lerped = Lerp(math.min(FrameTime() * 1.6, 1), lerped, ply:GetNW2Float("rem_bac_eff", 0)) -- раньше считалось дважды за кадр по 0.8
+	lastK, lastHeavy = math.Clamp((lerped - 0.3) / 2.2, 0, 1), math.Clamp((lerped - 1.8) / 1.2, 0, 1)
+	return lastK, lastHeavy
 end
 AL.Level = Level
+
+-- одна таблица на все кадры, без мусора
+local cm = {
+	["$pp_colour_addr"] = 0, ["$pp_colour_addg"] = 0, ["$pp_colour_addb"] = 0,
+	["$pp_colour_brightness"] = 0, ["$pp_colour_contrast"] = 1, ["$pp_colour_colour"] = 1,
+	["$pp_colour_mulr"] = 0, ["$pp_colour_mulg"] = 0, ["$pp_colour_mulb"] = 0,
+}
 
 hook.Add("RenderScreenspaceEffects", "rem_alcohol", function()
 	local k, heavy = Level()
 	if k <= 0.01 then return end
 	DrawMotionBlur(0.12 - 0.06 * heavy, 0.35 + 0.5 * k + 0.1 * heavy, 0.01)
-	DrawColorModify({
-		["$pp_colour_addr"] = 0.01 * k,
-		["$pp_colour_addg"] = 0.006 * k,
-		["$pp_colour_addb"] = 0,
-		["$pp_colour_brightness"] = 0,
-		["$pp_colour_contrast"] = 1 - 0.06 * k,
-		["$pp_colour_colour"] = 1 + 0.25 * k,
-		["$pp_colour_mulr"] = 0,
-		["$pp_colour_mulg"] = 0,
-		["$pp_colour_mulb"] = 0,
-	})
+	cm["$pp_colour_addr"] = 0.01 * k
+	cm["$pp_colour_addg"] = 0.006 * k
+	cm["$pp_colour_contrast"] = 1 - 0.06 * k
+	cm["$pp_colour_colour"] = 1 + 0.25 * k
+	DrawColorModify(cm)
 	if heavy > 0.05 then DrawSharpen(-0.6 * heavy, 1.2) end
 end)
 

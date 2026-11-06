@@ -15,6 +15,12 @@ hook.Add("CreateMove", "rem_addiction_tremor", function(cmd)
 	cmd:SetViewAngles(ang)
 end)
 
+local cm = {
+	["$pp_colour_addr"] = 0, ["$pp_colour_addg"] = 0, ["$pp_colour_addb"] = 0,
+	["$pp_colour_brightness"] = 0, ["$pp_colour_contrast"] = 1, ["$pp_colour_colour"] = 1,
+	["$pp_colour_mulr"] = 0, ["$pp_colour_mulg"] = 0, ["$pp_colour_mulb"] = 0,
+}
+
 hook.Add("RenderScreenspaceEffects", "rem_addiction", function()
 	local ply = LocalPlayer()
 	if not IsValid(ply) or not ply:Alive() then return end
@@ -22,15 +28,8 @@ hook.Add("RenderScreenspaceEffects", "rem_addiction", function()
 	if w < 0.3 then return end
 	local k = (w - 0.3) / 0.7
 	local pulse = math.sin(CurTime() * 2.6) * 0.5 + 0.5
-	DrawColorModify({
-		["$pp_colour_addr"] = 0,
-		["$pp_colour_addg"] = 0,
-		["$pp_colour_addb"] = 0,
-		["$pp_colour_brightness"] = -0.02 * k * pulse,
-		["$pp_colour_contrast"] = 1 + 0.08 * k,
-		["$pp_colour_colour"] = 1 - 0.2 * k,
-		["$pp_colour_mulr"] = 0,
-		["$pp_colour_mulg"] = 0,
-		["$pp_colour_mulb"] = 0,
-	})
+	cm["$pp_colour_brightness"] = -0.02 * k * pulse
+	cm["$pp_colour_contrast"] = 1 + 0.08 * k
+	cm["$pp_colour_colour"] = 1 - 0.2 * k
+	DrawColorModify(cm)
 end)
