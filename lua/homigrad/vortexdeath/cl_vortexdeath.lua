@@ -16,7 +16,7 @@ local MARKS_DOT = {0.4, 0.9, 1.4}    -- когда появляются точк
 local MARKS_BANG = {1.2, 2.6, 4.0}   -- когда точка становится "!"
 local GIVEUP_TIME = 7
 local SWIRL_ANGLE, RAYS_ANGLE = 0, 0 -- вихрь не крутится (как в оригинале): только медленно растёт
-local NOISE_FPS = 20
+local NOISE_FPS = 0 -- шум стоит неподвижно (0 - один кадр; >0 - мерцает с этой частотой)
 
 local matSwirl = Material("rem_death/vortex_swirl.png", "smooth")
 local matRays = Material("rem_death/vortex_rays.png", "smooth")
@@ -71,7 +71,7 @@ function DV.Draw(t, alpha, skipKey, holding)
 
 	if k > 0 then
 		-- красный шум
-		surface.SetMaterial(matNoise[math.floor(t * NOISE_FPS) % 4 + 1])
+		surface.SetMaterial(matNoise[NOISE_FPS > 0 and math.floor(t * NOISE_FPS) % 4 + 1 or 1])
 		surface.SetDrawColor(math.floor(255 * (0.75 + 0.25 * k)), 25, 25, math.floor(255 * k * mul))
 		surface.DrawTexturedRect(0, 0, sw, sh)
 
@@ -129,7 +129,7 @@ function DV.DrawDeceasedBackground(t, alpha, flash)
 	surface.DrawRect(0, 0, sw, sh)
 	if k <= 0 then return end
 
-	surface.SetMaterial(matNoise[math.floor(t * NOISE_FPS) % 4 + 1])
+	surface.SetMaterial(matNoise[NOISE_FPS > 0 and math.floor(t * NOISE_FPS) % 4 + 1 or 1])
 	surface.SetDrawColor(255, 25, 25, math.floor(255 * k * mul))
 	surface.DrawTexturedRect(0, 0, sw, sh)
 
