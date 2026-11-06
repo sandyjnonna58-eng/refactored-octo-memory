@@ -1,6 +1,7 @@
 -- Экран умирания "вихрь" (таймер смерти, sv_vortexdeath.lua) под песню rem_death_cfyt.ogg:
 -- чёрный экран, по одному проступают красные "!!!", ниже "Give up"; потом из темноты поднимается красный
--- пиксельный шум, тёмные спиральные рукава закручиваются к тёмному центру и со временем распрямляются в лучи.
+-- пиксельный шум, тёмные спиральные рукава вокруг тёмного центра; ничего не вращается - краснота медленно наползает,
+-- центр сжимается, а рукава распрямляются в лучи равномерно до самого конца таймера.
 -- Пока он идёт, остальная музыка затихает (hg.RemAudio); зажатый прыжок - "Give up": время смерти (и песня) идёт быстрее.
 hg.VortexDeath = hg.VortexDeath or {}
 local DV = hg.VortexDeath
@@ -9,11 +10,12 @@ local SONG = "sound/rem_death_cfyt.ogg"
 DV.GiveUpSpeed = 4 -- во сколько раз быстрее идёт время, пока зажат "Give up" (так же в sv_vortexdeath.lua)
 local FADE_IN, FADE_OUT = 0.6, 1.5
 
-local RAMP_START, RAMP_TIME = 9, 48 -- когда начинает проступать красный и за сколько доходит до максимума
+local RAMP_START, RAMP_TIME = 4, 30 -- когда начинает проступать красный и за сколько доходит до максимума
+local GROW_TIME = 78                 -- за сколько тёмный центр сжимается, а рукава распрямляются (почти весь таймер, 84 с)
 local MARKS_DOT = {0.4, 0.9, 1.4}    -- когда появляются точки
 local MARKS_BANG = {1.2, 2.6, 4.0}   -- когда точка становится "!"
 local GIVEUP_TIME = 7
-local SWIRL_SPIN, RAYS_SPIN = 7, 4   -- градусов в секунду
+local SWIRL_ANGLE, RAYS_ANGLE = 0, 0 -- вихрь не крутится (как в оригинале): только медленно растёт
 local NOISE_FPS = 20
 
 local matSwirl = Material("rem_death/vortex_swirl.png", "smooth")
@@ -73,15 +75,18 @@ function DV.Draw(t, alpha, skipKey, holding)
 		surface.SetDrawColor(math.floor(255 * (0.75 + 0.25 * k)), 25, 25, math.floor(255 * k * mul))
 		surface.DrawTexturedRect(0, 0, sw, sh)
 
-		-- рукава: сначала закрученные, потом прямые лучи
-		local size = math.max(sw, sh) * (1.55 - 0.15 * k)
-		local rays = smooth((k - 0.35) / 0.55)
+		-- рост: равномерно весь таймер
+		local g = math.Clamp((t - RAMP_START) / GROW_TIME, 0, 1)
+
+		-- рукава: сначала закрученные, потом прямые лучи; всё стоит на месте и медленно сжимается
+		local size = math.max(sw, sh) * (1.6 - 0.5 * g)
+		local rays = smooth((g - 0.3) / 0.6)
 		local armsAlpha = math.min(1, k * 3) * mul
-		if rays < 1 then DrawSpun(matSwirl, sw / 2, sh / 2, size, size * 0.72, t * SWIRL_SPIN, 242 * (1 - rays) * armsAlpha, 0.72) end
-		if rays > 0 then DrawSpun(matRays, sw / 2, sh / 2, size, size * 0.72, t * RAYS_SPIN, 230 * rays * armsAlpha, 0.72) end
+		if rays < 1 then DrawSpun(matSwirl, sw / 2, sh / 2, size, size * 0.72, SWIRL_ANGLE, 242 * (1 - rays) * armsAlpha, 0.72) end
+		if rays > 0 then DrawSpun(matRays, sw / 2, sh / 2, size, size * 0.72, RAYS_ANGLE, 230 * rays * armsAlpha, 0.72) end
 
 		-- тёмный центр сжимается
-		local cw = sw * (1.25 - 0.55 * k)
+		local cw = sw * (1.3 - 0.7 * g)
 		surface.SetMaterial(matCentre)
 		surface.SetDrawColor(255, 255, 255, math.floor(242 * math.min(1, k * 4) * mul))
 		surface.DrawTexturedRect(sw / 2 - cw / 2, sh / 2 - cw * 0.25, cw, cw * 0.5)
@@ -129,7 +134,7 @@ function DV.DrawDeceasedBackground(t, alpha, flash)
 	surface.DrawTexturedRect(0, 0, sw, sh)
 
 	local size = math.max(sw, sh) * 1.5
-	DrawSpun(matSwirl, sw / 2, sh / 2, size, size * 0.72, t * SWIRL_SPIN * 3, 230 * k * mul, 0.72)
+	DrawSpun(matSwirl, sw / 2, sh / 2, size, size * 0.72, SWIRL_ANGLE, 230 * k * mul, 0.72)
 
 	local cw = sw * (0.75 + 0.5 * (1 - flash))
 	surface.SetMaterial(matCentre)

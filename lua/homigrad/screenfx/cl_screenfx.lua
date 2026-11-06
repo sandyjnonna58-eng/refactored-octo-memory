@@ -55,8 +55,20 @@ local pain_max = 1
 -- боль 100% = 120: с 60% эффект проступает, к 140% (отключка, sv_pain.lua) - на полную
 local pain_overlay_start = 72
 local pain_overlay_full = 168
-local pain_overlay_spin = 1.5 -- градусов в секунду, лучи медленно ползут
+-- как в Fading Vitality: ничего не крутится, краснота "дышит" с сердцем - на каждом ударе рывком лезет к центру
+-- и отходит; шипы мелко дрожат; резкий скачок боли - краснота наплывает почти на весь экран и отползает к краям
+local pain_beat_push = 0.07   -- насколько удар сердца толкает красноту к центру (доля размера)
+local pain_beat_decay = 7     -- как быстро отходит после удара
+local pain_jitter_hz = 15     -- как часто дрожат шипы
+local pain_jitter_ang = 0.8   -- градусов
+local pain_jitter_move = 0.006 -- доля экрана
+local pain_surge_jump = 0.08  -- скачок силы боли за 0.1 с, после которого краснота наплывает
+local pain_surge_time = 1.2   -- секунд отползает обратно
 local painOverlay = 0
+local painPulse = 70
+local painSurge = 0
+local painPrev, painPrevTime = 0, 0
+local jitterAng, jitterX, jitterY, nextJitter = 0, 0, 0, 0
 
 local blood_gray_start = 4200
 local blood_gray_full = 2600
@@ -190,14 +202,36 @@ hook.Add("Think", "rem_fx", function()
 
 	local overlay = org and not org.otrub and Remap01(org.pain or 0, pain_overlay_start, pain_overlay_full) * EffectMul() or 0
 	painOverlay = Lerp(math.min(dt * 2, 1), painOverlay, overlay)
+	painPulse = org and math.Clamp(org.pulse or 70, 30, 220) or 70
+
+	-- резкий скачок боли - наплыв
+	local now = CurTime()
+	if now - painPrevTime >= 0.1 then
+		if overlay - painPrev > pain_surge_jump then painSurge = 1 end
+		painPrev, painPrevTime = overlay, now
+	end
+	painSurge = math.Approach(painSurge, 0, dt / pain_surge_time)
+	if not org or org.otrub then painSurge = 0 end
+
+	-- дрожь шипов: рывками, не плавно
+	if now >= nextJitter then
+		nextJitter = now + 1 / pain_jitter_hz
+		jitterAng = math.Rand(-1, 1) * pain_jitter_ang
+		jitterX, jitterY = math.Rand(-1, 1) * pain_jitter_move, math.Rand(-1, 1) * pain_jitter_move
+	end
 end)
 
 local function DrawPainOverlay(a)
 	local sw, sh = ScrW(), ScrH()
-	-- пока боль слабее, кольца больше экрана - краснота подползает с краёв
-	local scale = Lerp(a, 1.6, 1)
+	-- удар сердца: резкий толчок и спад до следующего
+	local phase = (CurTime() * painPulse / 60) % 1
+	local beat = math.exp(-phase * pain_beat_decay)
+	local surge = painSurge * painSurge
+	a = math.min(a + surge * 0.6, 1)
+	-- пока боль слабее, кольца больше экрана - краснота подползает с краёв; удар и наплыв тянут её к центру
+	local scale = Lerp(a, 1.6, 1) - pain_beat_push * beat * a - 0.35 * surge
 	local w, h = sw * scale, sh * scale
-	local x, y = (sw - w) / 2, (sh - h) / 2
+	local x, y = (sw - w) / 2 + jitterX * sw * a, (sh - h) / 2 + jitterY * sh * a
 
 	cam.Start2D()
 		surface.SetMaterial(mat_pain_dark)
@@ -211,11 +245,20 @@ local function DrawPainOverlay(a)
 		local size = math.max(sw, sh) * 1.15 * scale
 		surface.SetMaterial(mat_pain_rays)
 		surface.SetDrawColor(255, 15, 15, 230 * a)
-		surface.DrawTexturedRectRotated(sw / 2, sh / 2, size, size, CurTime() * pain_overlay_spin)
+		surface.DrawTexturedRectRotated(x + w / 2, y + h / 2, size, size, jitterAng * a)
 
 		surface.SetMaterial(mat_pain_edge)
 		surface.SetDrawColor(255, 0, 0, 255 * a)
 		surface.DrawTexturedRect(x, y, w, h)
+
+		-- кольцо стянулось меньше экрана - снаружи сплошная краснота
+		if x > 0 or y > 0 or x + w < sw or y + h < sh then
+			surface.SetDrawColor(255, 0, 0, 255 * a)
+			if y > 0 then surface.DrawRect(0, 0, sw, y + 1) end
+			if y + h < sh then surface.DrawRect(0, y + h - 1, sw, sh - y - h + 1) end
+			if x > 0 then surface.DrawRect(0, y, x + 1, h) end
+			if x + w < sw then surface.DrawRect(x + w - 1, y, sw - x - w + 1, h) end
+		end
 	cam.End2D()
 end
 
@@ -350,7 +393,7 @@ hook.Add("Post Pain Post Processing", "rem_fx", function()
 	end
 
 	-- сильная боль - после радиального размытия, оно её не смазывает
-	if painOverlay > 0.01 and LocalPlayer():Alive() and not mat_pain_edge:IsError() then DrawPainOverlay(painOverlay) end
+	if (painOverlay > 0.01 or painSurge > 0.01) and LocalPlayer():Alive() and not mat_pain_edge:IsError() then DrawPainOverlay(painOverlay) end
 
 	-- мозговая травма последней - поверх всего остального
 	if trauma > 0.01 and LocalPlayer():Alive() then DrawTrauma(trauma) end
