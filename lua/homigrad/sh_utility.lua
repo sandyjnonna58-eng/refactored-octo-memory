@@ -637,6 +637,8 @@ local IsValid = IsValid
 		--if self == lply and !selfdraw then return end
 		--debug.Trace()
 		if !self.shouldTransmit then return end
+		-- SWEP Снейка (compat/sh_mgsv.lua): тело рисует аддон, своё не рисуем
+		if hg.MGSV and hg.MGSV.Active(self) then return end
 
 		ent = IsValid(ent) and ent or self
 		if ent:GetMaterial() == "NULL" then ent:DrawShadow( false ) return end

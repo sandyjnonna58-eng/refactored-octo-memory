@@ -152,6 +152,8 @@ local Angle, Vector, AngleRand, VectorRand, math, hook, util, game = Angle, Vect
 		if(not IsValid(ply) or not ply:Alive())then
 			return
 		end
+		-- SWEP Снейка (compat/sh_mgsv.lua): у аддона своё движение, инерцию homigrad не применяем
+		if hg.MGSV and hg.MGSV.Active(ply) then return end
 
 		local org = ply.organism
 
