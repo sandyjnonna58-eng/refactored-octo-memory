@@ -4,6 +4,8 @@
 --     а конкретным игрокам его выдаёт админ: чат !ukmove <игрок|*> [1|0], консоль rem_ukmove <игрок|*|^> [1|0]
 --     (1 - выдать, 0 - забрать; по нику, SteamID или * - всем). Выдача сохраняется (data/zcity_ukmove.txt).
 --     У кого не выдано - хуки аддона для него не работают, движение обычное homigrad;
+--     у кого движение ULTRAKILL работает, организм homigrad выключен (org.remNoOrganism): нет боли, крови, переломов,
+--     усталости, отключек - урон снимает обычное здоровье, как в GMod (organism/tier_0/sv_tier_0.lua, tier_1/sv_input.lua);
 --   "ULTRAKILL Coin Mechanics" (монетки, ultrakill_toss_coin) - урон идёт обычным TakeDamageInfo, отдельно не трогаем.
 -- Пока в руках оружие пака, homigrad отдаёт камеру движку (cl_camera.lua: hg.CameraYield) - иначе он рисует своё тело
 -- от первого лица и вьюмодель с руками не видна. Когда включено движение ULTRAKILL, инерция homigrad выключена
@@ -96,6 +98,20 @@ if SERVER then
 		if hg.UK.MoveOn() then ApplyDuck(ply, on) end
 		if not on then StopUK(ply) end
 	end
+
+	-- организм: выключен, пока у игрока работает движение ULTRAKILL; при выключении - сброс в здоровое состояние
+	local function ApplyOrganism(ply, off)
+		local org = ply.organism
+		if not org or (org.remNoOrganism or false) == off then return end
+		if hg.organism and hg.organism.Clear then hg.organism.Clear(org) end
+		org.remNoOrganism = off or nil
+		if off and ply:Alive() then ply:SetHealth(math.max(ply:Health(), ply:GetMaxHealth())) end
+	end
+	timer.Create("rem_ukmove_organism", 0.5, 0, function()
+		for _, ply in player.Iterator() do
+			if ply:Alive() then ApplyOrganism(ply, hg.UK.MoveOn(ply)) end
+		end
+	end)
 
 	hook.Add("PlayerInitialSpawn", "rem_ukmove_load", function(ply)
 		ply:SetNW2Bool("rem_ukmove", granted[ply:SteamID64()] == true)

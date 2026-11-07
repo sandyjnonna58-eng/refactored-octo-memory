@@ -107,14 +107,15 @@ timer.Create("homigrad-organism", tickrate, 0, function()
 	for owner, org in pairs(hg.organism.list) do -- теперь ясно почему от трупов лагает...
 		if not IsValid(owner) or org.owner ~= owner then hg.organism.list[owner] = nil continue end
 		if not istable(org.o2) then hg.organism.EnsureO2(org) end
-		if org.godmode then continue end
+		-- org.remNoOrganism - организм выключен (движение ULTRAKILL, compat/sh_ultrakill.lua): тик не идёт
+		if org.godmode or org.remNoOrganism then continue end
 		hook_Run("Org Think", owner, org, mulTime)
 	end
 end)
 
 local lastcall = SysTime()
 hook.Add("Org Think Call", "homigrad-organism", function(owner, org)
-	if not IsValid(owner) or not org or org.owner ~= owner then return end
+	if not IsValid(owner) or not org or org.owner ~= owner or org.remNoOrganism then return end
 	local sysTime = SysTime()
 	if (sysTime - lastcall) < tickrate then return end
 	lastcall = sysTime

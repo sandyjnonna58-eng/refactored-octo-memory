@@ -62,7 +62,9 @@
 - Совместимость с отдельными аддонами ULTRAKILL (Weapons Pack, Movement Collection, Coin Mechanics; в репозиторий не кладём):
   `lua/homigrad/compat/sh_ultrakill.lua` - `hg.UK.Weapon(ply)` (оружие weapon_dredux_uk_*: камера движку, видна вьюмодель),
   `hg.UK.MoveOn(ply)` (ukmove_movement_enabled на сервере + выдано админом: `hg.UK.SetMove`, !ukmove / rem_ukmove <игрок|*> [1|0],
-  сохраняется в data/zcity_ukmove.txt; хуки аддона обёрнуты - у кого не выдано, движение обычное homigrad). Общая уступка камеры - `hg.CameraYield(ply)`.
+  сохраняется в data/zcity_ukmove.txt; хуки аддона обёрнуты - у кого не выдано, движение обычное homigrad).
+  У кого движение ULTRAKILL работает - организм выключен (`org.remNoOrganism`): тик в `organism/tier_0/sv_tier_0.lua` пропускается,
+  урон в `tier_1/sv_input.lua` идёт мимо организма обычным здоровьем; снятие - сброс `hg.organism.Clear`. Общая уступка камеры - `hg.CameraYield(ply)`.
 - Ярость (3 стадии, копится от угроз: смотрят с оружием, целятся, фак, «умри»; удар - рывок и x2, без удара не выше 2-й):
   `modules/sv_rage.lua` и `cl_rage.lua` (музыка по стадиям `sound/rem_rage/anger.mp3`, права у пользователя,
   куски 0-59 / 58-117 / 117-конец), плитка «anger» с описанием в `cl_health_indicator.lua`.
