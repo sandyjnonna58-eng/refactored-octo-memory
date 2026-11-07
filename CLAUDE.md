@@ -61,8 +61,8 @@
   картинки - `tools/octocamo/make.py`.
 - Совместимость с отдельными аддонами ULTRAKILL (Weapons Pack, Movement Collection, Coin Mechanics; в репозиторий не кладём):
   `lua/homigrad/compat/sh_ultrakill.lua` - `hg.UK.Weapon(ply)` (оружие weapon_dredux_uk_*: камера движку, видна вьюмодель),
-  `hg.UK.MoveOn(ply)` (ukmove_movement_enabled на сервере + личный rem_ukmove игрока; хуки аддона обёрнуты - у кого выключено,
-  движение обычное homigrad; инерция homigrad выключена только у включивших). Общая уступка камеры - `hg.CameraYield(ply)`.
+  `hg.UK.MoveOn(ply)` (ukmove_movement_enabled на сервере + выдано админом: `hg.UK.SetMove`, !ukmove / rem_ukmove <игрок|*> [1|0],
+  сохраняется в data/zcity_ukmove.txt; хуки аддона обёрнуты - у кого не выдано, движение обычное homigrad). Общая уступка камеры - `hg.CameraYield(ply)`.
 - Ярость (3 стадии, копится от угроз: смотрят с оружием, целятся, фак, «умри»; удар - рывок и x2, без удара не выше 2-й):
   `modules/sv_rage.lua` и `cl_rage.lua` (музыка по стадиям `sound/rem_rage/anger.mp3`, права у пользователя,
   куски 0-59 / 58-117 / 117-конец), плитка «anger» с описанием в `cl_health_indicator.lua`.
