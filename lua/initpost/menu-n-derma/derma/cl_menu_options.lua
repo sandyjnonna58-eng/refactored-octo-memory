@@ -126,6 +126,7 @@ hg.settings:AddOpt("Gameplay","hg_deathfadeout", "Death fade out")
 hg.settings:AddOpt("Gameplay","hg_nojogging", "Disable jogging")
 hg.settings:AddOpt("Gameplay","deatheffect_death_screen", "Cinematic death screen")
 hg.settings:AddOpt("Gameplay","rem_deathsound", "Death sound: heart stop")
+hg.settings:AddOpt("Gameplay","rem_ukmove", "ULTRAKILL movement (if the server allows it)")
 if not game.IsDedicated() then
 	hg.settings:AddOpt("Serverside gameplay","hg_toughnpcs", "Tough npcs")
 	hg.settings:AddOpt("Serverside gameplay","hg_thirdperson", "Thirdperson (WIP)")
