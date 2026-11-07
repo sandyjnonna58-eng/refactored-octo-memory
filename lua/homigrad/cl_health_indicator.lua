@@ -212,7 +212,7 @@ end
 -- стадии ярости: тяжесть плитки, название, описание (строки через \n)
 local RAGE_STAGES = {
 	{0.45, "Blinding anger", "You can barely hold it in.\nSomeone here is asking for it,\nand you feel more than ready.\nLess fear and pain."},
-	{0.75, "FURIOUS", "You're at your limit.\nYour fists clench on their own,\nyour hands shake.\nWhoever gets in your way, regrets it."},
+	{0.75, "FURIOUS", "You're at your limit.\nYour fists clench on their own.\nWhoever gets in your way, regrets it."},
 	{1, "UNDETERRABLE RAGE", "NOTHING. ELSE. MATTERS. BUT. THIS."},
 }
 

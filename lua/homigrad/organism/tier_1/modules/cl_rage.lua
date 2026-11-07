@@ -1,7 +1,7 @@
 -- Ярость на клиенте (сервер - sv_rage.lua, NW2 "rem_rage" 0..1 и "rem_rage_stage" 0..3):
 --   музыка (sound/rem_rage/anger.mp3): у каждой стадии свой кусок трека, он крутится по кругу;
 --   стадия сменилась - трек прыгает на её начало; ярость прошла - музыка затихает. Пока играет, остальная музыка глушится.
---   экран краснеет и контрастнее (3-я стадия пульсирует), со 2-й стадии прицел мелко дрожит - руки трясутся.
+--   экран краснеет и контрастнее (3-я стадия пульсирует). Прицел не дрожит.
 local SONG = "sound/rem_rage/anger.mp3"
 -- куски трека по стадиям, секунды (3-я - до конца трека)
 local SEGMENTS = {{0, 59}, {58, 117}, {117, math.huge}}
@@ -93,19 +93,4 @@ hook.Add("RenderScreenspaceEffects", "rem_rage", function()
 	cm["$pp_colour_mulr"] = 0.4 * k
 	cm["$pp_colour_brightness"] = -0.03 * k
 	DrawColorModify(cm)
-end)
-
--- со 2-й стадии руки трясутся
-hook.Add("CreateMove", "rem_rage_tremor", function(cmd)
-	local ply = LocalPlayer()
-	if not IsValid(ply) or not ply:Alive() then return end
-	local stage = Stage(ply)
-	if stage < 2 then return end
-	local amp = stage == 3 and 0.12 or 0.06
-	local t = CurTime()
-	local ft = math.min(FrameTime() * 60, 3)
-	local ang = cmd:GetViewAngles()
-	ang.p = math.Clamp(ang.p + (math.sin(t * 61) * 0.6 + math.sin(t * 29) * 0.4) * amp * ft, -89, 89)
-	ang.y = ang.y + (math.cos(t * 57) * 0.6 + math.sin(t * 33) * 0.4) * amp * ft
-	cmd:SetViewAngles(ang)
 end)
