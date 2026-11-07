@@ -12,8 +12,8 @@ os.makedirs(OUT, exist_ok=True)
 SIZE = 96
 
 TABLER = {
-    'wound': 'cut', 'bleeding': 'droplet', 'arterial': 'droplets', 'bloodloss': 'droplet-half-2',
-    'fracture': 'bone', 'dislocation': 'stretching', 'amputation': 'hand-off', 'skull': 'skull',
+    'bleeding': 'droplet', 'arterial': 'droplets', 'bloodloss': 'droplet-half-2',
+    'fracture': 'bone', 'skull': 'skull',
     'concussion': 'spiral', 'brain': 'brain', 'seizure': 'bolt', 'unconscious': 'zzz',
     'pain': 'mood-nervous', 'shock': 'activity', 'critical': 'alert-triangle',
     'arrhythmia': 'heart-rate-monitor', 'fibrillation': 'activity-heartbeat', 'cardiac_arrest': 'heart-off',
@@ -23,7 +23,7 @@ TABLER = {
     'alcohol': 'bottle', 'nausea': 'mood-sick', 'fear': 'ghost-2', 'depression': 'cloud-rain',
     'adrenaline': 'heartbeat', 'haste': 'run', 'painkillers': 'pill', 'fatigue': 'battery-1',
     'blind': 'eye-off', 'burning': 'flame', 'gas': 'cloud-fog', 'infection': 'virus',
-    'immobilized': 'link', 'incapacitated': 'wheelchair', 'internal': 'stethoscope', 'rage': 'swords',
+    'incapacitated': 'wheelchair', 'rage': 'swords',
     'nicotine': 'smoking', 'nicotine_wd': 'smoking-no', 'alcohol_wd': 'glass-off', 'tremor': 'hand-move',
     'anger': 'mood-angry',
 }
@@ -70,6 +70,62 @@ def liver(out):
         d.ellipse([(x - 2.2) * S, (y - 2.2) * S, (x + 2.2) * S, (y + 2.2) * S], fill='white')
     im.resize((SIZE, SIZE), Image.LANCZOS).save(out)
 
+def canvas():
+    # рисуем в 4 раза крупнее и уменьшаем - ровные края
+    im = Image.new('RGBA', (SIZE * 4, SIZE * 4), (0, 0, 0, 0))
+    return im, ImageDraw.Draw(im)
+
+def P(pts):
+    return [(x * 4, y * 4) for x, y in pts]
+
+def done(im, out, angle=0):
+    if angle: im = im.rotate(angle, Image.BICUBIC)
+    im.resize((SIZE, SIZE), Image.LANCZOS).save(out)
+
+def outline(d, pts, w=6):
+    # замкнутый контур со скруглёнными углами
+    d.line(P(pts + pts[:1]), fill='white', width=w * 4, joint='curve')
+    for x, y in pts:
+        d.ellipse(P([(x - w / 2, y - w / 2), (x + w / 2, y + w / 2)]), fill='white')
+
+def wound(out):
+    # рана: кусок кожи, на нём рваный порез (порез - отдельная деталь, make_fv красит его в красный)
+    im, d = canvas()
+    outline(d, [(14, 24), (40, 16), (72, 18), (86, 34), (84, 62), (64, 80), (30, 80), (12, 62)])
+    d.polygon(P([(24, 66), (34, 50), (42, 52), (50, 38), (58, 40), (72, 28), (66, 46), (58, 48), (50, 60), (42, 58)]), fill='white')
+    done(im, out)
+
+def internal(out):
+    # внутреннее кровотечение: туловище, внутри капля крови
+    im, d = canvas()
+    outline(d, [(40, 6), (56, 6), (58, 16), (78, 22), (86, 36), (74, 50), (74, 90), (22, 90), (22, 50), (10, 36), (18, 22), (38, 16)])
+    d.polygon(P([(48, 34), (60, 60), (36, 60)]), fill='white')
+    d.ellipse(P([(35, 50), (61, 76)]), fill='white')
+    done(im, out)
+
+def immobilized(out):
+    # обездвижен: рука в гипсе с бинтами (наискосок)
+    im, d = canvas()
+    d.rounded_rectangle(P([(6, 28), (90, 68)]), radius=18 * 4, outline='white', width=6 * 4)
+    for x in (30, 48, 66):
+        d.rounded_rectangle(P([(x - 2.5, 41), (x + 2.5, 55)]), radius=8, fill='white')
+    done(im, out, 30)
+
+def amputation(out):
+    # ампутация: рука обрублена - ровный срез, на срезе красное мясо
+    im, d = canvas()
+    d.rounded_rectangle(P([(6, 28), (82, 68)]), radius=18 * 4, outline='white', width=6 * 4, corners=(True, False, False, True))
+    d.ellipse(P([(58, 40), (68, 56)]), fill='white')
+    done(im, out, 30)
+
+def dislocation(out):
+    # вывих: две кости, сустав разошёлся
+    bone = Image.open(os.path.join(OUT, 'fracture.png')).convert('RGBA').resize((58, 58), Image.LANCZOS)
+    im = Image.new('RGBA', (SIZE, SIZE), (0, 0, 0, 0))
+    im.alpha_composite(bone, (0, 38))   # нижняя кость
+    im.alpha_composite(bone, (38, 0))   # верхняя, сдвинута вбок от сустава
+    im.save(out)
+
 def mark(path, plus):
     # значок "+" / "-" в правом верхнем углу (давление высокое / низкое)
     S = 4
@@ -85,4 +141,6 @@ mark(os.path.join(OUT, 'pressure_high.png'), True)
 mark(os.path.join(OUT, 'pressure_low.png'), False)
 o2(os.path.join(OUT, 'hypoxia.png'))
 liver(os.path.join(OUT, 'liver.png'))
-print(len(TABLER) + 2, 'icons')
+for f in (wound, internal, immobilized, amputation, dislocation):
+    f(os.path.join(OUT, f.__name__ + '.png'))
+print(len(TABLER) + 7, 'icons')

@@ -1,7 +1,7 @@
 # Значки состояний в стиле Fading Vitality (свои рисунки, не из игры) -> materials/rem_affl/*.png
 # Берёт белую основу из tools/affliction_icons/base (её делает make.py) и перерисовывает:
 #   крупные пиксели (32x32, увеличено до 96), зерно, тёмная обводка, цветные акценты;
-#   органы и предметы - закрашенные бледные пятна с тенью ("fill"), лица - тёмная клякса с белыми глазами ("face"),
+#   органы и предметы - закрашенные (третий элемент STYLE - цвет детали внутри, например красный порез) бледные пятна с тенью ("fill"), лица - тёмная клякса с белыми глазами ("face"),
 #   знаки тревоги - цветная плашка с белым рисунком ("badge"), остальное - линии своего цвета ("line").
 # Запуск из корня репозитория: python3 tools/affliction_icons/make_fv.py
 import os, random
@@ -17,23 +17,23 @@ WHITE = (238, 232, 228)
 STYLE = {
     'adrenaline': ('line', (255, 95, 95)),
     'alcohol': ('fill', (205, 140, 55)),
-    'alcohol_wd': ('line', (225, 165, 85)),
-    'amputation': ('line', WHITE),
+    'alcohol_wd': ('fill', (225, 165, 85)),
+    'amputation': ('fill', (226, 182, 150), (200, 25, 25)),
     'anger': ('face', (255, 70, 60)),
-    'arrhythmia': ('line', (255, 130, 130)),
+    'arrhythmia': ('fill', (255, 130, 130)),
     'arterial': ('fill', (200, 18, 18)),
     'bleeding': ('fill', (205, 22, 22)),
-    'blind': ('line', WHITE),
+    'blind': ('fill', (232, 226, 218)),
     'bloodloss': ('fill', (170, 20, 20)),
     'brain': ('fill', (228, 172, 182)),
     'burning': ('fill', (255, 140, 35)),
     'cardiac_arrest': ('fill', (232, 224, 218)),
-    'cold': ('line', (150, 200, 255)),
+    'cold': ('fill', (150, 200, 255)),
     'concussion': ('line', (255, 228, 140)),
     'critical': ('badge', (225, 25, 25)),
     'depression': ('line', (140, 160, 205)),
-    'dislocation': ('line', WHITE),
-    'fatigue': ('line', WHITE),
+    'dislocation': ('fill', (236, 226, 200)),
+    'fatigue': ('fill', (232, 226, 218)),
     'fear': ('face', WHITE),
     'fibrillation': ('line', (255, 120, 120)),
     'fracture': ('fill', (236, 226, 200)),
@@ -41,22 +41,22 @@ STYLE = {
     'gas': ('fill', (150, 172, 132)),
     'haste': ('line', WHITE),
     'heart': ('fill', (236, 226, 220)),
-    'hot': ('line', (255, 150, 40)),
+    'hot': ('fill', (255, 150, 40)),
     'hypoxia': ('line', (90, 172, 255)),
-    'immobilized': ('line', WHITE),
+    'immobilized': ('fill', (236, 232, 222)),
     'incapacitated': ('line', WHITE),
     'infection': ('fill', (132, 182, 92)),
-    'internal': ('line', WHITE),
+    'internal': ('fill', (226, 182, 150), (190, 18, 18)),
     'liver': ('fill', (160, 62, 56)),
     'lung_failure': ('fill', (214, 158, 170)),
     'lungs': ('fill', (220, 166, 176)),
     'nausea': ('face', (175, 222, 120)),
-    'nicotine': ('line', (235, 225, 208)),
-    'nicotine_wd': ('line', (235, 225, 208)),
+    'nicotine': ('fill', (235, 225, 208)),
+    'nicotine_wd': ('fill', (235, 225, 208)),
     'pain': ('face', WHITE),
     'painkillers': ('fill', (232, 232, 236)),
-    'pressure_high': ('line', (255, 140, 140)),
-    'pressure_low': ('line', (150, 190, 255)),
+    'pressure_high': ('fill', (255, 140, 140)),
+    'pressure_low': ('fill', (150, 190, 255)),
     'rage': ('line', (255, 80, 80)),
     'seizure': ('fill', (255, 222, 70)),
     'shock': ('line', WHITE),
@@ -65,7 +65,7 @@ STYLE = {
     'unconscious': ('line', (200, 222, 255)),
     'vessels_narrow': ('line', (150, 192, 255)),
     'vessels_wide': ('line', (255, 125, 125)),
-    'wound': ('line', WHITE),
+    'wound': ('fill', (226, 182, 150), (190, 18, 18)),
 }
 INK = (16, 4, 4)
 
@@ -112,7 +112,8 @@ def connected(seed, mask):
 
 
 def make(name):
-    style, col = STYLE.get(name, ('line', WHITE))
+    style, col, *extra = STYLE.get(name, ('line', WHITE))
+    dcol = extra[0] if extra else None  # свой цвет детали (порез, кровь внутри), иначе - темнее основного
     rnd = random.Random(name)
     a = np.asarray(Image.open(os.path.join(BASE, name + '.png')).convert('RGBA').resize((N, N), Image.BOX))[..., 3] / 255
     stroke = a > 0.3
@@ -138,7 +139,7 @@ def make(name):
         paint(stroke, col, noise=0.12)
     elif style == 'fill':
         paint(shape, col, light, noise=0.16)
-        paint(detail, tuple(c * 0.55 for c in col), light, noise=0.1)  # прожилки, доли, трещины - темнее
+        paint(detail, dcol or tuple(c * 0.55 for c in col), light, noise=0.1)  # прожилки, доли, трещины - темнее
         paint(ring, tuple(c * 0.7 for c in col), light, noise=0.1)
     elif style == 'face':
         paint(shape, (40, 10, 10), light, noise=0.35)  # тёмная клякса
