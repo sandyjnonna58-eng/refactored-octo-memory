@@ -212,3 +212,22 @@ if SERVER then
 		ply.remMgsvChokeUntil, ply.remMgsvLastK = nil, nil
 	end)
 end
+
+if CLIENT then
+	-- аддон, пока у игрока модель Снейка, каждый кадр ставит ему нулевые границы отрисовки (чтобы движок не рисовал
+	-- обычное тело), а когда SWEP убран - не возвращает их. Тогда тело homigrad рисуется, только если точка у ног
+	-- в кадре (смотришь вниз). Возвращаем нормальные границы модели, как только игрок перестал быть Снейком.
+	hook.Add("Think", "rem_mgsv_bounds", function()
+		if not MGSVSnake then return end
+		local getRig = MGSVSnake.GetRig
+		for _, ply in ipairs(player.GetAll()) do
+			if (getRig and getRig(ply)) or hg.MGSV.Active(ply) then
+				ply.remMgsvBounds = true
+			elseif ply.remMgsvBounds then
+				ply.remMgsvBounds = nil
+				local mins, maxs = ply:GetModelRenderBounds()
+				if mins and maxs then ply:SetRenderBounds(mins, maxs) else ply:SetRenderBounds(ply:OBBMins(), ply:OBBMaxs()) end
+			end
+		end
+	end)
+end
