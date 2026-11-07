@@ -39,14 +39,24 @@ def tabler(name, out):
     im.save(out)
 
 def o2(out):
+    # кислород: маленькая "O2" и график, который падает вниз (ломаная со стрелкой у самого низа)
     S = 4
     im = Image.new('RGBA', (SIZE * S, SIZE * S), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
     font = os.path.join(os.path.dirname(__file__), '..', '..', 'resource', 'fonts', 'ShareTechMono-Regular.ttf')
-    big, small = ImageFont.truetype(font, 46 * S), ImageFont.truetype(font, 26 * S)
-    d.text((10 * S, 20 * S), 'O', font=big, fill='white', stroke_width=S, stroke_fill='white')
-    d.text((40 * S, 44 * S), '2', font=small, fill='white', stroke_width=S, stroke_fill='white')
-    d.rectangle([58 * S, 34 * S, 84 * S, 39 * S], fill='white')
+    big, small = ImageFont.truetype(font, 28 * S), ImageFont.truetype(font, 22 * S)
+    d.text((4 * S, -2 * S), 'O', font=big, fill='white', stroke_width=S, stroke_fill='white')
+    d.text((21 * S, 9 * S), '2', font=small, fill='white', stroke_width=int(1.5 * S), stroke_fill='white')
+    w = int(6 * S)
+    # оси (отдельно от графика)
+    d.line([(8 * S, 44 * S), (8 * S, 90 * S), (92 * S, 90 * S)], fill='white', width=w, joint='curve')
+    # падающий график: справа от надписи, ломаная вниз
+    pts = [(42, 12), (54, 30), (62, 24), (74, 48), (80, 42), (86, 62)]
+    d.line([(x * S, y * S) for x, y in pts], fill='white', width=w, joint='curve')
+    for x, y in pts:
+        d.ellipse([(x - 3) * S, (y - 3) * S, (x + 3) * S, (y + 3) * S], fill='white')
+    # стрелка вниз на конце
+    d.polygon([(89 * S, 78 * S), (78 * S, 62 * S), (94 * S, 58 * S)], fill='white')
     im.resize((SIZE, SIZE), Image.LANCZOS).save(out)
 
 def liver(out):
