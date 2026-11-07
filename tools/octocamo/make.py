@@ -36,3 +36,28 @@ out = Image.composite(brick, base, mask).convert('RGBA')
 ImageDraw.Draw(out).rectangle([0, 0, W - 1, H - 1], outline=(30, 32, 34, 255))
 out.save(OUT)
 print('ok', OUT)
+
+
+# свои запасные текстуры поверхностей для OctoCamo (трава/земля/песок/снег на дисплейсментах) -> materials/rem_octo/*.png
+def surface(name, base, spots, n=900, rmax=4, blur=0.6, strokes=None):
+    rnd = random.Random(name)
+    im = Image.new('RGB', (256, 256), base)
+    dr = ImageDraw.Draw(im)
+    for _ in range(n):
+        x, y, r = rnd.uniform(0, 256), rnd.uniform(0, 256), rnd.uniform(1, rmax)
+        c = rnd.choice(spots)
+        j = rnd.randint(-10, 10)
+        dr.ellipse([x - r, y - r, x + r, y + r], fill=tuple(max(0, min(255, v + j)) for v in c))
+    for _ in range(strokes or 0):  # травинки
+        x, y, l, a = rnd.uniform(0, 256), rnd.uniform(0, 256), rnd.uniform(6, 16), rnd.uniform(-0.5, 0.5)
+        dr.line([(x, y), (x + a * l, y - l)], fill=rnd.choice(spots), width=2)
+    out = os.path.join(os.path.dirname(__file__), '..', '..', 'materials', 'rem_octo')
+    os.makedirs(out, exist_ok=True)
+    im.filter(ImageFilter.GaussianBlur(blur)).save(os.path.join(out, name + '.png'))
+
+
+surface('grass', (58, 82, 32), [(70, 104, 38), (48, 70, 26), (92, 120, 48), (40, 58, 22)], n=500, strokes=1400)
+surface('dirt', (92, 72, 50), [(110, 86, 60), (76, 58, 40), (124, 100, 72), (66, 50, 36)])
+surface('sand', (186, 164, 120), [(200, 180, 136), (170, 148, 106), (210, 192, 150)], rmax=2.5)
+surface('snow', (222, 226, 232), [(236, 240, 246), (206, 212, 222), (246, 248, 252)], rmax=5, blur=1.2)
+print('surfaces ok')
