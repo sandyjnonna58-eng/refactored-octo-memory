@@ -6,7 +6,10 @@
 --     У кого не выдано - хуки аддона для него не работают, движение обычное homigrad;
 --     у кого движение ULTRAKILL работает, организм homigrad выключен (org.remNoOrganism): нет боли, крови, переломов,
 --     усталости, отключек - урон снимает обычное здоровье, как в GMod (organism/tier_0/sv_tier_0.lua, tier_1/sv_input.lua);
---   "ULTRAKILL Coin Mechanics" (монетки, ultrakill_toss_coin) - урон идёт обычным TakeDamageInfo, отдельно не трогаем.
+--   "ULTRAKILL Coin Mechanics" (монетки, ultrakill_toss_coin) - урон идёт обычным TakeDamageInfo, отдельно не трогаем;
+--   "ULTRAKILL Arms REVAMPED" (руки через VManip: удар/парирование +ukarm_punch, кнут whiplash): работают только у тех,
+--     кому выдано движение ULTRAKILL (сервер игнорирует удары и кнут остальных; rem_ukarms_all 1 - у всех). Чтобы руки VManip
+--     было видно, у таких игроков без огнестрела homigrad камера отдаётся движку (hg.CameraYield).
 -- Пока в руках оружие пака, homigrad отдаёт камеру движку (cl_camera.lua: hg.CameraYield) - иначе он рисует своё тело
 -- от первого лица и вьюмодель с руками не видна. Когда включено движение ULTRAKILL, инерция homigrad выключена
 -- (movement/sh_inertia.lua), чтобы не гасила слайд/дэш. В регдолле homigrad всё как обычно.
@@ -28,8 +31,15 @@ end
 
 -- включено на сервере (ply не дан) / включено на сервере и у этого игрока
 function hg.UK.MoveOn(ply)
-	local cv = GetConVar("ukmove_movement_enabled")
-	if not (cv and cv:GetBool()) then return false end
+	-- ukmove_movement_enabled у аддона не реплицируется - клиентам его раздаёт сервер (GlobalBool)
+	local global
+	if SERVER then
+		local cv = GetConVar("ukmove_movement_enabled")
+		global = cv and cv:GetBool() or false
+	else
+		global = GetGlobalBool("rem_ukmove_global", false)
+	end
+	if not global then return false end
 	if IsValid(ply) and ply:IsPlayer() then return Personal(ply) end
 	return true
 end
@@ -79,6 +89,35 @@ timer.Simple(2, WrapUK)
 hook.Add("InitPostEntity", "rem_ukmove_wrap", WrapUK)
 
 if SERVER then
+	-- раздаём клиентам, включено ли движение ULTRAKILL на сервере
+	timer.Create("rem_ukmove_global", 1, 0, function()
+		local cv = GetConVar("ukmove_movement_enabled")
+		local on = cv and cv:GetBool() or false
+		if GetGlobalBool("rem_ukmove_global", false) ~= on then SetGlobalBool("rem_ukmove_global", on) end
+	end)
+
+	-- руки ULTRAKILL: удары и кнут принимаем только от тех, у кого выдано движение ULTRAKILL
+	local cvArmsAll = CreateConVar("rem_ukarms_all", "0", FCVAR_ARCHIVE, "ULTRAKILL arms for everyone (1) or only for players given ULTRAKILL movement (0)", 0, 1)
+	local ARM_NETS = {"feedbackerswing", "knuckleblast", "whiplashevent", "uk_updatewhiplashkeydown"}
+	local armWrapped = {}
+	local function WrapArms()
+		for _, name in ipairs(ARM_NETS) do
+			local fn = net.Receivers[name]
+			if fn and armWrapped[name] ~= fn then
+				local orig = fn
+				local w = function(len, ply)
+					if IsValid(ply) and not cvArmsAll:GetBool() and not hg.UK.MoveOn(ply) then return end
+					return orig(len, ply)
+				end
+				armWrapped[name] = w
+				net.Receivers[name] = w
+			end
+		end
+	end
+	timer.Simple(0, WrapArms)
+	timer.Simple(2, WrapArms)
+	hook.Add("InitPostEntity", "rem_ukarms_wrap", WrapArms)
+
 	-- скорость приседания: аддон ставит 0 всем, у кого не выдано - обычная homigrad (0.3)
 	local function ApplyDuck(ply, on)
 		if on then ply:SetDuckSpeed(0) ply:SetUnDuckSpeed(0) else ply:SetDuckSpeed(0.3) ply:SetUnDuckSpeed(0.3) end
@@ -165,4 +204,16 @@ if SERVER then
 			if IsValid(ply) then ply:ChatPrint(msg) else print(msg) end
 		end)
 	end)
+end
+
+-- общая уступка камеры чужим аддонам (cl_camera.lua): Снейк (sh_mgsv.lua), оружие ULTRAKILL, руки ULTRAKILL (VManip)
+-- у выданных игроков, пока в руках не огнестрел homigrad (его без камеры homigrad не видно)
+function hg.CameraYield(ply)
+	if hg.MGSV and hg.MGSV.Owns and hg.MGSV.Owns(ply) then return true end
+	if hg.UK.Weapon(ply) then return true end
+	if VManip and IsValid(ply) and ply:IsPlayer() and not IsValid(ply.FakeRagdoll) and hg.UK.MoveOn(ply) then
+		local w = ply:GetActiveWeapon()
+		return not (IsValid(w) and ishgweapon and ishgweapon(w))
+	end
+	return false
 end
