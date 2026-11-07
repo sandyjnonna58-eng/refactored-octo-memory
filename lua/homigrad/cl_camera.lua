@@ -689,7 +689,7 @@ end
 hg.CalcView = CalcView
 hook.Add("CalcView", "homigrad-view", function(ply, origin, angles, fov, znear, zfar)
 	-- SWEP Снейка: уступаем камере аддона (mgsv_snake_cam)
-	if hg.MGSV and hg.MGSV.Active(ply) then viewOverride = nil return end
+	if hg.MGSV and hg.MGSV.Owns(ply) then viewOverride = nil return end
 	local viewa = viewOverride
 	viewOverride = nil
 	return viewa or CalcView(ply, origin, angles, fov, znear, zfar)
@@ -740,7 +740,7 @@ local IsValid = IsValid
 local function renderscene(pos, angle, fov)
 	lply = IsValid(lply) and lply or fLPly()
 	-- SWEP Снейка (compat/sh_mgsv.lua): кадр рисует движок с камерой аддона от 3-го лица
-	if hg.MGSV and hg.MGSV.Active(lply) then viewOverride = nil return end
+	if hg.MGSV and hg.MGSV.Owns(lply) then viewOverride = nil return end
 	
 	pos = eyepos(lply)
 	angle = eyeangles(lply)

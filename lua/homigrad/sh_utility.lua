@@ -634,11 +634,13 @@ local IsValid = IsValid
 --\\ Render Override
 	hg.renderOverride = function(self, ent, flags)
 		if bit.band(flags, STUDIO_RENDER) != STUDIO_RENDER then return end
+		-- регдолл аддона Снейка (compat/sh_mgsv.lua) - обычная отрисовка движка
+		if hg.MGSV and hg.MGSV.IsRag(self) then self:DrawModel(flags) return end
 		--if self == lply and !selfdraw then return end
 		--debug.Trace()
 		if !self.shouldTransmit then return end
-		-- SWEP Снейка (compat/sh_mgsv.lua): тело рисует аддон, своё не рисуем
-		if hg.MGSV and hg.MGSV.Active(self) then return end
+		-- SWEP Снейка или схвачен им (compat/sh_mgsv.lua): тело рисует аддон, своё не рисуем
+		if hg.MGSV and hg.MGSV.Owns(self) then return end
 
 		ent = IsValid(ent) and ent or self
 		if ent:GetMaterial() == "NULL" then ent:DrawShadow( false ) return end
