@@ -9,6 +9,10 @@
 -- ему не навязывает (у схваченного камера аддона).
 -- Транквилизатор Снейка (и бионическая рука) по игрокам и NPC с организмом действует как дротик Z-city
 -- (weapon_tranquilizer): удар DMG_CLUB на 5 и +5 к org.tranquilizer - сознание уходит постепенно (sv_pain.lua).
+-- Приёмы CQC по игрокам с организмом (вместо сна из аддона):
+--   броски и удар об землю - НЕ вырубают, только больно;
+--   нож после захвата - перерезано горло, как у тейкдауна (TD.CriticalInjuries: сонная артерия хлещет, падает);
+--   удушение после захвата - без сознания ненадолго, всего не больше 2 минут.
 hg.MGSV = hg.MGSV or {}
 
 function hg.MGSV.Active(ply)
@@ -66,6 +70,19 @@ local function Wrap()
 		end
 	end
 
+	-- конец броска/удушения/ножа: аддон хочет усыпить игрока и создаёт свой регдолл - для организмов это делаем сами
+	if SERVER and S.KnockOutPlayer and not S.RemWrappedKO then
+		S.RemWrappedKO = true
+		local orig = S.KnockOutPlayer
+		S.KnockOutPlayer = function(victim, rag)
+			if IsValid(victim) and victim:IsPlayer() and victim.organism then
+				if IsValid(rag) then rag:Remove() end
+				return true -- что именно было - смотрит Think ниже (последняя фаза приёма у жертвы)
+			end
+			return orig(victim, rag)
+		end
+	end
+
 	if SERVER and S.TranqPlayer and not S.RemWrappedTranqPly then
 		S.RemWrappedTranqPly = true
 		local orig = S.TranqPlayer
@@ -117,5 +134,81 @@ if SERVER then
 			end
 		end
 		for _, l in ipairs(out) do ply:PrintMessage(HUD_PRINTCONSOLE, l) end
+	end)
+end
+
+if SERVER then
+	local CQC = {
+		throwPain = 50,                 -- боль за бросок / удар об землю (100% = 120), добавляется постепенно
+		chokeMin = 30, chokeMax = 110,  -- сколько держит без сознания после удушения; ещё ~6 с просыпается - итого до 2 минут
+	}
+	hg.MGSV.CQC = CQC
+
+	local function baseKey(k)
+		if not k then return end
+		if string.sub(k, 1, 2) == "q_" then k = string.sub(k, 3) end
+		return k
+	end
+
+	local function Finish(ply, k)
+		local org = ply.organism
+		if not org or not ply:Alive() then return end
+		if k == "knf_kil" then
+			-- перерезано горло (нож дошёл до конца)
+			local TD = hg.Takedown
+			if TD and TD.CriticalInjuries and TD.CriticalInjuries(ply) then
+				if hg.Fake then hg.Fake(ply, nil, nil, true) end
+			end
+		elseif k == "choke_ed" then -- удушение доведено до конца (прерванное - не вырубает)
+			ply.remMgsvChokeUntil = CurTime() + math.Rand(CQC.chokeMin, CQC.chokeMax)
+			org.consciousness = 0
+			org.needotrub = true
+			org.needfake = true
+		elseif string.sub(k, 1, 4) == "thw_" or k == "slam" then
+			org.painadd = (org.painadd or 0) + CQC.throwPain
+		end
+	end
+
+	hook.Add("Think", "rem_mgsv_cqc", function()
+		local C = MGSVCQC
+		if not C or not C.Info then return end
+		local now = CurTime()
+
+		-- нож по игроку с организмом: аддон убил бы его (Kill) - снимаем флаг, горло режем сами в конце приёма
+		if C.BusyTable then
+			for snake, rec in pairs(C.BusyTable) do
+				local v = rec and rec.npc
+				if rec.kill and IsValid(v) and v:IsPlayer() and v.organism then rec.kill = false end
+			end
+		end
+
+		for _, ply in player.Iterator() do
+			-- последняя фаза приёма у жертвы; фаза пропала - приём закончился
+			local k = C.Info(ply, true)
+			if k then
+				ply.remMgsvLastK = baseKey(k)
+			elseif ply.remMgsvLastK then
+				local last = ply.remMgsvLastK
+				ply.remMgsvLastK = nil
+				Finish(ply, last)
+			end
+
+			-- после удушения держим без сознания
+			local untilT = ply.remMgsvChokeUntil
+			if untilT then
+				local org = ply.organism
+				if now >= untilT or not ply:Alive() or not org then
+					ply.remMgsvChokeUntil = nil
+				else
+					org.consciousness = 0
+					org.needotrub = true
+					org.needfake = true
+				end
+			end
+		end
+	end)
+
+	hook.Add("PlayerSpawn", "rem_mgsv_cqc", function(ply)
+		ply.remMgsvChokeUntil, ply.remMgsvLastK = nil, nil
 	end)
 end

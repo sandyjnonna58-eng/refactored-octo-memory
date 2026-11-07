@@ -278,6 +278,8 @@ local function CriticalInjuries(victim)
 	org.consciousness = 0
 	return true
 end
+-- нужно и снаружи: перерезанное горло после ножевого CQC Снейка (compat/sh_mgsv.lua)
+TD.CriticalInjuries = CriticalInjuries
 
 local function KillVictim(td)
 	local victim, ply = td.victim, td.attacker
