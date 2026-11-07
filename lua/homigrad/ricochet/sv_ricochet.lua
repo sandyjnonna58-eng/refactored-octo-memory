@@ -50,11 +50,53 @@ local function PickTarget(from, shooter, skip)
 	if #list > 0 then return list[math.random(#list)] end
 end
 
+-- куски, если штатный разрыв homigrad не сработал (NPC без организма и т.п.)
+local GIBS = {"models/gibs/hgibs.mdl", "models/gibs/hgibs_rib.mdl", "models/gibs/hgibs_scapula.mdl", "models/gibs/hgibs_spine.mdl",
+	"models/gibs/antlion_gib_small_1.mdl", "models/gibs/antlion_gib_small_2.mdl"}
+local function ScatterGibs(pos, dir)
+	for i = 1, 8 do
+		local g = ents.Create("prop_physics")
+		if not IsValid(g) then break end
+		g:SetModel(GIBS[(i - 1) % #GIBS + 1])
+		g:SetPos(pos + VectorRand() * 10)
+		g:SetAngles(AngleRand())
+		g:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
+		g:Spawn()
+		local ph = g:GetPhysicsObject()
+		if IsValid(ph) then ph:SetVelocity(dir * 300 + VectorRand() * 350 + Vector(0, 0, 200)) end
+		SafeRemoveEntityDelayed(g, 20)
+	end
+end
+
+-- взрыв крови там, где был человек (всем видно и слышно)
+local function Burst(pos, dir)
+	local fx = EffectData()
+	fx:SetOrigin(pos)
+	fx:SetNormal(-dir)
+	fx:SetScale(1)
+	fx:SetMagnitude(1)
+	util.Effect("Explosion", fx, true, true) -- только картинка и звук, без урона
+	for _ = 1, 6 do
+		local b = EffectData()
+		b:SetOrigin(pos + VectorRand() * 14)
+		b:SetNormal(VectorRand())
+		b:SetScale(12)
+		b:SetFlags(3)
+		b:SetColor(0)
+		util.Effect("bloodspray", b, true, true)
+		util.Effect("BloodImpact", b, true, true)
+	end
+	sound.Play("physics/flesh/flesh_bloody_break.wav", pos, 90, math.random(90, 105))
+	util.Decal("Blood", pos, pos - Vector(0, 0, 80))
+end
+
 -- разорвать на части
 local function Gib(victim, ent, dir, shooter, wep, pos, C)
+	local center = victim:WorldSpaceCenter()
+	Burst(center, dir)
 	local d = DamageInfo()
 	d:SetDamage(C.lethal)
-	d:SetDamageType(DMG_BULLET)
+	d:SetDamageType(bit.bor(DMG_BULLET, DMG_BLAST, DMG_ALWAYSGIB))
 	d:SetAttacker(IsValid(shooter) and shooter or victim)
 	d:SetInflictor(IsValid(wep) and wep or (IsValid(shooter) and shooter or victim))
 	d:SetDamagePosition(pos)
@@ -64,13 +106,22 @@ local function Gib(victim, ent, dir, shooter, wep, pos, C)
 		timer.Simple(0, function()
 			if IsValid(victim) and victim:Alive() then victim:Kill() end
 			timer.Simple(0.05, function()
-				if IsValid(victim) and hg.FullBodyExplode then hg.FullBodyExplode(victim, dir * C.gibForce) end
+				if not IsValid(victim) then return end
+				if not (hg.FullBodyExplode and hg.FullBodyExplode(victim, dir * C.gibForce)) then
+					local rag = victim:GetNWEntity("RagdollDeath")
+					ScatterGibs(center, dir)
+					if IsValid(rag) then rag:Remove() end
+				end
 			end)
 		end)
-	elseif hg.FullBodyExplode then
+	else
 		timer.Simple(0, function()
-			if IsValid(victim) and hg.FullBodyExplode(victim, dir * C.gibForce) then return end
-			if IsValid(victim) and victim:Health() > 0 then victim:TakeDamageInfo(d) end
+			if IsValid(victim) and hg.FullBodyExplode and hg.FullBodyExplode(victim, dir * C.gibForce) then return end
+			ScatterGibs(center, dir)
+			if IsValid(victim) then
+				if victim:Health() > 0 then victim:TakeDamageInfo(d) end
+				if victim:IsNPC() then victim:Remove() end -- тела не остаётся, только куски
+			end
 		end)
 	end
 end

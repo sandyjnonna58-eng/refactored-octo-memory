@@ -57,6 +57,19 @@ function SWEP:Think()
 		local s = self:GetNWFloat("rem_rr_spin", 0)
 		s = spinning and math.min(s + FrameTime() / SPIN_TIME, 1) or 0
 		if s ~= self:GetNWFloat("rem_rr_spin", 0) then self:SetNWFloat("rem_rr_spin", s) end
+		-- анимация: барабан крутится и разгоняется (drumroll только для вида, на патроны не влияет);
+		-- после раскрутки доворачиваем до целого оборота, чтобы камора встала на место
+		if s > 0 then
+			if CurTime() >= (self.remSpinStepT or 0) then
+				self.remSpinStepT = CurTime() + Lerp(s, 0.18, 0.035)
+				self.remSpinSteps = (self.remSpinSteps or 0) + 1
+				self:SetNWInt("drumroll", self:GetNWInt("drumroll", 0) + 1)
+			end
+		elseif (self.remSpinSteps or 0) > 0 then
+			local rest = (6 - self.remSpinSteps % 6) % 6
+			if rest > 0 then self:SetNWInt("drumroll", self:GetNWInt("drumroll", 0) + rest) end
+			self.remSpinSteps = 0
+		end
 		if s >= 1 and not self.remSpunNotified then
 			self.remSpunNotified = true
 			self:EmitSound("buttons/button17.wav", 60, 140)
