@@ -12,7 +12,8 @@
 hg.MGSV = hg.MGSV or {}
 
 function hg.MGSV.Active(ply)
-	if not MGSVSnake or not MGSVSnake.Active or not IsValid(ply) then return false end
+	-- только игроки: homigrad зовёт отрисовку и для регдоллов, а у них нет InVehicle и т.п.
+	if not MGSVSnake or not MGSVSnake.Active or not IsValid(ply) or not ply:IsPlayer() then return false end
 	return MGSVSnake.Active(ply) and true or false
 end
 
@@ -59,7 +60,8 @@ local function Wrap()
 		S.RemWrappedActive = true
 		local orig = S.Active
 		S.Active = function(ply)
-			if IsValid(ply) and (IsValid(ply.FakeRagdoll) or (ply.organism and ply.organism.otrub)) then return false end
+			if not IsValid(ply) or not ply:IsPlayer() then return false end
+			if IsValid(ply.FakeRagdoll) or (ply.organism and ply.organism.otrub) then return false end
 			return orig(ply)
 		end
 	end
