@@ -15,7 +15,7 @@ TABLER = {
     'wound': 'cut', 'bleeding': 'droplet', 'arterial': 'droplets', 'bloodloss': 'droplet-half-2',
     'fracture': 'bone', 'dislocation': 'stretching', 'amputation': 'hand-off', 'skull': 'skull',
     'concussion': 'spiral', 'brain': 'brain', 'seizure': 'bolt', 'unconscious': 'zzz',
-    'shock': 'activity', 'critical': 'alert-triangle',
+    'pain': 'mood-nervous', 'shock': 'activity', 'critical': 'alert-triangle',
     'arrhythmia': 'heart-rate-monitor', 'fibrillation': 'activity-heartbeat', 'cardiac_arrest': 'heart-off',
     'heart': 'heart-broken', 'pressure_low': 'gauge', 'pressure_high': 'gauge',
     'lungs': 'lungs', 'lung_failure': 'lungs-off', 'hot': 'temperature-plus', 'cold': 'temperature-minus',
@@ -70,17 +70,6 @@ def liver(out):
         d.ellipse([(x - 2.2) * S, (y - 2.2) * S, (x + 2.2) * S, (y + 2.2) * S], fill='white')
     im.resize((SIZE, SIZE), Image.LANCZOS).save(out)
 
-def sad(out):
-    # боль: классический грустный смайлик =( - круг, две точки-глаза, рот дугой вниз
-    S = 4
-    im = Image.new('RGBA', (SIZE * S, SIZE * S), (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
-    d.ellipse([10 * S, 10 * S, 86 * S, 86 * S], outline='white', width=int(6 * S))
-    for x in (35, 61):
-        d.ellipse([(x - 5) * S, 30 * S, (x + 5) * S, 46 * S], fill='white')
-    d.arc([31 * S, 60 * S, 65 * S, 88 * S], 205, 335, fill='white', width=int(6 * S))
-    im.resize((SIZE, SIZE), Image.LANCZOS).save(out)
-
 def mark(path, plus):
     # значок "+" / "-" в правом верхнем углу (давление высокое / низкое)
     S = 4
@@ -96,5 +85,4 @@ mark(os.path.join(OUT, 'pressure_high.png'), True)
 mark(os.path.join(OUT, 'pressure_low.png'), False)
 o2(os.path.join(OUT, 'hypoxia.png'))
 liver(os.path.join(OUT, 'liver.png'))
-sad(os.path.join(OUT, 'pain.png'))
-print(len(TABLER) + 3, 'icons')
+print(len(TABLER) + 2, 'icons')
