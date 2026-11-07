@@ -12,8 +12,7 @@
 - Комментарии в коде - по-русски, коротко: что делает и почему.
 - В игре изменения проверяет пользователь; у Claude - только проверка синтаксиса Lua.
 - Чужой защищённый контент (видео, фото товаров, выдранные модели) - не в публичный репозиторий, а в приватные паки,
-  они в `.gitignore` (`materials/rem_wd_private`, `sound/rem_wd_private`, `materials/rem_drinks_private`,
-  `sound/rem_rage_private`),
+  они в `.gitignore` (`materials/rem_wd_private`, `sound/rem_wd_private`, `materials/rem_drinks_private`),
   раздаются через FastDL-циклы в `lua/homigrad/skills/sv_skills.lua`.
 - Новые звуки/текстуры - `resource.AddSingleFile` на сервере, иначе у игроков их не будет.
 - Генераторы текстур - в `tools/` (Python + PIL), запуск из корня репозитория.
@@ -48,5 +47,5 @@
   `weapon_hg_cigarettes`.
 - Тейкдауны, камера FC, лечение FC, бросок ножа (E + ПКМ): `lua/homigrad/takedowns`, `fccamera`, `fcheal`, `meleethrow`.
 - Ярость (3 стадии, копится от угроз: смотрят с оружием, целятся, фак, «умри»; удар - рывок и x2, без удара не выше 2-й):
-  `modules/sv_rage.lua` и `cl_rage.lua` (музыка по стадиям из приватного `sound/rem_rage_private/anger.mp3`,
+  `modules/sv_rage.lua` и `cl_rage.lua` (музыка по стадиям `sound/rem_rage/anger.mp3`, права у пользователя,
   куски 0-59 / 58-117 / 117-конец), плитка «anger» с описанием в `cl_health_indicator.lua`.

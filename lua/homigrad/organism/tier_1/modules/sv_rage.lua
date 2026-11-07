@@ -40,9 +40,7 @@ local stagePhrases = {
 	"NOTHING. ELSE. MATTERS. BUT. THIS.",
 }
 
-if file.Exists("sound/rem_rage_private/anger.mp3", "GAME") then
-	resource.AddSingleFile("sound/rem_rage_private/anger.mp3") -- музыка ярости (приватный пак, не в репозитории)
-end
+resource.AddSingleFile("sound/rem_rage/anger.mp3") -- музыка ярости (cl_rage.lua)
 
 local function StageOf(rage)
 	if rage >= R.stage3 then return 3 end
