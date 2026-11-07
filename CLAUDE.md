@@ -59,6 +59,9 @@
   костюм перенимает текстуру только лёжа (пол) или упёршись в стену стоя/сидя (стена), 3 с неподвижно; рисуется через
   `MGSVSnake.DrawBody`; дисплейсменты (трава и т.п.) - по типу поверхности, запасные текстуры `materials/rem_octo`;
   картинки - `tools/octocamo/make.py`.
+- Совместимость с отдельными аддонами ULTRAKILL (Weapons Pack, Movement Collection, Coin Mechanics; в репозиторий не кладём):
+  `lua/homigrad/compat/sh_ultrakill.lua` - `hg.UK.Weapon(ply)` (оружие weapon_dredux_uk_*: камера движку, видна вьюмодель),
+  `hg.UK.MoveOn()` (ukmove_movement_enabled: инерция homigrad выключена). Общая уступка камеры - `hg.CameraYield(ply)`.
 - Ярость (3 стадии, копится от угроз: смотрят с оружием, целятся, фак, «умри»; удар - рывок и x2, без удара не выше 2-й):
   `modules/sv_rage.lua` и `cl_rage.lua` (музыка по стадиям `sound/rem_rage/anger.mp3`, права у пользователя,
   куски 0-59 / 58-117 / 117-конец), плитка «anger» с описанием в `cl_health_indicator.lua`.
