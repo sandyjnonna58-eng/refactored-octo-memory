@@ -1,4 +1,4 @@
-# Белые значки состояний для плиток осмотра (lua/homigrad/cl_health_indicator.lua) -> materials/rem_affl/*.png
+# Белые значки-основа для плиток осмотра (lua/homigrad/cl_health_indicator.lua) -> tools/affliction_icons/base/*.png
 # Большинство - Tabler Icons (MIT, лицензия в materials/radialmenu_rem/LICENSE-tabler-icons.txt), O2 и печень нарисованы тут.
 # Запуск: python3 tools/affliction_icons/make.py <папка tabler/icons/outline>
 import io, os, re, sys
@@ -6,7 +6,8 @@ import cairosvg
 from PIL import Image, ImageDraw, ImageFont
 
 SRC = sys.argv[1]
-OUT = os.path.join(os.path.dirname(__file__), '..', '..', 'materials', 'rem_affl')
+# белая основа; готовые значки в стиле Fading Vitality из неё делает make_fv.py -> materials/rem_affl
+OUT = os.path.join(os.path.dirname(__file__), 'base')
 os.makedirs(OUT, exist_ok=True)
 SIZE = 96
 

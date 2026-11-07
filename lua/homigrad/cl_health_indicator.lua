@@ -364,6 +364,9 @@ local gradDown = Material("vgui/gradient-d")
 -- как в Fading Vitality: тяжёлые плитки приподняты над рядом (чем тяжелее - тем выше) и над ними горит красный
 -- столб свечения, тающий кверху, со слабым знаком тревоги; все плитки мелко трясутся рывками (тяжёлые - сильнее)
 local gradUp = Material("vgui/gradient-u")
+-- зерно плиток - тот же пиксельный шум, что у таймера смерти (крупные пиксели, без smooth)
+local tileGrain = {}
+for i = 1, 4 do tileGrain[i] = Material("rem_death/vortex_static" .. i .. ".png") end
 local LIFT_START = 0.45                   -- с какой тяжести плитка поднимается
 local LIFT_MAX = 0.55                     -- на сколько плиток поднимается самая тяжёлая
 local GLOW_HEIGHT = 1.7                   -- высота столба свечения (в плитках) у самой тяжёлой
@@ -444,11 +447,17 @@ local function DrawAfflictionIcons(iconEntries, centerX, bottomY, visibility, ap
 				surface.SetDrawColor(30, 110, 190, a)
 				surface.DrawTexturedRect(x, yy, tile, tile)
 			else
-				surface.SetDrawColor(18 + 70 * sev, 0, 0, a)
+				-- как в Fading Vitality: почти чёрная плитка, снизу наливается красным по тяжести, сверху грязное зерно
+				surface.SetDrawColor(12 + 20 * sev, 3, 3, a)
 				surface.DrawRect(x, yy, tile, tile)
 				surface.SetMaterial(gradDown)
-				surface.SetDrawColor(math.min(255, 70 + 170 * sev + 40 * pulse), 6 + 12 * sev, 6 + 12 * sev, a)
+				surface.SetDrawColor(math.min(255, 40 + 150 * sev + 40 * pulse), 5 + 8 * sev, 5 + 8 * sev, math.floor(a * (0.45 + 0.5 * sev)))
 				surface.DrawTexturedRect(x, yy, tile, tile)
+				if tileGrain[1] and not tileGrain[1]:IsError() then
+					surface.SetMaterial(tileGrain[(idx + math.floor(timeNow * 6)) % 4 + 1])
+					surface.SetDrawColor(120, 40, 40, math.floor(a * 0.18))
+					surface.DrawTexturedRectUV(x, yy, tile, tile, (idx * 0.13) % 1, 0, (idx * 0.13) % 1 + 0.12, 0.2)
+				end
 			end
 
 			-- рамка
@@ -457,7 +466,8 @@ local function DrawAfflictionIcons(iconEntries, centerX, bottomY, visibility, ap
 			elseif sev >= 0.9 then
 				surface.SetDrawColor(255, 255, 255, a)
 			else
-				surface.SetDrawColor(140 + 100 * sev, 55 + 50 * sev, 55 + 50 * sev, a)
+				-- бледно-розовая рамка, у тяжёлых светлее
+				surface.SetDrawColor(170 + 70 * sev, 110 + 60 * sev, 110 + 60 * sev, a)
 			end
 
 			surface.DrawOutlinedRect(x, yy, tile, tile, border)
