@@ -116,10 +116,81 @@ function SWEP:FireBullet()
 		end
 		return
 	end
-	return Base.FireBullet(self)
+	local res = Base.FireBullet(self)
+	-- обычная пуля тоже красная: красный след от глаз до попадания (тот же луч, что у рикошета)
+	if SERVER and IsValid(owner) and owner:IsPlayer() then
+		local start = owner:EyePos()
+		local tr = util.TraceLine({start = start, endpos = start + owner:GetAimVector() * 8000, filter = owner, mask = MASK_SHOT})
+		net.Start("rem_ricochet")
+			net.WriteUInt(2, 6)
+			net.WriteVector(start + owner:GetAimVector() * 30)
+			net.WriteVector(tr.HitPos)
+			net.WriteFloat(0.02)
+		net.Broadcast()
+	end
+	return res
 end
 
 if CLIENT then
+	-- раскрутка видна: крутим кость барабана той модели, что рисуется (c_357 - и от первого, и от третьего лица);
+	-- ось - rem_rr_spin_axis (p/y/r), если на модели барабан крутится "не туда"
+	local cvAxis = CreateClientConVar("rem_rr_spin_axis", "r", true, false, "Ricochet revolver: drum spin axis p/y/r")
+	local function CylinderBone(wm)
+		if wm.remCyl ~= nil then return wm.remCyl or nil end
+		wm.remCyl = false
+		for i = 0, wm:GetBoneCount() - 1 do
+			local n = string.lower(wm:GetBoneName(i) or "")
+			if (string.find(n, "cylinder", 1, true) or string.find(n, "drum", 1, true)) and not string.find(n, "release", 1, true) then
+				wm.remCyl = i
+				break
+			end
+		end
+		return wm.remCyl or nil
+	end
+
+	hook.Add("Think", "rem_ricochet_spin_anim", function()
+		for _, wep in ipairs(ents.FindByClass("weapon_rem_ricochet")) do
+			local wm = wep.GetWM and wep:GetWM()
+			local bone = IsValid(wm) and CylinderBone(wm)
+			if bone then
+				local f = wep:SpinFrac()
+				-- скорость: от 0 до ~3 оборотов в секунду; отпустил - барабан останавливается на ближайшей каморе
+				wep.remCylAng = wep.remCylAng or 0
+				if f > 0 then
+					wep.remCylAng = (wep.remCylAng + FrameTime() * f * f * 1080) % 360
+				else
+					local target = math.Round(wep.remCylAng / 60) * 60
+					wep.remCylAng = math.Approach(wep.remCylAng, target, FrameTime() * 240) % 360
+				end
+				local a, axis = wep.remCylAng, cvAxis:GetString()
+				wm:ManipulateBoneAngles(bone, axis == "p" and Angle(a, 0, 0) or axis == "y" and Angle(0, a, 0) or Angle(0, 0, a))
+			end
+		end
+	end)
+
+	-- 6 красных кружков под прицелом - патроны в барабане: выстрел гасит один, перезарядка - снова все 6
+	hook.Add("HUDPaint", "rem_ricochet_rounds", function()
+		local ply = LocalPlayer()
+		local wep = IsValid(ply) and ply:GetActiveWeapon()
+		if not IsValid(wep) or wep:GetClass() ~= "weapon_rem_ricochet" then return end
+		local n = math.Clamp(wep:Clip1(), 0, 6)
+		local r, gap = 6, 17
+		local x0, y = ScrW() / 2 - gap * 2.5, ScrH() / 2 + 58
+		draw.NoTexture()
+		for i = 1, 6 do
+			local x = x0 + (i - 1) * gap
+			surface.SetDrawColor(30, 0, 0, 200)
+			draw.Circle(x, y, r + 2, 16)
+			if i <= n then
+				surface.SetDrawColor(235, 25, 25, 255)
+				draw.Circle(x, y, r, 16)
+			else
+				surface.SetDrawColor(90, 10, 10, 160)
+				draw.Circle(x, y, r * 0.45, 12)
+			end
+		end
+	end)
+
 	-- полоска раскрутки под прицелом
 	hook.Add("HUDPaint", "rem_ricochet_spin", function()
 		local ply = LocalPlayer()
@@ -136,4 +207,16 @@ if CLIENT then
 		surface.SetDrawColor(200 + 55 * pulse, 30 + 60 * pulse, 30, 230)
 		surface.DrawRect(x, y, w * f, h)
 	end)
+end
+
+-- круг для HUD (если в проекте ещё нет)
+if CLIENT and not draw.Circle then
+	function draw.Circle(x, y, radius, seg)
+		local cir = {}
+		for i = 0, seg do
+			local a = math.rad((i / seg) * -360)
+			cir[#cir + 1] = {x = x + math.sin(a) * radius, y = y + math.cos(a) * radius}
+		end
+		surface.DrawPoly(cir)
+	end
 end
