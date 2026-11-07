@@ -86,3 +86,36 @@ end
 Wrap()
 timer.Simple(0, Wrap)
 hook.Add("InitPostEntity", "rem_mgsv_compat", Wrap)
+
+if SERVER then
+	-- zcity построен на sandbox: его PlayerShouldTakeDamage даёт false при sbox_godmode / sbox_playershurtplayers 0,
+	-- а аддон Снейка этим хуком решает, можно ли хватать (CQC) и усыплять игрока. Урон у нас идёт через организм homigrad,
+	-- поэтому для Снейка этот запрет не нужен: приёмы и дротики по игрокам работают всегда.
+	hook.Add("PlayerShouldTakeDamage", "rem_mgsv_cqc", function(victim, attacker)
+		if IsValid(attacker) and attacker:IsPlayer() and attacker ~= victim and hg.MGSV.Active(attacker) then return true end
+	end)
+
+	-- rem_mgsv_debug: почему сервер не начинает захват (печатает в консоль того, кто вызвал)
+	concommand.Add("rem_mgsv_debug", function(ply)
+		if not IsValid(ply) then return end
+		local S, C = MGSVSnake, MGSVCQC
+		local out = {}
+		local function p(...) out[#out + 1] = table.concat({...}, " ") end
+		if not S then p("MGSVSnake нет - аддон Снейка не загружен") ply:PrintMessage(HUD_PRINTCONSOLE, out[1]) return end
+		p("Active:", tostring(S.Active(ply)), "OnGround:", tostring(ply:IsOnGround()), "State:", tostring(S.State and S.State(ply)),
+			"Aiming:", tostring(S.Aiming and S.Aiming(ply)), "Busy:", tostring(C and C.Busy and C.Busy(ply)))
+		p("Cig:", tostring(S.CigState and S.CigState(ply)), "Throw:", tostring(S.Throwing and S.Throwing(ply)),
+			"Reload:", tostring(S.ReloadPhase and S.ReloadPhase(ply)), "Dance:", tostring(S.Dancing and S.Dancing(ply)))
+		p("CQCReady (сервер):", tostring(S.CQCReady and S.CQCReady(ply)), "cqc_players:", tostring(S.cvCQCPlayers and S.cvCQCPlayers:GetBool()))
+		for _, e in ipairs(ents.FindInSphere(ply:GetPos(), 120)) do
+			if e ~= ply and (e:IsPlayer() or e:IsNPC()) then
+				local d = e:GetPos() - ply:GetPos()
+				p(tostring(e), "dist:", math.Round(d:Length2D()), "dz:", math.Round(d.z), "alive/hp:", tostring(e:IsPlayer() and e:Alive() or e:Health()),
+					"ground:", tostring(e:IsOnGround()), "nodraw:", tostring(e:GetNoDraw()), "cqcFlag:", tostring(e.mgsvCQC), "sleep:", tostring(e.mgsvSleepEnd),
+					"pelvis:", tostring(e:LookupBone("ValveBiped.Bip01_Pelvis")),
+					"ShouldTakeDamage:", tostring(e:IsPlayer() and hook.Run("PlayerShouldTakeDamage", e, ply)))
+			end
+		end
+		for _, l in ipairs(out) do ply:PrintMessage(HUD_PRINTCONSOLE, l) end
+	end)
+end
