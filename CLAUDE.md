@@ -66,7 +66,8 @@
   У кого движение ULTRAKILL работает - организм выключен (`org.remNoOrganism`): тик в `organism/tier_0/sv_tier_0.lua` пропускается,
   урон в `tier_1/sv_input.lua` идёт мимо организма обычным здоровьем; снятие - сброс `hg.organism.Clear`. Общая уступка камеры - `hg.CameraYield(ply)`
   (определена В КОНЦЕ sh_ultrakill.lua - не затереть при правках!). Руки ULTRAKILL Arms REVAMPED (VManip) - только у выданных
-  (net-приёмники аддона обёрнуты; rem_ukarms_all 1 - у всех). ukmove_movement_enabled клиентам - GlobalBool "rem_ukmove_global".
+  (net-приёмники аддона обёрнуты; rem_ukarms_all 1 - у всех; камеру ради рук не отдаём - пропадает своё тело).
+  При выключенном организме выносливость держится полной (Think "rem_ukmove_stamina"). ukmove_movement_enabled клиентам - GlobalBool "rem_ukmove_global".
 - Ярость (3 стадии, копится от угроз: смотрят с оружием, целятся, фак, «умри»; удар - рывок и x2, без удара не выше 2-й):
   `modules/sv_rage.lua` и `cl_rage.lua` (музыка по стадиям `sound/rem_rage/anger.mp3`, права у пользователя,
   куски 0-59 / 58-117 / 117-конец), плитка «anger» с описанием в `cl_health_indicator.lua`.

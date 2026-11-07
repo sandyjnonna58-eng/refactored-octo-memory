@@ -8,8 +8,8 @@
 --     усталости, отключек - урон снимает обычное здоровье, как в GMod (organism/tier_0/sv_tier_0.lua, tier_1/sv_input.lua);
 --   "ULTRAKILL Coin Mechanics" (монетки, ultrakill_toss_coin) - урон идёт обычным TakeDamageInfo, отдельно не трогаем;
 --   "ULTRAKILL Arms REVAMPED" (руки через VManip: удар/парирование +ukarm_punch, кнут whiplash): работают только у тех,
---     кому выдано движение ULTRAKILL (сервер игнорирует удары и кнут остальных; rem_ukarms_all 1 - у всех). Чтобы руки VManip
---     было видно, у таких игроков без огнестрела homigrad камера отдаётся движку (hg.CameraYield).
+--     кому выдано движение ULTRAKILL (сервер игнорирует удары и кнут остальных; rem_ukarms_all 1 - у всех). Камеру ради рук
+--     не отдаём (иначе пропадает своё тело от первого лица) - удары работают, анимация рук VManip под камерой homigrad не видна.
 -- Пока в руках оружие пака, homigrad отдаёт камеру движку (cl_camera.lua: hg.CameraYield) - иначе он рисует своё тело
 -- от первого лица и вьюмодель с руками не видна. Когда включено движение ULTRAKILL, инерция homigrad выключена
 -- (movement/sh_inertia.lua), чтобы не гасила слайд/дэш. В регдолле homigrad всё как обычно.
@@ -138,6 +138,20 @@ if SERVER then
 		if not on then StopUK(ply) end
 	end
 
+	-- выключенный организм не тикает, а бег и прыжки homigrad всё равно тратят выносливость (FinishMove и т.п.) -
+	-- держим её полной, иначе без восстановления кончится и homigrad начнёт резать бег/прыжки
+	hook.Add("Think", "rem_ukmove_stamina", function()
+		for _, ply in player.Iterator() do
+			local org = ply.organism
+			local st = org and org.remNoOrganism and org.stamina
+			if st then
+				local full = st.max or st.range or 180
+				if st[1] ~= full then st[1] = full end
+				st.sub = 0
+			end
+		end
+	end)
+
 	-- организм: выключен, пока у игрока работает движение ULTRAKILL; при выключении - сброс в здоровое состояние
 	local function ApplyOrganism(ply, off)
 		local org = ply.organism
@@ -206,14 +220,8 @@ if SERVER then
 	end)
 end
 
--- общая уступка камеры чужим аддонам (cl_camera.lua): Снейк (sh_mgsv.lua), оружие ULTRAKILL, руки ULTRAKILL (VManip)
--- у выданных игроков, пока в руках не огнестрел homigrad (его без камеры homigrad не видно)
+-- общая уступка камеры чужим аддонам (cl_camera.lua): Снейк (sh_mgsv.lua) и оружие ULTRAKILL (у него своя вьюмодель)
 function hg.CameraYield(ply)
 	if hg.MGSV and hg.MGSV.Owns and hg.MGSV.Owns(ply) then return true end
-	if hg.UK.Weapon(ply) then return true end
-	if VManip and IsValid(ply) and ply:IsPlayer() and not IsValid(ply.FakeRagdoll) and hg.UK.MoveOn(ply) then
-		local w = ply:GetActiveWeapon()
-		return not (IsValid(w) and ishgweapon and ishgweapon(w))
-	end
-	return false
+	return hg.UK.Weapon(ply)
 end
