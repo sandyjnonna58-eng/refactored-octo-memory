@@ -2,6 +2,7 @@
 # Берёт белую основу из tools/affliction_icons/base (её делает make.py) и перерисовывает:
 #   крупные пиксели (32x32, увеличено до 96), зерно, тёмная обводка, цветные акценты;
 #   органы и предметы - закрашенные бледные пятна с тенью ("fill"), лица - тёмная клякса с белыми глазами ("face"),
+#   классические смайлики - жёлтый круг с тёмными глазами и ртом ("smiley"),
 #   знаки тревоги - цветная плашка с белым рисунком ("badge"), остальное - линии своего цвета ("line").
 # Запуск из корня репозитория: python3 tools/affliction_icons/make_fv.py
 import os, random
@@ -53,7 +54,7 @@ STYLE = {
     'nausea': ('face', (175, 222, 120)),
     'nicotine': ('line', (235, 225, 208)),
     'nicotine_wd': ('line', (235, 225, 208)),
-    'pain': ('face', WHITE),
+    'pain': ('smiley', (240, 200, 60)),
     'painkillers': ('fill', (232, 232, 236)),
     'pressure_high': ('line', (255, 140, 140)),
     'pressure_low': ('line', (150, 190, 255)),
@@ -144,6 +145,10 @@ def make(name):
         paint(shape, (40, 10, 10), light, noise=0.35)  # тёмная клякса
         paint(ring, (95, 22, 22), noise=0.2)
         paint(detail, col, noise=0.08)                 # глаза и рот
+    elif style == 'smiley':
+        paint(shape, col, light, noise=0.14)                       # жёлтый круг
+        paint(ring, tuple(c * 0.62 for c in col), light, noise=0.1)
+        paint(detail, (30, 12, 8), noise=0.05)                     # тёмные глаза и рот
     elif style == 'badge':
         paint(shape, col, light, noise=0.18)
         paint(detail, WHITE, noise=0.05)
