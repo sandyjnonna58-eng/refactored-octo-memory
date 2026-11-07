@@ -209,9 +209,16 @@ local function AfflIcon(name)
 	return afflIconCache[name] or nil
 end
 
+-- стадии ярости: тяжесть плитки, название, описание (строки через \n)
+local RAGE_STAGES = {
+	{0.45, "Blinding anger", "You can barely hold it in.\nSomeone here is asking for it,\nand you feel more than ready.\nLess fear and pain."},
+	{0.75, "FURIOUS", "You're at your limit.\nYour fists clench on their own,\nyour hands shake.\nWhoever gets in your way, regrets it."},
+	{1, "UNDETERRABLE RAGE", "NOTHING. ELSE. MATTERS. BUT. THIS."},
+}
+
 local function CollectAfflictionIcons(ply, org)
 	local icons, seen = {}, {}
-	local function add(iconName, severity, label, good)
+	local function add(iconName, severity, label, good, desc)
 		severity = math.Clamp(severity or 0.5, 0.05, 1)
 		local e = seen[iconName]
 		if e then
@@ -220,7 +227,7 @@ local function CollectAfflictionIcons(ply, org)
 		end
 		local mat = AfflIcon(iconName)
 		if not mat then return end
-		e = {mat = mat, severity = severity, label = label or iconName, good = good}
+		e = {mat = mat, severity = severity, label = label or iconName, good = good, desc = desc}
 		seen[iconName] = e
 		icons[#icons + 1] = e
 	end
@@ -314,6 +321,10 @@ local function CollectAfflictionIcons(ply, org)
 	if Num(org.adrenaline) > 0.5 then add("adrenaline", Num(org.adrenaline) / 2, "Adrenaline") end
 	if org.noradrenalineActive then add("haste", 0.45, "Noradrenaline") end
 	if org.berserkActive2 then add("rage", 0.6, "Rage") end
+	-- ярость (modules/sv_rage.lua): своя плитка на каждую стадию, с описанием
+	local rageStage = ply:GetNW2Int("rem_rage_stage", 0)
+	local rageInfo = RAGE_STAGES[rageStage]
+	if rageInfo then add("anger", rageInfo[1], rageInfo[2], false, rageInfo[3]) end
 	local fear = Num(org.fear)
 	if fear > 0.3 then add("fear", fear, "Fear") end
 	local depression = Num(org.depression)
@@ -458,23 +469,36 @@ local function DrawAfflictionIcons(iconEntries, centerX, bottomY, visibility, ap
 			surface.DrawTexturedRect(x + pad, yy + pad, tile - pad * 2, tile - pad * 2)
 
 			if cursor and mx >= x and mx <= x + tile and my >= yy and my <= yy + tile then
-				hovered = {e.label, x + tile * 0.5, yy}
+				hovered = {e.label, x + tile * 0.5, yy, e.desc}
 			end
 		end
 	end
 
 	-- подпись под курсором (когда курсор виден - меню, чат, контекст)
+	-- с описанием - название сверху, ниже строки описания (серые)
 	if hovered then
 		surface.SetFont("HomigradFontSmall")
-		local tw, th = surface.GetTextSize(hovered[1])
-		local tx, ty = hovered[2] - tw * 0.5 - 6, hovered[3] - th - 10
+		local lines = {hovered[1]}
+		if hovered[4] then
+			for line in string.gmatch(hovered[4], "[^\n]+") do lines[#lines + 1] = line end
+		end
+		local tw, th = 0, 0
+		for _, line in ipairs(lines) do
+			local w, h = surface.GetTextSize(line)
+			tw, th = math.max(tw, w), math.max(th, h)
+		end
+		local bh = th * #lines + 4
+		local tx, ty = hovered[2] - tw * 0.5 - 6, hovered[3] - bh - 6
+		tx = math.Clamp(tx, 2, ScrW() - tw - 14)
 		surface.SetDrawColor(10, 0, 0, 220)
-		surface.DrawRect(tx, ty, tw + 12, th + 4)
+		surface.DrawRect(tx, ty, tw + 12, bh)
 		surface.SetDrawColor(200, 60, 60, 255)
-		surface.DrawOutlinedRect(tx, ty, tw + 12, th + 4, 1)
-		surface.SetTextColor(255, 255, 255, 255)
-		surface.SetTextPos(tx + 6, ty + 2)
-		surface.DrawText(hovered[1])
+		surface.DrawOutlinedRect(tx, ty, tw + 12, bh, 1)
+		for i, line in ipairs(lines) do
+			if i == 1 then surface.SetTextColor(255, 255, 255, 255) else surface.SetTextColor(200, 200, 200, 255) end
+			surface.SetTextPos(tx + 6, ty + 2 + (i - 1) * th)
+			surface.DrawText(line)
+		end
 	end
 end
 

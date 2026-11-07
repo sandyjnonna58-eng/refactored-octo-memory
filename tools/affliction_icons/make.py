@@ -24,6 +24,7 @@ TABLER = {
     'blind': 'eye-off', 'burning': 'flame', 'gas': 'cloud-fog', 'infection': 'virus',
     'immobilized': 'link', 'incapacitated': 'wheelchair', 'internal': 'stethoscope', 'rage': 'swords',
     'nicotine': 'smoking', 'nicotine_wd': 'smoking-no', 'alcohol_wd': 'glass-off', 'tremor': 'hand-move',
+    'anger': 'mood-angry',
 }
 
 def tabler(name, out):

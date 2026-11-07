@@ -645,6 +645,8 @@ hook.Add("Org Think", "Main", function(owner, org, timeValue)
 	if hg.organism.Nicotine then hg.organism.Nicotine(owner, org, timeValue) end
 	if hg.organism.Addiction then hg.organism.Addiction(owner, org, timeValue) end
 	if hg.organism.Vessels then hg.organism.Vessels(owner, org, timeValue) end
+	-- ярость (modules/sv_rage.lua): угрозы, удары; меньше страха и боли, больше адреналина
+	if hg.organism.Rage then hg.organism.Rage(owner, org, timeValue) end
 	module.blood[2](owner, org, timeValue)
 
 	module.pain[2](owner, org, timeValue)

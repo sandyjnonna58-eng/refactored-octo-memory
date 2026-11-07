@@ -29,6 +29,8 @@ if SERVER then
         org.pain = org.avgpain * math.max(1 - (org.adrenaline or 0) / 4, 0.75) * math.max(1 - (org.analgesia or 0), 0) * heroPainMul
         -- алкоголь притупляет боль (modules/sv_alcohol.lua): до -40%
         org.pain = org.pain * (1 - math.min((org.alcoholEff or org.alcohol or 0) * ((hg.organism.AlcoholConfig and hg.organism.AlcoholConfig.painRelief) or 0.12), 0.4))
+        -- в ярости боль чувствуется меньше (modules/sv_rage.lua): до -35%
+        org.pain = org.pain * (1 - (org.ragePainRelief or 0))
         org.pain = math.min(org.pain, hg.organism.PainCap or 260)
     end, HOOK_MONITOR_HIGH)
     hook.Add("Org Think", "ImmediatePainDrainBoost", function(owner, org, timeValue)
@@ -49,6 +51,8 @@ if SERVER then
         org.pain = org.avgpain * math.max(1 - (org.adrenaline or 0) / 4, 0.75) * math.max(1 - (org.analgesia or 0), 0) * heroPainMul
         -- алкоголь притупляет боль (modules/sv_alcohol.lua): до -40%
         org.pain = org.pain * (1 - math.min((org.alcoholEff or org.alcohol or 0) * ((hg.organism.AlcoholConfig and hg.organism.AlcoholConfig.painRelief) or 0.12), 0.4))
+        -- в ярости боль чувствуется меньше (modules/sv_rage.lua): до -35%
+        org.pain = org.pain * (1 - (org.ragePainRelief or 0))
         org.pain = math.min(org.pain, hg.organism.PainCap or 260)
     end, HOOK_MONITOR_LOW)
 end
