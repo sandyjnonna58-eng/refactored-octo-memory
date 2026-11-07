@@ -30,6 +30,9 @@ local R = {
 }
 hg.organism.RageConfig = R
 
+-- серверная настройка (Serverside gameplay -> "Rage mechanic"): 0 - ярости нет совсем
+local rem_rage_enabled = ConVarExists("rem_rage_enabled") and GetConVar("rem_rage_enabled") or CreateConVar("rem_rage_enabled", 1, FCVAR_REPLICATED + FCVAR_ARCHIVE, "Toggle the rage mechanic", 0, 1)
+
 -- слова-угрозы: русские - частью слова ("умрите" тоже), английские - только целым словом;
 -- string.lower в GMod не трогает кириллицу, поэтому варианты с заглавными перечислены
 local wordsRu = {"умри", "Умри", "УМРИ", "сдохни", "Сдохни", "СДОХНИ"}
@@ -59,7 +62,7 @@ end
 -- добавить ярость игроку (учитывает потолок без удара и x2 после удара)
 function hg.organism.AddRage(ply, amount)
 	local org = IsValid(ply) and ply.organism
-	if not org or not ply:Alive() or org.otrub or amount <= 0 then return end
+	if not org or not ply:Alive() or org.otrub or amount <= 0 or not rem_rage_enabled:GetBool() then return end
 	local hit = (org.rageHitUntil or 0) > CurTime()
 	if hit then amount = amount * 2 end
 	local cap = hit and 1 or math.max(R.capNoHit, org.rage or 0)
@@ -97,7 +100,7 @@ function hg.organism.Rage(owner, org, timeValue)
 	if not ply then return end
 	local rage = org.rage or 0
 
-	if not ply:Alive() or org.otrub or org.alive == false then
+	if not ply:Alive() or org.otrub or org.alive == false or not rem_rage_enabled:GetBool() then
 		rage = 0
 	else
 		-- угрозы вокруг

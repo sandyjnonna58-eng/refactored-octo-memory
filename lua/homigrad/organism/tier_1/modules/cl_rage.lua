@@ -9,6 +9,8 @@ local FADE_IN, FADE_OUT = 1.5, 3
 local DUCK = 0.15 -- до какой доли глушится остальная музыка
 
 local MusicVolume = GetConVar("snd_musicvolume")
+-- серверная настройка из sv_rage.lua (реплицируется; создаём и тут, чтобы меню настроек её видело)
+local rem_rage_enabled = ConVarExists("rem_rage_enabled") and GetConVar("rem_rage_enabled") or CreateConVar("rem_rage_enabled", 1, FCVAR_REPLICATED + FCVAR_ARCHIVE, "Toggle the rage mechanic", 0, 1)
 local RageVolume = CreateClientConVar("rem_rage_music_volume", "1", true, false, "Volume of the rage music, 1 = 100%", 0, 3)
 
 local hasSong = file.Exists(SONG, "GAME")
@@ -22,7 +24,7 @@ end
 hook.Add("Think", "rem_rage_music", function()
 	local ply = LocalPlayer()
 	if not IsValid(ply) then return end
-	local stage = ply:Alive() and Stage(ply) or 0
+	local stage = (ply:Alive() and rem_rage_enabled:GetBool()) and Stage(ply) or 0
 	-- на экране умирания своя песня
 	if hg.VortexDeath and hg.VortexDeath.Active and hg.VortexDeath.Active() then stage = 0 end
 	local want = hasSong and stage > 0
