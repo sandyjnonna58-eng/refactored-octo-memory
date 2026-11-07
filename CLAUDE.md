@@ -51,3 +51,6 @@
 - Ярость (3 стадии, копится от угроз: смотрят с оружием, целятся, фак, «умри»; удар - рывок и x2, без удара не выше 2-й):
   `modules/sv_rage.lua` и `cl_rage.lua` (музыка по стадиям `sound/rem_rage/anger.mp3`, права у пользователя,
   куски 0-59 / 58-117 / 117-конец), плитка «anger» с описанием в `cl_health_indicator.lua`.
+- Совместимость с InfMap (бесконечные карты): `lua/autorun/!zcity_infmap.lua` + `lua/zcity_infmap/`, описание в `INFMAP.md`.
+  Работает только на картах InfMap, выключается `zc_infmap 0`. Новое net-сообщение с позицией - дописать в списки
+  `lua/zcity_infmap/sh_net.lua`.
