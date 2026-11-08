@@ -83,3 +83,6 @@ hook.Add("Think", "rem_critmusic", function()
 
 	station:SetVolume(volume * MusicVolume:GetFloat())
 end)
+
+-- играет ли сейчас (музыка паники, cl_panic.lua, ей уступает)
+hg.CritMusicPlaying = function() return IsValid(station) and volume > 0.02 end

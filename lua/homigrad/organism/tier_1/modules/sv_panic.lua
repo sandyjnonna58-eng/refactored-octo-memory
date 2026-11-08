@@ -1,18 +1,19 @@
--- Паника. org.panic 0..1 копится от сильного страха (org.fear), от ударов и от того, что рядом на глазах убили человека;
--- спадает, когда страх ушёл. Ярость (sv_rage.lua) панику гасит.
+-- Паника. org.panic 0..1 копится ОЧЕНЬ медленно и только когда ты при смерти: мало крови, не хватает кислорода,
+-- невыносимая боль, уплывает сознание, встало сердце (Danger); чем хуже - тем быстрее. Стало лучше - спадает.
+-- Ярость (sv_rage.lua) панику гасит.
 -- С P.on: чёрные края экрана "плывут", своя музыка, частое дыхание, прицел гуляет (cl_panic.lua), мысли вслух;
 --   внезапно появился человек перед тобой - палец сам жмёт на спуск (с шансом), тело само дёргается на шаг в сторону.
 -- С P.heavy (слепая паника): видишь угрозу (на тебя смотрят с оружием / только что ударили) - сам срываешься и бежишь
 --   прочь пару секунд. Управление этим - sh_panic.lua (StartCommand), сервер только решает и пишет в NW2.
 -- Клиенту - NW2 "rem_panic" (0..1).
 local P = {
-	fearFrom = 0.45,   -- страх, с которого копится паника
-	gain = 0.07,       -- в секунду при страхе 1
-	hitGain = 0.08,    -- за удар от игрока (урон не меньше 3)
-	witnessGain = 0.18,-- рядом на глазах убили человека
-	witnessRange = 900,
-	calmFear = 0.3,    -- страх ниже этого - спадает
-	decay = 0.025,     -- в секунду
+	gain = 0.006,      -- в секунду в самом тяжёлом состоянии: до начала паники ~1 мин, до слепой ~2 мин
+	decay = 0.02,      -- в секунду, когда опасности для жизни нет
+	-- "при смерти": с какого значения начинается и на каком - худшее
+	blood = {3900, 2400},     -- мл (норма 5000)
+	o2 = {14, 5},             -- норма 30
+	pain = {100, 150},        -- org.pain (100% на экране = 120)
+	consciousness = {0.6, 0.3},
 	on = 0.35,         -- отсюда эффекты и поведение
 	heavy = 0.7,       -- отсюда сам убегает
 	appearRange = 750, -- "внезапно появился": стал виден ближе этого
@@ -70,6 +71,19 @@ function hg.organism.AddPanic(ply, amount)
 	org.panic = math.min((org.panic or 0) + amount, 1)
 end
 
+local function Remap01(v, from, to) return math.Clamp((v - from) / (to - from), 0, 1) end
+
+-- насколько ты при смерти: 0 - жизни ничего не грозит, 1 - хуже некуда
+local function Danger(org)
+	if org.heartstop then return 1 end
+	local d = Remap01(org.blood or 5000, P.blood[1], P.blood[2])
+	d = math.max(d, Remap01(istable(org.o2) and org.o2[1] or 30, P.o2[1], P.o2[2]))
+	d = math.max(d, Remap01(org.pain or 0, P.pain[1], P.pain[2]))
+	d = math.max(d, Remap01(org.consciousness or 1, P.consciousness[1], P.consciousness[2]))
+	return d
+end
+hg.organism.PanicDanger = Danger
+
 function hg.organism.Panic(owner, org, timeValue)
 	local ply = PlayerOf(owner)
 	if not ply then return end
@@ -80,10 +94,10 @@ function hg.organism.Panic(owner, org, timeValue)
 	elseif (org.rageStage or 0) > 0 then
 		panic = math.max(panic - timeValue * P.decay * 4, 0)
 	else
-		local fear = org.fear or 0
-		if fear > P.fearFrom then
-			panic = math.min(panic + timeValue * P.gain * (fear - P.fearFrom) / (1 - P.fearFrom), 1)
-		elseif fear < P.calmFear then
+		local danger = Danger(org)
+		if danger > 0 then
+			panic = math.min(panic + timeValue * P.gain * (0.3 + 0.7 * danger), 1)
+		else
 			panic = math.max(panic - timeValue * P.decay, 0)
 		end
 		-- паника сама держит страх и подгоняет сердце
@@ -108,13 +122,12 @@ function hg.organism.Panic(owner, org, timeValue)
 	end
 end
 
--- удар от игрока
+-- удар от игрока: паника от него не растёт, только запоминаем, от кого бежать
 hook.Add("HomigradDamage", "rem_panic_hit", function(ply, dmgInfo)
 	if not IsValid(ply) or not ply:IsPlayer() then return end
 	local attacker = PlayerOf(dmgInfo:GetAttacker())
 	if not attacker or attacker == ply or dmgInfo:GetDamage() < 3 then return end
 	ply.remPanicAttacker, ply.remPanicAttackedAt = attacker, CurTime()
-	hg.organism.AddPanic(ply, P.hitGain)
 end)
 
 -- ты видишь его? (перед тобой и без стены между)
@@ -128,17 +141,6 @@ local function Sees(ply, other, dot)
 	local tr = util.TraceLine({start = from, endpos = to, filter = {ply, other, ply.FakeRagdoll, other.FakeRagdoll}, mask = MASK_VISIBLE})
 	return not tr.Hit, dist
 end
-
--- рядом убили человека у тебя на глазах
-hook.Add("PlayerDeath", "rem_panic_witness", function(victim)
-	if not IsValid(victim) then return end
-	for _, ply in player.Iterator() do
-		if ply ~= victim and ply:Alive() then
-			local ok, dist = Sees(ply, victim, 0.3)
-			if ok and dist < P.witnessRange then hg.organism.AddPanic(ply, P.witnessGain) end
-		end
-	end
-end)
 
 local function IsGun(wep)
 	if not IsValid(wep) then return false end
@@ -237,8 +239,7 @@ concommand.Add("rem_panic_set", function(ply, _, args)
 		end
 	end
 	if not IsValid(target) or not target.organism then return end
-	target.organism.panic = value
-	target.organism.fear = math.max(target.organism.fear or 0, value) -- иначе паника сразу спадёт без страха
+	target.organism.panic = value -- без опасности для жизни потом медленно спадёт сама
 	print("[rem_panic] " .. target:Nick() .. " = " .. value)
 end)
 

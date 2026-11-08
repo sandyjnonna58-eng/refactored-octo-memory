@@ -1,6 +1,7 @@
 -- Паника на клиенте (сервер - sv_panic.lua, NW2 "rem_panic" 0..1, действия тела - sh_panic.lua):
 --   чёрные края экрана, которые "плывут" и пульсируют (несколько слоёв rem_fx/tunnel.png со своими колебаниями),
---   экран блекнет; музыка sound/rem_panic/panic.mp3 по кругу (остальная музыка глушится, ярость - важнее);
+--   экран блекнет; музыка sound/rem_panic/panic.mp3 по кругу - глушит только обычную фоновую музыку, а любой особой
+--   (боль, критическое состояние, последние моменты, смерть, паническая атака, ярость, голоса) уступает и молчит;
 --   прицел гуляет туда-сюда, при рефлекторном выстреле дёргается к тому, кто появился. Дыхание чаще - cl_main.lua.
 local SONG = "sound/rem_panic/panic.mp3"
 local FADE_IN, FADE_OUT = 2, 3
@@ -29,14 +30,34 @@ local hasSong = file.Exists(SONG, "GAME")
 local station, loading
 local volume = 0
 
+-- играет ли другая особая музыка: свои каналы особые модули помечают SetExempt, глушить остальное просят через Duck
+-- (remaudio/cl_remaudio.lua); музыка крита и панической атаки - отдельно
+local function OtherMusic(ply)
+	if ply:GetNW2Int("rem_rage_stage", 0) > 0 then return true end
+	if hg.VortexDeath and hg.VortexDeath.Active and hg.VortexDeath.Active() then return true end
+	if hg.CritMusicPlaying and hg.CritMusicPlaying() then return true end
+	if IsValid(PanicStation) and PanicStation:GetState() == GMOD_CHANNEL_PLAYING and PanicStation:GetVolume() > 0.02 then return true end
+	local RA = hg.RemAudio
+	if not RA then return false end
+	for id in pairs(RA.Requests or {}) do
+		if id ~= "panic" then return true end
+	end
+	for chan in pairs(RA.Exempt or {}) do
+		if chan ~= station and IsValid(chan) and chan:GetState() == GMOD_CHANNEL_PLAYING and (RA.Channels[chan] or 0) > 0.02 then
+			return true
+		end
+	end
+	return false
+end
+
 hook.Add("Think", "rem_panic_music", function()
 	local ply = LocalPlayer()
 	if not IsValid(ply) then return end
 	local want = hasSong and ply:Alive() and ply:GetNW2Float("rem_panic", 0) >= MUSIC_FROM and rem_panic_enabled:GetBool()
-	if ply:GetNW2Int("rem_rage_stage", 0) > 0 then want = false end -- музыка ярости важнее
-	if hg.VortexDeath and hg.VortexDeath.Active and hg.VortexDeath.Active() then want = false end
+	if want and OtherMusic(ply) then want = false end -- любая особая музыка важнее
 
-	if hg.RemAudio then hg.RemAudio.Duck("panic", (want or volume > 0.05) and DUCK or nil) end
+	-- глушим только обычную музыку и только пока сами звучим; уступаем - просьбу снимаем сразу
+	if hg.RemAudio then hg.RemAudio.Duck("panic", want and DUCK or nil) end
 
 	if want and not IsValid(station) and not loading then
 		loading = true
