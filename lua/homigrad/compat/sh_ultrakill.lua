@@ -2,6 +2,8 @@
 -- в репозиторий не кладём - чужие модели/звуки, ставится в garrysmod/addons). У этого оружия своя вьюмодель первого лица:
 -- пока оно в руках, homigrad отдаёт камеру движку (cl_camera.lua: hg.CameraYield) - иначе он рисует своё тело
 -- от первого лица и вьюмодель с руками не видна. В регдолле homigrad всё как обычно.
+-- "ULTRAKILL Coin Mechanics" (монетки, ultrakill_toss_coin) тоже поддерживается и ничего тут не требует: рикошет бьёт
+-- обычным TakeDamageInfo с позицией попадания - организм homigrad разбирает его сам.
 hg.UK = hg.UK or {}
 
 local UK_BASES = {weapon_dredux_base2_uk = true, weapon_dredux_base3_uk = true}

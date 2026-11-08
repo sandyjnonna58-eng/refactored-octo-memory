@@ -59,9 +59,10 @@
   костюм перенимает текстуру только лёжа (пол) или упёршись в стену стоя/сидя (стена), 3 с неподвижно; рисуется через
   `MGSVSnake.DrawBody`; дисплейсменты (трава и т.п.) - по типу поверхности, запасные текстуры `materials/rem_octo`;
   картинки - `tools/octocamo/make.py`.
-- Совместимость с отдельным аддоном «ULTRAKILL Weapons Pack» (в репозиторий не кладём; остальные ULTRAKILL-аддоны - движение,
-  руки, монетки - убраны): `lua/homigrad/compat/sh_ultrakill.lua` - `hg.UK.Weapon(ply)` (оружие weapon_dredux_uk_*: камера движку,
-  видна вьюмодель). Общая уступка камеры - `hg.CameraYield(ply)` (там же; её зовёт `cl_camera.lua`).
+- Совместимость с отдельными аддонами «ULTRAKILL Weapons Pack» и «ULTRAKILL Coin Mechanics» (в репозиторий не кладём; движение
+  и руки ULTRAKILL - убраны): `lua/homigrad/compat/sh_ultrakill.lua` - `hg.UK.Weapon(ply)` (оружие weapon_dredux_uk_*: камера движку,
+  видна вьюмодель). Общая уступка камеры - `hg.CameraYield(ply)` (там же; её зовёт `cl_camera.lua`). Монетки (ultrakill_toss_coin)
+  кода не требуют: их урон - обычный TakeDamageInfo с позицией попадания, организм homigrad разбирает его сам.
 - Ярость (3 стадии, растёт ТОЛЬКО от: удара игрока, жеста «фак», «фак»/fuck в чате; удар - рывок и x2, без удара не выше 2-й):
   `modules/sv_rage.lua` и `cl_rage.lua` (музыка по стадиям `sound/rem_rage/anger.mp3`, права у пользователя,
   куски 0-59 / 58-117 / 117-конец), плитка «anger» с описанием в `cl_health_indicator.lua`.
