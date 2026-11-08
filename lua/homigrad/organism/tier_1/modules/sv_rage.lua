@@ -1,7 +1,6 @@
--- Ярость (как в Fading Vitality). org.rage 0..1 копится, когда тебе угрожают:
---   на тебя смотрят с оружием в руках (ближнее - медленно), в тебя целятся из огнестрела (быстрее),
---   тебе показали фак (жест "fuck you", hg_hand_gesture), тебе сказали в чат "умри"/"сдохни"/"die".
--- Сам ты должен это видеть: угроза у тебя за спиной не злит.
+-- Ярость (как в Fading Vitality). org.rage 0..1 растёт только от трёх вещей:
+--   тебя ударил игрок; тебе показали фак (жест "fuck you", hg_hand_gesture - ты должен это видеть);
+--   тебе написали "фак" в чат (тот, на кого смотрит пишущий, или кто совсем рядом).
 -- Пока тебя не ударили, ярость не поднимается выше 2-й стадии. Удар от игрока - большой рывок вверх, открывает 3-ю стадию
 -- и на hitWindow секунд всё копится вдвое быстрее.
 -- Стадии: 1 "Blinding anger", 2 "Furious", 3 "Undeterrable rage". Чем выше - тем меньше страх и боль, больше адреналина;
@@ -13,13 +12,9 @@ local R = {
 	hitWindow = 30,      -- секунд после удара: открыта 3-я стадия, рост x2
 	hitGain = 0.22,      -- за удар (с уроном не меньше hitMinDamage)
 	hitMinDamage = 3,
-	aimGain = 0.035,     -- в секунду, пока в тебя целятся из огнестрела (до 2-й стадии ~15 с)
-	lookGain = 0.015,    -- в секунду, пока на тебя смотрят с ближним оружием
-	gestureGain = 0.12,  -- за фак
-	wordGain = 0.15,     -- за "умри"
-	gunRange = 2500, meleeRange = 600, wordRange = 900,
-	aimDot = 0.97,       -- насколько точно ствол направлен на тебя
-	lookDot = 0.9,
+	gestureGain = 0.12,  -- за фак жестом
+	wordGain = 0.15,     -- за "фак" в чате
+	meleeRange = 600, wordRange = 900,
 	noticeDot = 0.25,    -- ты сам смотришь в его сторону (видишь угрозу)
 	calmDelay = 8,       -- через сколько секунд без угроз начинает спадать
 	decay = 0.012,       -- в секунду
@@ -33,10 +28,10 @@ hg.organism.RageConfig = R
 -- серверная настройка (Serverside gameplay -> "Rage mechanic"): 0 - ярости нет совсем
 local rem_rage_enabled = ConVarExists("rem_rage_enabled") and GetConVar("rem_rage_enabled") or CreateConVar("rem_rage_enabled", 1, FCVAR_REPLICATED + FCVAR_ARCHIVE, "Toggle the rage mechanic", 0, 1)
 
--- слова-угрозы: русские - частью слова ("умрите" тоже), английские - только целым словом;
+-- "фак" в чате: русский - частью слова ("факи", "фак ю"), английский - целым словом;
 -- string.lower в GMod не трогает кириллицу, поэтому варианты с заглавными перечислены
-local wordsRu = {"умри", "Умри", "УМРИ", "сдохни", "Сдохни", "СДОХНИ"}
-local wordsEn = {die = true, kys = true}
+local wordsRu = {"фак", "Фак", "ФАК"}
+local wordsEn = {fuck = true, fck = true, fuk = true}
 local stagePhrases = {
 	"Who the hell does he think he is...",
 	"I'm going to kill him.",
@@ -81,20 +76,6 @@ local function Sees(victim, other)
 	return not tr.Hit, dist
 end
 
--- он направил на тебя оружие (смотрит в твою сторону)
-local function Threat(victim, other)
-	local wep = other:GetActiveWeapon()
-	if not IsValid(wep) or wep:GetClass() == "weapon_hands_sh" then return 0 end
-	local gun = ishgweapon and ishgweapon(wep)
-	if not gun and not wep.ismelee then return 0 end -- бутылки, аптечки, камера не в счёт
-	local to = victim:EyePos() - other:EyePos()
-	local dist = to:Length()
-	if dist > (gun and R.gunRange or R.meleeRange) then return 0 end
-	to:Mul(1 / math.max(dist, 1))
-	if other:GetAimVector():Dot(to) < (gun and R.aimDot or R.lookDot) then return 0 end
-	return gun and R.aimGain or R.lookGain
-end
-
 function hg.organism.Rage(owner, org, timeValue)
 	local ply = PlayerOf(owner)
 	if not ply then return end
@@ -103,18 +84,7 @@ function hg.organism.Rage(owner, org, timeValue)
 	if not ply:Alive() or org.otrub or org.alive == false or not rem_rage_enabled:GetBool() then
 		rage = 0
 	else
-		-- угрозы вокруг
-		local gain = 0
-		for _, other in player.Iterator() do
-			if other ~= ply and other:Alive() and not IsValid(other.FakeRagdoll) then
-				local g = Threat(ply, other)
-				if g > 0 and Sees(ply, other) then gain = math.max(gain, g) end
-			end
-		end
-		if gain > 0 then hg.organism.AddRage(ply, gain * timeValue) end
-		rage = org.rage or 0
-
-		-- спадает, когда угроз нет
+		-- сама не растёт (только удар, фак жестом, фак в чате - см. ниже); спадает, когда их давно не было
 		if CurTime() - (org.rageLastThreat or 0) > R.calmDelay and (org.rageHitUntil or 0) < CurTime() then
 			rage = math.max(rage - timeValue * R.decay, 0)
 		end
@@ -154,7 +124,7 @@ hook.Add("HomigradDamage", "rem_rage_hit", function(ply, dmgInfo)
 	hg.organism.AddRage(ply, R.hitGain)
 end)
 
--- "умри" в чат: злятся те, на кого он смотрит (или кто совсем рядом)
+-- "фак" в чат: злятся те, на кого он смотрит (или кто совсем рядом)
 hook.Add("PlayerSay", "rem_rage_words", function(speaker, text)
 	if not IsValid(speaker) or not speaker:Alive() then return end
 	local hit = false
