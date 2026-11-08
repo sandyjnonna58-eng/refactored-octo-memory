@@ -62,7 +62,8 @@
 - Совместимость с отдельными аддонами «ULTRAKILL Weapons Pack» и «ULTRAKILL Coin Mechanics» (в репозиторий не кладём; движение
   и руки ULTRAKILL - убраны): `lua/homigrad/compat/sh_ultrakill.lua`. Оружие weapon_dredux_uk_* работает как оружие zcity:
   камера homigrad, вьюмодели (рука V1) нет - модель *_3rd.mdl держит аватар (SetHandPos ставит кисть перед глазами, руку
-  дотягивает hg.DoTPIK, DrawWorldModel2 рисует по кости R_Hand - её зовёт fake/sh_render.lua); WorkWithFake - остаётся в руке
+  дотягивает hg.DoTPIK, DrawWorldModel2 рисует по кости R_Hand - её зовёт fake/sh_render.lua); анимации SWEP - Anim():
+  поза невидимой вьюмодели (зеркало + моды SCK) минус покой -> кисть аватара и кости weapon_* модели в руке (поправки осей - FIX); WorkWithFake - остаётся в руке
   в рэгдолле (флаг remHeldGun в fake/sv_control.lua: ЛКМ/ПКМ - выстрел, рука тянется по прицелу; точка выстрела в рэгдолле
   вынесена на 14 юнитов вперёд через ViewOffset). Поля навешиваются на таблицы оружия (PreRegisterSWEP + уже созданные).
   `hg.CameraYield(ply)` (там же, её зовёт `cl_camera.lua`) теперь только для Снейка. Монетки (ultrakill_toss_coin) кода не
