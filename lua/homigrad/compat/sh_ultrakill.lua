@@ -302,6 +302,9 @@ local function Patch(t)
 		t.SetHandPos = hg.UK.SetHandPos
 		t.DrawWorldModel2 = hg.UK.DrawWorldModel2
 		t.DrawWorldModel = hg.UK.DrawWorldModel
+		-- вьюмодель ULTRAKILL движок рисовал поверх (вторая пушка в углу экрана): не рисуем, она только играет анимации
+		-- для Anim(); как у оружия homigrad (homigrad_base/sh_worldmodel.lua)
+		t.ShouldDrawViewModel = function() return false end
 	end
 end
 
