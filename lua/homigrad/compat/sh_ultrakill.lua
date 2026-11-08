@@ -111,6 +111,7 @@ if CLIENT then
 		cs:SetRenderAngles(w:GetAngles())
 		cs:SetupBones()
 		cs:DrawModel()
+		self.remDrawn = CurTime()
 	end
 
 	-- движок рисует оружие в руке сам (по анимации, мимо TPIK) - в руках его рисует DrawWorldModel2, сам - только лежащее
@@ -151,12 +152,52 @@ hook.Add("PreRegisterSWEP", "rem_ultrakill", function(swep, class)
 end)
 hook.Add("InitPostEntity", "rem_ultrakill", PatchAll)
 timer.Simple(0, PatchAll)
+-- каждое новое оружие - тоже (на случай, если таблица экземпляра собрана без наших полей)
+hook.Add("OnEntityCreated", "rem_ultrakill", function(e)
+	timer.Simple(0, function()
+		if IsValid(e) and e:IsWeapon() and IsUKClass(e:GetClass(), e.Base) then Patch(e:GetTable()) end
+	end)
+end)
+
+-- rem_uk_debug: что с оружием ULTRAKILL сейчас (вводить лёжа в рэгдолле, если пушки не видно)
+local function DebugLine(ply, wep)
+	return string.format("weapon=%s WorkWithFake=%s remHeldGun=%s FakeRagdoll=%s",
+		IsValid(wep) and wep:GetClass() or "none", tostring(IsValid(wep) and wep.WorkWithFake),
+		tostring(IsValid(wep) and wep.remHeldGun), tostring(IsValid(ply.FakeRagdoll)))
+end
+if SERVER then
+	concommand.Add("rem_uk_debug_sv", function(ply)
+		if not IsValid(ply) then return end
+		ply:PrintMessage(HUD_PRINTCONSOLE, "[rem_uk] server: " .. DebugLine(ply, ply:GetActiveWeapon())
+			.. " heldBeforeFall=" .. tostring(IsValid(ply.remUKFallWep) and ply.remUKFallWep:GetClass()))
+	end)
+else
+	concommand.Add("rem_uk_debug", function(ply)
+		local wep = ply:GetActiveWeapon()
+		print("[rem_uk] client: " .. DebugLine(ply, wep) .. " DrawWorldModel2=" .. tostring(IsValid(wep) and wep.DrawWorldModel2 ~= nil)
+			.. " drawnAgo=" .. tostring(IsValid(wep) and wep.remDrawn and math.Round(CurTime() - wep.remDrawn, 2)))
+		RunConsoleCommand("rem_uk_debug_sv")
+	end)
+end
 
 if SERVER then
 	-- в рэгдолле игрок стоит в голове рэгдолла (fake/sv_control.lua), и выстрел/снаряд ULTRAKILL (из GetShootPos)
 	-- попадал бы в свою же голову - точка выстрела выносится вперёд по прицелу
 	local SHOOT_FWD = 14
 	local up = Vector(0, 0, 1)
+
+	-- упал с пушкой ULTRAKILL - она остаётся в руке (homigrad_base/sv_fake.lua делает так для WorkWithFake; здесь - страховка,
+	-- если что-то успело убрать оружие при падении)
+	hook.Add("Fake", "rem_ultrakill_keep", function(ply)
+		local wep = ply.ActiveWeapon
+		if not IsValid(wep) or not IsUKClass(wep:GetClass(), wep.Base) then ply.remUKFallWep = nil return end
+		Patch(wep:GetTable())
+		ply.remUKFallWep = wep
+		timer.Simple(0, function()
+			if not IsValid(ply) or not IsValid(wep) or not IsValid(ply.FakeRagdoll) or wep:GetOwner() ~= ply then return end
+			if ply:GetActiveWeapon() ~= wep then ply:SetActiveWeapon(wep) end
+		end)
+	end)
 
 	hook.Add("Think", "rem_ultrakill_fakeshoot", function()
 		for _, ply in player.Iterator() do
