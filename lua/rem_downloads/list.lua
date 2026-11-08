@@ -471,6 +471,7 @@ return {
 	"sound/rem_loud_yatebyamognu.mp3",
 	"sound/rem_newroundcommence.mp3",
 	"sound/rem_oneandonly.mp3",
+	"sound/rem_panic/panic.mp3",
 	"sound/rem_puke.wav",
 	"sound/rem_rage/anger.mp3",
 	"sound/rem_sexualdeviants.mp3",
