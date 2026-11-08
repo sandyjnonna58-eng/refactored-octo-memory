@@ -648,8 +648,6 @@ hook.Add("EntityTakeDamage", "homigrad-damage", function(ent, dmgInfo)
 	org.isPly = IsValid(ply)
 	
 	if org.godmode then return true end
-	-- организм выключен (движение ULTRAKILL, compat/sh_ultrakill.lua): урон не в организм, а обычным здоровьем движка
-	if org.remNoOrganism then return end
 
 	if ent == ply and IsValid(ply.FakeRagdoll) and dmgInfo:IsDamageType(DMG_BURN) then
 		return true

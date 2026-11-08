@@ -59,15 +59,9 @@
   костюм перенимает текстуру только лёжа (пол) или упёршись в стену стоя/сидя (стена), 3 с неподвижно; рисуется через
   `MGSVSnake.DrawBody`; дисплейсменты (трава и т.п.) - по типу поверхности, запасные текстуры `materials/rem_octo`;
   картинки - `tools/octocamo/make.py`.
-- Совместимость с отдельными аддонами ULTRAKILL (Weapons Pack, Movement Collection, Coin Mechanics; в репозиторий не кладём):
-  `lua/homigrad/compat/sh_ultrakill.lua` - `hg.UK.Weapon(ply)` (оружие weapon_dredux_uk_*: камера движку, видна вьюмодель),
-  `hg.UK.MoveOn(ply)` (ukmove_movement_enabled на сервере + выдано админом: `hg.UK.SetMove`, !ukmove / rem_ukmove <игрок|*> [1|0],
-  сохраняется в data/zcity_ukmove.txt; хуки аддона обёрнуты - у кого не выдано, движение обычное homigrad).
-  У кого движение ULTRAKILL работает - организм выключен (`org.remNoOrganism`): тик в `organism/tier_0/sv_tier_0.lua` пропускается,
-  урон в `tier_1/sv_input.lua` идёт мимо организма обычным здоровьем; снятие - сброс `hg.organism.Clear`. Общая уступка камеры - `hg.CameraYield(ply)`
-  (определена В КОНЦЕ sh_ultrakill.lua - не затереть при правках!). Руки ULTRAKILL Arms REVAMPED (VManip) - только у выданных
-  (net-приёмники аддона обёрнуты; rem_ukarms_all 1 - у всех; камеру ради рук не отдаём - пропадает своё тело).
-  При выключенном организме выносливость держится полной (Think "rem_ukmove_stamina"). ukmove_movement_enabled клиентам - GlobalBool "rem_ukmove_global".
+- Совместимость с отдельным аддоном «ULTRAKILL Weapons Pack» (в репозиторий не кладём; остальные ULTRAKILL-аддоны - движение,
+  руки, монетки - убраны): `lua/homigrad/compat/sh_ultrakill.lua` - `hg.UK.Weapon(ply)` (оружие weapon_dredux_uk_*: камера движку,
+  видна вьюмодель). Общая уступка камеры - `hg.CameraYield(ply)` (там же; её зовёт `cl_camera.lua`).
 - Ярость (3 стадии, растёт ТОЛЬКО от: удара игрока, жеста «фак», «фак»/fuck в чате; удар - рывок и x2, без удара не выше 2-й):
   `modules/sv_rage.lua` и `cl_rage.lua` (музыка по стадиям `sound/rem_rage/anger.mp3`, права у пользователя,
   куски 0-59 / 58-117 / 117-конец), плитка «anger» с описанием в `cl_health_indicator.lua`.

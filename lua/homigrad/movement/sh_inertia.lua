@@ -154,8 +154,6 @@ local Angle, Vector, AngleRand, VectorRand, math, hook, util, game = Angle, Vect
 		end
 		-- SWEP Снейка (compat/sh_mgsv.lua): у аддона своё движение, инерцию homigrad не применяем
 		if hg.MGSV and hg.MGSV.Owns(ply) then return end
-		-- движение ULTRAKILL включено (compat/sh_ultrakill.lua): слайд/дэш/прыжки от стен - его, инерцию не применяем
-		if hg.UK and hg.UK.MoveOn(ply) then return end
 
 		local org = ply.organism
 
