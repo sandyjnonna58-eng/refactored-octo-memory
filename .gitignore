@@ -7,5 +7,3 @@ sound/rem_wd_private/
 __pycache__/
 materials/rem_drinks_private/
 
-# музыка паники (PANIC - Wild ecosystem OST): чужой трек, не в публичный репозиторий; у пользователя - из архива
-sound/rem_panic/
