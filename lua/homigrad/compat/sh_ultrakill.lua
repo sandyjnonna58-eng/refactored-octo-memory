@@ -290,6 +290,15 @@ if CLIENT then
 	end
 
 	hg.UK.SetHandPos, hg.UK.DrawWorldModel2, hg.UK.DrawWorldModel = SetHandPos, DrawWorldModel2, DrawWorldModel
+
+	-- вьюмодель и руки ULTRAKILL не рисуем никогда (в рэгдолле камера homigrad их не прячет - была вторая пушка
+	-- в руке внизу экрана); вьюмодель при этом продолжает анимироваться для Anim()
+	hook.Add("PreDrawViewModel", "rem_ultrakill", function(vm, ply, wep)
+		if IsValid(wep) and wep.remHeldGun then return true end
+	end)
+	hook.Add("PreDrawPlayerHands", "rem_ultrakill", function(hands, vm, ply, wep)
+		if IsValid(wep) and wep.remHeldGun then return true end
+	end)
 end
 
 -- свойства оружия zcity: таблицы классов (новые экземпляры) и уже созданное оружие
