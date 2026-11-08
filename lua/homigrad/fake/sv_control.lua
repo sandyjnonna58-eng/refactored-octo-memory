@@ -767,7 +767,7 @@ hook.Add("Think", "Fake", function()
 		local fakeKick = ragdoll.fakeLegKick
 		local fakeKickActive = fakeKick and curTime < fakeKick.finish and org.canmove
 
-		if (!ply:InVehicle() && (ply:KeyDown(IN_USE) || ((ishgweapon(wep)) && (ply:KeyDown(IN_ATTACK2) || (wep.IsResting and wep:IsResting()))) || (wep.ismelee && (ply:KeyDown(IN_ATTACK2) || ply:KeyDown(IN_ATTACK))) || (wep.remHeldGun && (ply:KeyDown(IN_ATTACK2) || ply:KeyDown(IN_ATTACK))))) || (ply:InVehicle() && not ply:KeyDown(IN_USE)) or ragdollcombat then
+		if (!ply:InVehicle() && (ply:KeyDown(IN_USE) || ((ishgweapon(wep)) && (ply:KeyDown(IN_ATTACK2) || (wep.IsResting and wep:IsResting()))) || (wep.ismelee && (ply:KeyDown(IN_ATTACK2) || ply:KeyDown(IN_ATTACK))))) || (ply:InVehicle() && not ply:KeyDown(IN_USE)) or ragdollcombat then
 			if org.canmove and (!((ply:KeyDown(IN_MOVELEFT) or ply:KeyDown(IN_MOVERIGHT)) and ragdoll:IsOnFire()) or ply:InVehicle()) then
 				local angl = angZero
 				angl:Set(ang)
@@ -1018,7 +1018,7 @@ hook.Add("Think", "Fake", function()
 		
 		if not wep.RagdollFunc then
 			local force = math.max(1 - org.larm / 1.3, 0)
-			if not fallCoverActive and not manualHoldWound and (!IsValid(ragdoll.ConsLH) and (ply:KeyDown(IN_ATTACK) and !ishgweapon(wep) and !wep.remHeldGun) or (((ishgweapon(wep) and (!wep:IsResting() or ply:KeyDown(IN_FORWARD) or ply:KeyDown(IN_BACK))) or wep.ismelee2) and (ply:KeyDown(IN_USE) or ply:KeyDown(IN_ATTACK2)))) then// || ply:InVehicle() then
+			if not fallCoverActive and not manualHoldWound and (!IsValid(ragdoll.ConsLH) and (ply:KeyDown(IN_ATTACK) and !ishgweapon(wep)) or (((ishgweapon(wep) and (!wep:IsResting() or ply:KeyDown(IN_FORWARD) or ply:KeyDown(IN_BACK))) or wep.ismelee2) and (ply:KeyDown(IN_USE) or ply:KeyDown(IN_ATTACK2)))) then// || ply:InVehicle() then
 				if org.canmove then
 					//if !ply:InVehicle() then
 						ang2:Set(angles)
@@ -1133,14 +1133,13 @@ hook.Add("Think", "Fake", function()
 
 			local force = math.max(1 - org.rarm / 1.3, 0)
 
-			local gunlike = ishgweapon(wep) or wep.remHeldGun -- оружие в правой руке: на ЛКМ/ПКМ/E рука с ним тянется по прицелу
-			if not fallCoverActive and (!IsValid(ragdoll.ConsRH) and ply:KeyDown(IN_ATTACK2) or ((ishgweapon(wep) or wep.ismelee2) and ply:KeyDown(IN_USE)) or (wep.remHeldGun and (ply:KeyDown(IN_ATTACK) or ply:KeyDown(IN_ATTACK2) or ply:KeyDown(IN_USE)))) then// || ply:InVehicle() then
+			if not fallCoverActive and (!IsValid(ragdoll.ConsRH) and ply:KeyDown(IN_ATTACK2) or ((ishgweapon(wep) or wep.ismelee2) and ply:KeyDown(IN_USE))) then// || ply:InVehicle() then
 				if org.canmove then
 					--if org.shock > 1 and not ply:KeyDown(IN_ATTACK2) then angles = spine:GetAngles() end
 					//if !ply:InVehicle() then
 						ang2:Set(angles)
-						ang2:RotateAroundAxis(angles:Up(), gunlike and -10 or 0)
-						ang2:RotateAroundAxis(angles:Right(), gunlike and 10 or 0)
+						ang2:RotateAroundAxis(angles:Up(), ishgweapon(wep) and -10 or 0)
+						ang2:RotateAroundAxis(angles:Right(), ishgweapon(wep) and 10 or 0)
 						ang2:RotateAroundAxis(angles:Forward(), -90)
 
 						//if !ishgweapon(wep) then
@@ -1149,8 +1148,8 @@ hook.Add("Think", "Fake", function()
 						//end
 
 						ang2:RotateAroundAxis(ang2:Forward(), 135)
-						ang2:RotateAroundAxis(ang2:Up(), gunlike and 1 or 20)
-						ang2:RotateAroundAxis(ang2:Forward(), gunlike and 120 or 0)
+						ang2:RotateAroundAxis(ang2:Up(), ishgweapon(wep) and 1 or 20)
+						ang2:RotateAroundAxis(ang2:Forward(), ishgweapon(wep) and 120 or 0)
 						shadowControl(ragdoll, 7, 0.001, ang2, forceArm * 2, forceArm_dump, ragdoll:GetPhysicsObjectNum(realPhysNum(ragdoll,7)):GetPos() + ang2:Forward() * 15 + ((vellen > 150 and ragdoll:GetPhysicsObject():GetVelocity() / 224) or vector_zero), ishgweapon(wep) and 500 or 500, ishgweapon(wep) and 50 or 50)
 						if ply:WaterLevel() == 1 then shadowControl(ragdoll, 1, 0.001, nil, nil, nil, ragdoll:GetPhysicsObjectNum(7):GetPos(), 5, 0) end
 					/*else
@@ -1294,7 +1293,7 @@ hook.Add("Think", "Fake", function()
 				end
 			end
 
-			if not fallCoverActive and ply:KeyDown(IN_WALK) and org.canmove and !(ishgweapon(wep) or wep.ismelee2 or wep.remHeldGun) and !org.rarmamputated and (!ply.HandsStun or ply.HandsStun < CurTime()) then
+			if not fallCoverActive and ply:KeyDown(IN_WALK) and org.canmove and !(ishgweapon(wep) or wep.ismelee2) and !org.rarmamputated and (!ply.HandsStun or ply.HandsStun < CurTime()) then
 				if IsValid(ragdoll.ConsRH) then
 					if hg_fake_stamina:GetBool() then
 						org.stamina.subadd = org.stamina.subadd + 0.06 * (ragdoll.staminaRightModifyer or 1) * ( IsValid(ragdoll.ConsLH) and 0.35 or 1.25) * (on_ground and 0.25 or 1)

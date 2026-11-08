@@ -8,8 +8,7 @@
 --   * анимации как в SWEP (Anim): невидимая вьюмодель продолжает играть свои анимации и моды костей - их поза
 --     переносится на кисть аватара (выстрел, перезарядка, доставание; левая рука - когда она у пушки) и на детали
 --     модели в руке (барабан, стволы, пила, колесо, помпа, пипки). У других игроков детали - только по модам SCK;
---   * можно падать в рэгдолл с оружием в руке (WorkWithFake): пушка остаётся в руке рэгдолла, ЛКМ/ПКМ - выстрел,
---     рука с пушкой тянется по прицелу (fake/sv_control.lua, флаг remHeldGun), стрельба - из точки перед лицом.
+--   * при падении в рэгдолл оружие убирается, как обычное чужое оружие (в рэгдолле его нет).
 -- Монетки (ultrakill_toss_coin) кода не требуют: их рикошет бьёт обычным TakeDamageInfo с позицией попадания -
 -- организм homigrad разбирает его сам.
 hg.UK = hg.UK or {}
@@ -291,13 +290,12 @@ if CLIENT then
 
 	hg.UK.SetHandPos, hg.UK.DrawWorldModel2, hg.UK.DrawWorldModel = SetHandPos, DrawWorldModel2, DrawWorldModel
 
-	-- вьюмодель и руки ULTRAKILL не рисуем никогда (в рэгдолле камера homigrad их не прячет - была вторая пушка
-	-- в руке внизу экрана); вьюмодель при этом продолжает анимироваться для Anim()
+	-- вьюмодель и руки ULTRAKILL не рисуем никогда (иначе вторая пушка с рукой поверх); вьюмодель при этом продолжает анимироваться для Anim()
 	hook.Add("PreDrawViewModel", "rem_ultrakill", function(vm, ply, wep)
-		if IsValid(wep) and wep.remHeldGun then return true end
+		if IsValid(wep) and wep.remUKGun then return true end
 	end)
 	hook.Add("PreDrawPlayerHands", "rem_ultrakill", function(hands, vm, ply, wep)
-		if IsValid(wep) and wep.remHeldGun then return true end
+		if IsValid(wep) and wep.remUKGun then return true end
 	end)
 end
 
@@ -305,8 +303,7 @@ end
 local function Patch(t)
 	if not t or t.remUKPatched then return end
 	t.remUKPatched = true
-	t.WorkWithFake = true -- не убирается при падении в рэгдолл (homigrad_base/sv_fake.lua)
-	t.remHeldGun = true   -- управление рукой рэгдолла (fake/sv_control.lua)
+	t.remUKGun = true -- метка для хуков ниже (вьюмодель и руки не рисуются)
 	if CLIENT then
 		t.SetHandPos = hg.UK.SetHandPos
 		t.DrawWorldModel2 = hg.UK.DrawWorldModel2
@@ -337,67 +334,3 @@ hook.Add("OnEntityCreated", "rem_ultrakill", function(e)
 		if IsValid(e) and e:IsWeapon() and IsUKClass(e:GetClass(), e.Base) then Patch(e:GetTable()) end
 	end)
 end)
-
--- rem_uk_debug: что с оружием ULTRAKILL сейчас (вводить лёжа в рэгдолле, если пушки не видно)
-local function DebugLine(ply, wep)
-	return string.format("weapon=%s WorkWithFake=%s remHeldGun=%s FakeRagdoll=%s",
-		IsValid(wep) and wep:GetClass() or "none", tostring(IsValid(wep) and wep.WorkWithFake),
-		tostring(IsValid(wep) and wep.remHeldGun), tostring(IsValid(ply.FakeRagdoll)))
-end
-if SERVER then
-	concommand.Add("rem_uk_debug_sv", function(ply)
-		if not IsValid(ply) then return end
-		ply:PrintMessage(HUD_PRINTCONSOLE, "[rem_uk] server: " .. DebugLine(ply, ply:GetActiveWeapon())
-			.. " heldBeforeFall=" .. tostring(IsValid(ply.remUKFallWep) and ply.remUKFallWep:GetClass()))
-	end)
-else
-	concommand.Add("rem_uk_debug", function(ply)
-		local wep = ply:GetActiveWeapon()
-		print("[rem_uk] client: " .. DebugLine(ply, wep) .. " DrawWorldModel2=" .. tostring(IsValid(wep) and wep.DrawWorldModel2 ~= nil)
-			.. " drawnAgo=" .. tostring(IsValid(wep) and wep.remDrawn and math.Round(CurTime() - wep.remDrawn, 2)))
-		RunConsoleCommand("rem_uk_debug_sv")
-	end)
-end
-
-if SERVER then
-	-- в рэгдолле игрок стоит в голове рэгдолла (fake/sv_control.lua), и выстрел/снаряд ULTRAKILL (из GetShootPos)
-	-- попадал бы в свою же голову - точка выстрела выносится вперёд по прицелу
-	local SHOOT_FWD = 14
-	local up = Vector(0, 0, 1)
-
-	-- упал с пушкой ULTRAKILL - она остаётся в руке (homigrad_base/sv_fake.lua делает так для WorkWithFake; здесь - страховка,
-	-- если что-то успело убрать оружие при падении)
-	hook.Add("Fake", "rem_ultrakill_keep", function(ply)
-		local wep = ply.ActiveWeapon
-		if not IsValid(wep) or not IsUKClass(wep:GetClass(), wep.Base) then ply.remUKFallWep = nil return end
-		Patch(wep:GetTable())
-		ply.remUKFallWep = wep
-		timer.Simple(0, function()
-			if not IsValid(ply) or not IsValid(wep) or not IsValid(ply.FakeRagdoll) or wep:GetOwner() ~= ply then return end
-			if ply:GetActiveWeapon() ~= wep then ply:SetActiveWeapon(wep) end
-		end)
-	end)
-
-	hook.Add("Think", "rem_ultrakill_fakeshoot", function()
-		for _, ply in player.Iterator() do
-			local rag = ply.FakeRagdoll
-			local wep = IsValid(rag) and ply:Alive() and ply:GetActiveWeapon()
-			local on = IsValid(wep) and wep.remHeldGun and not ply:InVehicle() and ply:GetMoveType() == MOVETYPE_NOCLIP
-			if on then
-				local aim, pos = ply:GetAimVector(), ply:GetPos()
-				local tr = util.TraceLine({start = pos, endpos = pos + aim * SHOOT_FWD, filter = {ply, rag}, mask = MASK_SOLID})
-				local off = tr.HitPos - aim * 2 - pos
-				ply:SetViewOffset(off)
-				ply:SetViewOffsetDucked(off)
-				ply.remUKOffset = true
-			elseif ply.remUKOffset then
-				ply.remUKOffset = nil
-				-- всё ещё лежит (сменил оружие) - как ставит homigrad; встал - вид уже вернул homigrad
-				if IsValid(rag) and ply:GetMoveType() == MOVETYPE_NOCLIP then
-					ply:SetViewOffset(up)
-					ply:SetViewOffsetDucked(up)
-				end
-			end
-		end
-	end)
-end
