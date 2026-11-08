@@ -647,6 +647,8 @@ hook.Add("Org Think", "Main", function(owner, org, timeValue)
 	if hg.organism.Vessels then hg.organism.Vessels(owner, org, timeValue) end
 	-- ярость (modules/sv_rage.lua): угрозы, удары; меньше страха и боли, больше адреналина
 	if hg.organism.Rage then hg.organism.Rage(owner, org, timeValue) end
+	-- паника (modules/sv_panic.lua): от сильного страха; после ярости - ярость её гасит
+	if hg.organism.Panic then hg.organism.Panic(owner, org, timeValue) end
 	module.blood[2](owner, org, timeValue)
 
 	module.pain[2](owner, org, timeValue)

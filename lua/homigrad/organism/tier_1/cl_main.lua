@@ -1006,6 +1006,9 @@ hook.Add("Player-Ragdoll think", "organism-think-client-blood", function(ply, en
 		local pulse = org.heartbeat
 		org.pulsethink = org.pulsethink or 0
 		local speed = math.Clamp(org.heartbeat / 60, 1, 3.3) * 0.5 * (org.o2[1] < 8 and 0 or 1)
+		-- паника (modules/sv_panic.lua): дыхание чаще и громче
+		local panic = ply.GetNW2Float and ply:GetNW2Float("rem_panic", 0) or 0
+		speed = speed * (1 + panic * 1.6)
 		org.pulsethink = org.pulsethink + (org.heartbeat > 1 and 1 or 0) * (org.holdingbreath and 0 or 1) * FrameTime() * 5.6 * (speed) * (org.lungsfunction and 1 or 0) * ((org.alive and !ent.headexploded) and 1 or 0)
 		
 		local torso = ent:LookupBone("ValveBiped.Bip01_Spine2")
@@ -1034,7 +1037,7 @@ hook.Add("Player-Ragdoll think", "organism-think-client-blood", function(ply, en
 				local heartbeat = org.heartbeat or 0
 				local muffed
 				local pitch = math.Clamp(heartbeat / 200 * 100, 100, 100) * math.Clamp((org.stamina and org.stamina[1] and (1 + (1 - org.stamina[1] / org.stamina.max) * 0.2) or 1), 1, 1.2)
-				local vol = math.Remap(heartbeat, 70, 300, 0, 0.25) + (org.stamina and org.stamina[1] and 1 - org.stamina[1] / org.stamina.max or 0)
+				local vol = math.Remap(heartbeat, 70, 300, 0, 0.25) + (org.stamina and org.stamina[1] and 1 - org.stamina[1] / org.stamina.max or 0) + panic * 0.5
 
 				if ent.armors then
 					muffed = ent.armors["face"] == "mask2" or ent.PlayerClassName == "Combine"

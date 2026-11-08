@@ -54,6 +54,7 @@ STYLE = {
     'nicotine': ('fill', (235, 225, 208)),
     'nicotine_wd': ('fill', (235, 225, 208)),
     'pain': ('face', WHITE),
+    'panic': ('face', (185, 160, 255)),
     'painkillers': ('fill', (232, 232, 236)),
     'pressure_high': ('fill', (255, 140, 140)),
     'pressure_low': ('fill', (150, 190, 255)),

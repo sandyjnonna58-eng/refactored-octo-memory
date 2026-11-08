@@ -140,6 +140,7 @@ if not game.IsDedicated() then
 	hg.settings:AddOpt("Serverside gameplay","hg_infiniteammo", "Infinite ammo")
 	hg.settings:AddOpt("Serverside gameplay","hg_taser_death_chance", "Taser: chance (%) to stop the heart", nil, nil, "int")
 	hg.settings:AddOpt("Serverside gameplay","rem_rage_enabled", "Rage mechanic", nil, nil, "bool")
+	hg.settings:AddOpt("Serverside gameplay","rem_panic_enabled", "Panic mechanic", nil, nil, "bool")
     hg.settings:AddOpt("Serverside gameplay","homicide_traitoramount", "Homicide: Traitor Amount", nil, nil, "int")
 end
 

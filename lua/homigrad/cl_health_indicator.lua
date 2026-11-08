@@ -216,6 +216,12 @@ local RAGE_STAGES = {
 	{1, "UNDETERRABLE RAGE", "NOTHING. ELSE. MATTERS. BUT. THIS."},
 }
 
+-- паника (modules/sv_panic.lua): с 0.35 и с 0.7 (слепая)
+local PANIC_STAGES = {
+	{0.35, 0.6, "Panic", "Your heart is pounding out of your chest.\nYour breath comes in short gasps\nand your hands won't stay still.\nYou flinch at everything that moves."},
+	{0.7, 1, "BLIND PANIC", "You can't think. You just want OUT.\nYour body moves on its own."},
+}
+
 local function CollectAfflictionIcons(ply, org)
 	local icons, seen = {}, {}
 	local function add(iconName, severity, label, good, desc)
@@ -325,6 +331,11 @@ local function CollectAfflictionIcons(ply, org)
 	local rageStage = ply:GetNW2Int("rem_rage_stage", 0)
 	local rageInfo = RAGE_STAGES[rageStage]
 	if rageInfo then add("anger", rageInfo[1], rageInfo[2], false, rageInfo[3]) end
+	local panic = ply:GetNW2Float("rem_panic", 0)
+	for i = #PANIC_STAGES, 1, -1 do
+		local s = PANIC_STAGES[i]
+		if panic >= s[1] then add("panic", s[2], s[3], false, s[4]) break end
+	end
 	local fear = Num(org.fear)
 	if fear > 0.3 then add("fear", fear, "Fear") end
 	local depression = Num(org.depression)

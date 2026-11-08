@@ -71,6 +71,11 @@
 - Ярость (3 стадии, растёт ТОЛЬКО от: удара игрока, жеста «фак», «фак»/fuck в чате; удар - рывок и x2, без удара не выше 2-й):
   `modules/sv_rage.lua` и `cl_rage.lua` (музыка по стадиям `sound/rem_rage/anger.mp3`, права у пользователя,
   куски 0-59 / 58-117 / 117-конец), плитка «anger» с описанием в `cl_health_indicator.lua`.
+- Паника (`modules/sv_panic.lua`, `sh_panic.lua`, `cl_panic.lua`; выкл. - `rem_panic_enabled`): org.panic 0..1 копится от страха
+  выше 0.45, ударов игроков и смерти человека на глазах; ярость её гасит. С 0.35: чёрные плывущие края экрана (слои tunnel.png),
+  музыка `sound/rem_panic/panic.mp3` (в .gitignore - чужой трек, у пользователя из архива), дыхание чаще (cl_main.lua), прицел
+  гуляет, мысли; кто-то внезапно появился - рефлекторный выстрел (NW2 rem_panic_fire + рывок прицела), непроизвольные шаги.
+  С 0.7 - сам убегает от угрозы (rem_panic_flee_*). Действия тела - StartCommand в sh_panic.lua. Плитка "panic" в осмотре.
 - Совместимость с InfMap (бесконечные карты): `lua/autorun/!zcity_infmap.lua` + `lua/zcity_infmap/`, описание в `INFMAP.md`.
   Работает только на картах InfMap, выключается `zc_infmap 0`. Новое net-сообщение с позицией - дописать в списки
   `lua/zcity_infmap/sh_net.lua`.
