@@ -6,6 +6,7 @@ local SONG = "sound/rem_panic/panic.mp3"
 local FADE_IN, FADE_OUT = 2, 3
 local DUCK = 0.15
 local ON = 0.35 -- как P.on в sv_panic.lua
+local MUSIC_FROM = ON * 0.6 -- музыка - вместе с первыми чёрными краями
 
 local MusicVolume = GetConVar("snd_musicvolume")
 local rem_panic_enabled = ConVarExists("rem_panic_enabled") and GetConVar("rem_panic_enabled") or CreateConVar("rem_panic_enabled", 1, FCVAR_REPLICATED + FCVAR_ARCHIVE, "Toggle the panic mechanic", 0, 1)
@@ -31,7 +32,7 @@ local volume = 0
 hook.Add("Think", "rem_panic_music", function()
 	local ply = LocalPlayer()
 	if not IsValid(ply) then return end
-	local want = hasSong and ply:Alive() and ply:GetNW2Float("rem_panic", 0) >= ON and rem_panic_enabled:GetBool()
+	local want = hasSong and ply:Alive() and ply:GetNW2Float("rem_panic", 0) >= MUSIC_FROM and rem_panic_enabled:GetBool()
 	if ply:GetNW2Int("rem_rage_stage", 0) > 0 then want = false end -- музыка ярости важнее
 	if hg.VortexDeath and hg.VortexDeath.Active and hg.VortexDeath.Active() then want = false end
 

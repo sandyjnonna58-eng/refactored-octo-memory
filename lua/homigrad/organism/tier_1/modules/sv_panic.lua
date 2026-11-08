@@ -226,6 +226,22 @@ timer.Create("rem_panic_behaviour", P.tick, 0, function()
 	end
 end)
 
+-- проверка: rem_panic_set [0..1] [игрок] - выставить панику (админ; без игрока - себе)
+concommand.Add("rem_panic_set", function(ply, _, args)
+	if IsValid(ply) and not ply:IsAdmin() then return end
+	local value = math.Clamp(tonumber(args[1] or "") or 1, 0, 1)
+	local target = ply
+	if args[2] then
+		for _, p in player.Iterator() do
+			if string.find(string.lower(p:Nick()), string.lower(args[2]), 1, true) then target = p break end
+		end
+	end
+	if not IsValid(target) or not target.organism then return end
+	target.organism.panic = value
+	target.organism.fear = math.max(target.organism.fear or 0, value) -- иначе паника сразу спадёт без страха
+	print("[rem_panic] " .. target:Nick() .. " = " .. value)
+end)
+
 -- после смерти/возрождения - с нуля
 local function Reset(ply)
 	local org = ply.organism
