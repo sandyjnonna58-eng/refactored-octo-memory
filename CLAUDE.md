@@ -14,7 +14,10 @@
 - Чужой защищённый контент (видео, фото товаров, выдранные модели) - не в публичный репозиторий, а в приватные паки,
   они в `.gitignore` (`materials/rem_wd_private`, `sound/rem_wd_private`, `materials/rem_drinks_private`),
   раздаются через FastDL-циклы в `lua/homigrad/skills/sv_skills.lua`.
-- Новые звуки/текстуры - `resource.AddSingleFile` на сервере, иначе у игроков их не будет.
+- Новые звуки/текстуры - `resource.AddSingleFile` на сервере, иначе у игроков их не будет. Общая раздача при входе -
+  `lua/autorun/server/rem_downloads.lua`: файлы аддона по списку `lua/rem_downloads/list.lua` (после добавления контента
+  вне папок rem_* - перегенерировать `python3 tools/downloads/make.py`) + все аддоны Мастерской сервера (engine.GetAddons)
+  + `rem_workshop_extra`. Lua игрокам отдаёт загрузчик (AddCSLuaFile).
 - Генераторы текстур - в `tools/` (Python + PIL), запуск из корня репозитория.
 
 ## Устройство
