@@ -60,9 +60,13 @@
   `MGSVSnake.DrawBody`; дисплейсменты (трава и т.п.) - по типу поверхности, запасные текстуры `materials/rem_octo`;
   картинки - `tools/octocamo/make.py`.
 - Совместимость с отдельными аддонами «ULTRAKILL Weapons Pack» и «ULTRAKILL Coin Mechanics» (в репозиторий не кладём; движение
-  и руки ULTRAKILL - убраны): `lua/homigrad/compat/sh_ultrakill.lua` - `hg.UK.Weapon(ply)` (оружие weapon_dredux_uk_*: камера движку,
-  видна вьюмодель). Общая уступка камеры - `hg.CameraYield(ply)` (там же; её зовёт `cl_camera.lua`). Монетки (ultrakill_toss_coin)
-  кода не требуют: их урон - обычный TakeDamageInfo с позицией попадания, организм homigrad разбирает его сам.
+  и руки ULTRAKILL - убраны): `lua/homigrad/compat/sh_ultrakill.lua`. Оружие weapon_dredux_uk_* работает как оружие zcity:
+  камера homigrad, вьюмодели (рука V1) нет - модель *_3rd.mdl держит аватар (SetHandPos ставит кисть перед глазами, руку
+  дотягивает hg.DoTPIK, DrawWorldModel2 рисует по кости R_Hand - её зовёт fake/sh_render.lua); WorkWithFake - остаётся в руке
+  в рэгдолле (флаг remHeldGun в fake/sv_control.lua: ЛКМ/ПКМ - выстрел, рука тянется по прицелу; точка выстрела в рэгдолле
+  вынесена на 14 юнитов вперёд через ViewOffset). Поля навешиваются на таблицы оружия (PreRegisterSWEP + уже созданные).
+  `hg.CameraYield(ply)` (там же, её зовёт `cl_camera.lua`) теперь только для Снейка. Монетки (ultrakill_toss_coin) кода не
+  требуют: их урон - обычный TakeDamageInfo с позицией попадания.
 - Ярость (3 стадии, растёт ТОЛЬКО от: удара игрока, жеста «фак», «фак»/fuck в чате; удар - рывок и x2, без удара не выше 2-й):
   `modules/sv_rage.lua` и `cl_rage.lua` (музыка по стадиям `sound/rem_rage/anger.mp3`, права у пользователя,
   куски 0-59 / 58-117 / 117-конец), плитка «anger» с описанием в `cl_health_indicator.lua`.
