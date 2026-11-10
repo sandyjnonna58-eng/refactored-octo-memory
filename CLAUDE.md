@@ -83,6 +83,11 @@
   любой особой музыке - OtherMusic: Duck/Exempt других модулей, hg.CritMusicPlaying, PanicStation), дыхание чаще (cl_main.lua), прицел
   гуляет, мысли; кто-то внезапно появился - рефлекторный выстрел (NW2 rem_panic_fire + рывок прицела), непроизвольные шаги.
   С 0.7 - сам убегает от угрозы (rem_panic_flee_*). Действия тела - StartCommand в sh_panic.lua. Плитка "panic" в осмотре.
+- Самоповреждение - мини-игра как в Fading Vitality (`lua/homigrad/selfharm/cl_selfharm_game.lua`): во время позыва
+  (sv_depression.lua, NW rem_selfharm_wave_end, нож в руках) панель с контуром предплечья (`materials/rem_selfharm/arm.png`,
+  `tools/selfharm/make.py`) и точка-рука, её тянет к руке (сильнее к концу позыва), игрок отводит мышью (InputMouseApply,
+  ЛКМ/ПКМ заблокированы). Дотянуло - красный порез с каплями, затемнение, net "rem_selfharm_cut" -> сервер зовёт
+  DoSelfHarmCut ножа (не чаще 0.7 с). Старое "жми E" у игроков больше не режет (тик порезов - только ботам).
 - Совместимость с InfMap (бесконечные карты): `lua/autorun/!zcity_infmap.lua` + `lua/zcity_infmap/`, описание в `INFMAP.md`.
   Работает только на картах InfMap, выключается `zc_infmap 0`. Новое net-сообщение с позицией - дописать в списки
   `lua/zcity_infmap/sh_net.lua`.

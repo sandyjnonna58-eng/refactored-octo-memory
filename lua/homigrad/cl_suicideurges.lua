@@ -175,8 +175,7 @@ hook.Add("HUDPaint", "REM_SuicideUrges", function()
 			wasSelfHarmActive = true
 		end
 
-		local text = now < plainUntil and "E FIGHT THE URGE" or ">E< FIGHT THE URGE"
-		drawResistText(text, ScrW() / 2 + math.random(-4, 4), ScrH() / 2 + ScrH() * 0.12 + math.random(-3, 3))
+		-- подсказку и саму борьбу рисует мини-игра (selfharm/cl_selfharm_game.lua)
 	elseif wasSelfHarmActive then
 		wasSelfHarmActive = false
 		lastPress = 0

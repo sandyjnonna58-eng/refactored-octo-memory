@@ -244,6 +244,7 @@ return {
 	"materials/rem_octo/grass.png",
 	"materials/rem_octo/sand.png",
 	"materials/rem_octo/snow.png",
+	"materials/rem_selfharm/arm.png",
 	"materials/rem_skills/agility.png",
 	"materials/rem_skills/asthmatic.png",
 	"materials/rem_skills/brawler.png",
