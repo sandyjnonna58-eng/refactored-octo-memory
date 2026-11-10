@@ -34,15 +34,12 @@ local iconsAppearTime = 0
 local iconsTargetVisible = false
 local cachedAfflictionIcons = {}
 -- ряд как в Fading Vitality: слева направо, первым всегда сердце (бьётся с пульсом), остальные - в порядке появления
--- (новые - в конец); пропала плитка - те, что за ней, скользят к сердцу; любая смена набора - белая вспышка
+-- (новые - в конец); пропала плитка - те, что за ней, скользят к сердцу (белую вспышку при смене набора убрали по просьбе)
 local iconOrder, iconOrderSeq = {pulse = 0}, 0
-local iconSetKey = ""
-local iconFlashUntil = 0
 local tileSlotX = {} -- имя -> текущий x плитки от начала ряда (скользит к своему месту)
-local FLASH_TIME = 0.1 -- вспышка при смене набора
 local SLIDE_TIME = 0.12 -- за сколько плитка проходит одну клетку к сердцу
 local function ResetIconOrder()
-	iconOrder, iconOrderSeq, iconSetKey, tileSlotX = {pulse = 0}, 0, "", {}
+	iconOrder, iconOrderSeq, tileSlotX = {pulse = 0}, 0, {}
 end
 
 HI.Shown = HI.Shown or false
@@ -386,13 +383,6 @@ local function CollectAfflictionIcons(ply, org)
 		end
 	end
 	table.sort(icons, function(a, b) return iconOrder[a.name] < iconOrder[b.name] end)
-	-- набор сменился (плитка появилась или пропала) - вспышка
-	local key = ""
-	for _, e in ipairs(icons) do key = key .. e.name .. ";" end
-	if key ~= iconSetKey then
-		if iconSetKey ~= "" then iconFlashUntil = CurTime() + FLASH_TIME end
-		iconSetKey = key
-	end
 	return icons
 end
 
@@ -511,12 +501,6 @@ local function DrawAfflictionIcons(iconEntries, x0, bottomY, visibility, appearT
 			end
 
 			surface.DrawOutlinedRect(x, yy, tile, tile, border)
-
-			-- вспышка: набор плиток только что сменился - весь ряд на миг белеет
-			if iconFlashUntil > timeNow then
-				surface.SetDrawColor(255, 255, 255, math.floor(190 * alphaMul))
-				surface.DrawRect(x, yy, tile, tile)
-			end
 
 			-- значок (сердце - бьётся с пульсом)
 			local pad = math.floor(tile * 0.1)
