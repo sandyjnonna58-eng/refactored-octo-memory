@@ -618,6 +618,22 @@ function hg.organism.AddDepression(org, amount)
 	return org.depressionadd
 end
 
+-- проверка: rem_depression_set [0..1] [игрок] - выставить депрессию (админ; без игрока - себе)
+concommand.Add("rem_depression_set", function(ply, _, args)
+	if IsValid(ply) and not ply:IsAdmin() then return end
+	local value = Clamp(tonumber(args[1] or "") or 1, 0, depression_max)
+	local target = ply
+	if args[2] then
+		for _, p in player.Iterator() do
+			if string.find(string.lower(p:Nick()), string.lower(args[2]), 1, true) then target = p break end
+		end
+	end
+	if not IsValid(target) or not target.organism then return end
+	target.organism.depression = value
+	target.organism.selfharmNextRoll = CurTime() + 2 -- чтобы позыв не ждать
+	print("[rem_depression] " .. target:Nick() .. " = " .. value)
+end)
+
 concommand.Add("selfharm", function(ply)
 	if not IsValid(ply) or not ply:IsPlayer() or not ply:Alive() then return end
 	if not ply.organism or ply.selfharming or ply.suiciding or ply.remUrgeEnd then return end
