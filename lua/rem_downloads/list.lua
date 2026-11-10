@@ -213,6 +213,7 @@ return {
 	"materials/rem_affl/panic.png",
 	"materials/rem_affl/pressure_high.png",
 	"materials/rem_affl/pressure_low.png",
+	"materials/rem_affl/pulse.png",
 	"materials/rem_affl/rage.png",
 	"materials/rem_affl/seizure.png",
 	"materials/rem_affl/shock.png",

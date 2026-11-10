@@ -58,6 +58,7 @@ STYLE = {
     'painkillers': ('fill', (232, 232, 236)),
     'pressure_high': ('fill', (255, 140, 140)),
     'pressure_low': ('fill', (150, 190, 255)),
+    'pulse': ('fill', (236, 222, 216)),
     'rage': ('line', (255, 80, 80)),
     'seizure': ('fill', (255, 222, 70)),
     'shock': ('line', WHITE),

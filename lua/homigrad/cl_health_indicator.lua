@@ -33,6 +33,17 @@ local iconsVisibility = 0
 local iconsAppearTime = 0
 local iconsTargetVisible = false
 local cachedAfflictionIcons = {}
+-- ряд как в Fading Vitality: слева направо, первым всегда сердце (бьётся с пульсом), остальные - в порядке появления
+-- (новые - в конец); пропала плитка - те, что за ней, скользят к сердцу; любая смена набора - белая вспышка
+local iconOrder, iconOrderSeq = {pulse = 0}, 0
+local iconSetKey = ""
+local iconFlashUntil = 0
+local tileSlotX = {} -- имя -> текущий x плитки от начала ряда (скользит к своему месту)
+local FLASH_TIME = 0.1 -- вспышка при смене набора
+local SLIDE_TIME = 0.12 -- за сколько плитка проходит одну клетку к сердцу
+local function ResetIconOrder()
+	iconOrder, iconOrderSeq, iconSetKey, tileSlotX = {pulse = 0}, 0, "", {}
+end
 
 HI.Shown = HI.Shown or false
 
@@ -233,12 +244,15 @@ local function CollectAfflictionIcons(ply, org)
 		end
 		local mat = AfflIcon(iconName)
 		if not mat then return end
-		e = {mat = mat, severity = severity, label = label or iconName, good = good, desc = desc}
+		e = {name = iconName, mat = mat, severity = severity, label = label or iconName, good = good, desc = desc}
 		seen[iconName] = e
 		icons[#icons + 1] = e
 	end
 
 	if not org then return icons end
+
+	-- сердце - всегда первое, как в Fading Vitality (в отрисовке бьётся с пульсом)
+	add("pulse", 0.05, "Heart", false, "Pulse: " .. math.Round(Num(org.pulse)) .. " bpm")
 
 	-- раны и кровь
 	local wounds = ply.wounds or ply:GetNetVar("wounds")
@@ -364,10 +378,21 @@ local function CollectAfflictionIcons(ply, org)
 	local stamina = Num(org.stamina)
 	if stamina > 0 and stamina < 50 then add("fatigue", (50 - stamina) / 50, "Exhausted") end
 
-	table.sort(icons, function(a, b)
-		if (a.good or false) ~= (b.good or false) then return not a.good end
-		return a.severity > b.severity
-	end)
+	-- порядок появления: новые - в конец, сердце - первое
+	for _, e in ipairs(icons) do
+		if not iconOrder[e.name] then
+			iconOrderSeq = iconOrderSeq + 1
+			iconOrder[e.name] = iconOrderSeq
+		end
+	end
+	table.sort(icons, function(a, b) return iconOrder[a.name] < iconOrder[b.name] end)
+	-- набор сменился (плитка появилась или пропала) - вспышка
+	local key = ""
+	for _, e in ipairs(icons) do key = key .. e.name .. ";" end
+	if key ~= iconSetKey then
+		if iconSetKey ~= "" then iconFlashUntil = CurTime() + FLASH_TIME end
+		iconSetKey = key
+	end
 	return icons
 end
 
@@ -392,14 +417,14 @@ local function Shake(idx, timeNow, amp)
 	return (sx - math.floor(sx) - 0.5) * 2 * amp, (sy - math.floor(sy) - 0.5) * 2 * amp
 end
 
-local function DrawAfflictionIcons(iconEntries, centerX, bottomY, visibility, appearTime, timeNow, org)
+local function DrawAfflictionIcons(iconEntries, x0, bottomY, visibility, appearTime, timeNow, org)
 	if #iconEntries == 0 or visibility <= 0.01 then return end
 	warnIcon = warnIcon or Material("rem_affl/critical.png", "smooth mips")
 
 	local tile = math.max(math.floor(ScreenScaleFixed(25)), 22)
 	local spacing = math.max(math.floor(ScreenScaleFixed(2.5)), 2)
 	local border = math.max(math.floor(tile / 26), 1)
-	local horizontalSpace = ScrW() - ScreenScaleFixed(ICONS_SCREEN_EDGE_MARGIN) * 2
+	local horizontalSpace = ScrW() - x0 - ScreenScaleFixed(ICONS_SCREEN_EDGE_MARGIN)
 	local maxPerRow = math.max(1, math.floor((horizontalSpace + spacing) / (tile + spacing)))
 	local rows = math.ceil(#iconEntries / maxPerRow)
 	local appearFrac = math.Clamp((timeNow - appearTime) / 0.3, 0, 1)
@@ -411,8 +436,6 @@ local function DrawAfflictionIcons(iconEntries, centerX, bottomY, visibility, ap
 	for row = 1, rows do
 		local rowStart = (row - 1) * maxPerRow + 1
 		local rowCount = math.min(maxPerRow, #iconEntries - rowStart + 1)
-		local rowWidth = rowCount * tile + (rowCount - 1) * spacing
-		local x0 = centerX - rowWidth * 0.5
 		local y = bottomY - row * tile - (row - 1) * spacing + (1 - appearFrac) * tile * 0.6
 		if y < 0 then break end
 
@@ -420,7 +443,13 @@ local function DrawAfflictionIcons(iconEntries, centerX, bottomY, visibility, ap
 			local idx = rowStart + col - 1
 			local e = iconEntries[idx]
 			local sev = e.severity
-			local x = math.floor(x0 + (col - 1) * (tile + spacing))
+			-- место в ряду; к нему плитка скользит (освободилось место ближе к сердцу - идёт туда)
+			local targetX = (col - 1) * (tile + spacing)
+			local cur = tileSlotX[e.name]
+			if cur == nil or math.abs(cur - targetX) > tile * 8 then cur = targetX end
+			cur = math.Approach(cur, targetX, FrameTime() * (tile + spacing) / SLIDE_TIME)
+			tileSlotX[e.name] = cur
+			local x = math.floor(x0 + cur)
 			-- тяжёлые подняты, все трясутся рывками
 			local lift = 0
 			if sev > LIFT_START and not e.good then
@@ -483,11 +512,23 @@ local function DrawAfflictionIcons(iconEntries, centerX, bottomY, visibility, ap
 
 			surface.DrawOutlinedRect(x, yy, tile, tile, border)
 
-			-- значок
+			-- вспышка: набор плиток только что сменился - весь ряд на миг белеет
+			if iconFlashUntil > timeNow then
+				surface.SetDrawColor(255, 255, 255, math.floor(190 * alphaMul))
+				surface.DrawRect(x, yy, tile, tile)
+			end
+
+			-- значок (сердце - бьётся с пульсом)
 			local pad = math.floor(tile * 0.1)
+			local isz = tile - pad * 2
+			if e.name == "pulse" and org then
+				local beat = (math.sin(org.pulsethink or 0) + 1) * 0.5
+				local grow = math.floor(tile * 0.14 * beat * beat)
+				pad, isz = pad - grow * 0.5, isz + grow
+			end
 			surface.SetMaterial(e.mat)
 			surface.SetDrawColor(255, 235 + 20 * sev, 235 + 20 * sev, math.floor(255 * alphaMul))
-			surface.DrawTexturedRect(x + pad, yy + pad, tile - pad * 2, tile - pad * 2)
+			surface.DrawTexturedRect(x + pad, yy + pad, isz, isz)
 
 			if cursor and mx >= x and mx <= x + tile and my >= yy and my <= yy + tile then
 				hovered = {e.label, x + tile * 0.5, yy, e.desc}
@@ -598,6 +639,7 @@ hook.Add("HUDPaint", "rem_health_indicator", function()
 	local alive = ply:Alive()
 	if lastLifeState ~= alive then
 		ResetModels()
+		ResetIconOrder()
 		lastLifeState = alive
 		if not alive then HI.Shown = false end
 	end
@@ -621,9 +663,13 @@ hook.Add("HUDPaint", "rem_health_indicator", function()
 	iconsTargetVisible = shown
 
 	if iconsVisibility > 0.01 and #cachedAfflictionIcons > 0 then
-		DrawAfflictionIcons(cachedAfflictionIcons, ScrW() * 0.5, ScrH() - ScreenScaleFixed(ICONS_SCREEN_MARGIN_Y), iconsVisibility, iconsAppearTime, time, org)
+		-- ряд начинается справа от панели с силуэтом (слева внизу, как в Fading Vitality)
+		local panelRight = currentX + ScreenScaleFixed(BACKDROP_OFFSET_X) + ScreenScaleFixed(IND_SIZE) * 0.92
+		local x0 = math.max(panelRight + ScreenScaleFixed(10), ScreenScaleFixed(ICONS_SCREEN_EDGE_MARGIN))
+		DrawAfflictionIcons(cachedAfflictionIcons, x0, ScrH() - ScreenScaleFixed(ICONS_SCREEN_MARGIN_Y), iconsVisibility, iconsAppearTime, time, org)
 	elseif not shown and iconsVisibility <= 0.01 then
 		cachedAfflictionIcons = {}
+		ResetIconOrder()
 	end
 
 	-- совсем уехал за край - модели не трогаем
