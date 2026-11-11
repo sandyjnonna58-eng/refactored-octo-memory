@@ -60,13 +60,15 @@ local function CutFromHit(body, hitPos)
 	return {sx / f.w, sy / f.yArm, ex / f.w, ey / f.yArm}
 end
 
+-- только урон, нанесённый самим оружием (не кровотечение и т.п. от того, кто держит нож)
 local function Weapon(dmg)
 	local wep = dmg:GetInflictor()
-	if IsValid(wep) and wep:IsWeapon() then return wep end
-	local att = dmg:GetAttacker()
-	wep = IsValid(att) and att.GetActiveWeapon and att:GetActiveWeapon()
-	return IsValid(wep) and wep or nil
+	return (IsValid(wep) and wep:IsWeapon()) and wep or nil
 end
+
+-- режущее оружие Z-City (MultiDmg1) бьёт каждый тик, пока клинок идёт по телу: один взмах - десятки событий
+-- урона. Бросок шанса и счёт ран - один раз за взмах (пауза SWING_GAP по этому человеку)
+local SWING_GAP = 0.6
 
 local function DoCut(target, attacker, cut, dmg)
 	local dir = IsValid(attacker) and attacker:GetAimVector() or dmg:GetDamageForce():GetNormalized()
@@ -121,6 +123,10 @@ local function OnDamage(target, dmg)
 
 	if not cut then return end -- не по туловищу
 	local holder = IsValid(ply) and ply or target
+	local now = CurTime()
+	wep.__remHalveNext = wep.__remHalveNext or setmetatable({}, {__mode = "k"})
+	if (wep.__remHalveNext[holder] or 0) > now then return end
+	wep.__remHalveNext[holder] = now + SWING_GAP
 	local hits = holder.__remCutHits or 0
 	holder.__remCutHits = hits + 1
 	if KNIFE[class] and hits < KNIFE_HITS then return end
