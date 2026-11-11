@@ -737,6 +737,27 @@ local eyepos = entmeta.EyePos
 local eyeangles = entmeta.EyeAngles
 local fLPly = LocalPlayer
 local IsValid = IsValid
+-- Наш RenderScene рисует кадр сам и возвращает true - хуки RenderScene других аддонов после этого не вызываются.
+-- Им это бывает нужно: например, сквозные пробоины GHM Ballistic Damage готовят в нём вид за стеной - с физганом
+-- (камера движка, мы кадр не перехватываем) сквозь дыру было видно, а с оружием Z-City в дыре - пустота.
+-- Поэтому перед своим кадром зовём их сами, с нашей камерой. Пропускаем свои и те, что рисуют весь кадр сами.
+local otherSceneSkip = {
+	jopa = true,
+	CinematicDeathRenderScene = true,          -- экран смерти (cl_cdeath.lua) сам снимает наш хук
+	["wOS.DynaBase.PreventDataAccess"] = true, -- wOS: true = кадр не рисовать, это не про подготовку
+}
+local function CallOtherRenderScene(origin, angles, fov)
+	local list = hook.GetTable().RenderScene
+	if not list then return end
+	for name, fn in pairs(list) do
+		if isfunction(fn) and not otherSceneSkip[name] then
+			local ok, res = pcall(fn, origin, angles, fov)
+			if not ok then ErrorNoHalt("[RenderScene " .. tostring(name) .. "] " .. tostring(res) .. "\n")
+			elseif res == true then return true end -- этот хук сам нарисовал кадр - второй раз не рисуем
+		end
+	end
+end
+
 local function renderscene(pos, angle, fov)
 	lply = IsValid(lply) and lply or fLPly()
 	-- Снейк (compat/sh_mgsv.lua) или оружие ULTRAKILL (compat/sh_ultrakill.lua): кадр рисует движок с камерой аддона
@@ -776,6 +797,7 @@ local function renderscene(pos, angle, fov)
 	--if GlobalRenderOverideTickOFF then GlobalRenderOverideTickOFF = nil return end
 	--lply:DrawModel()
 
+	if CallOtherRenderScene(view.origin, view.angles, fov) then lply.norender = nil return true end
 	render_RenderView(renderView)
 	lply.norender = nil
 	

@@ -117,7 +117,8 @@
   попадание в стену / проп -> `hg.ShrapnelImpact` - короткая пуля Z-City (FireLuaBullets, урон 1) у места попадания: след и
   пробоина, её видят аддоны пробоин через EntityFireBullets / PostEntityFireBullets / callback. Лимит на взрыв `rem_frag_impacts`.
   GHM Ballistic Damage - отдельный аддон из Мастерской, обфусцирован, автор запрещает распространение и правку: в репозиторий
-  не кладём и не трогаем; пули Z-City вызывают те же хуки, что пули движка.
+  не кладём и не трогаем; пули Z-City вызывают те же хуки, что пули движка. Наш RenderScene (cl_camera.lua) рисует кадр
+  сам и глушит чужие RenderScene - CallOtherRenderScene зовёт их перед своим кадром (иначе в пробоине GHM пустота).
 - Совместимость с InfMap (бесконечные карты): `lua/autorun/!zcity_infmap.lua` + `lua/zcity_infmap/`, описание в `INFMAP.md`.
   Работает только на картах InfMap, выключается `zc_infmap 0`. Новое net-сообщение с позицией - дописать в списки
   `lua/zcity_infmap/sh_net.lua`.
