@@ -744,11 +744,21 @@ hook.Add("HUDPaint", "rem_health_indicator", function()
 		render.SuppressEngineLighting(false)
 	cam.End3D()
 
-	-- в отключке всё это еле видно: поверх - темнота, медленно сгущается и отступает
+	-- в отключке всё это еле видно: поверх - темнота, медленно сгущается и отступает. Сверху вниз она нарастает
+	-- плавно (полосами по 1/48 высоты) - без резкого края: прямоугольник давал линию поперёк экрана
 	if otrubView then
 		local k = (math.sin(time * math.pi * 2 / otrub_dim_period) + 1) / 2
-		surface.SetDrawColor(0, 0, 0, 255 * Lerp(k, otrub_dim_min, otrub_dim_max))
-		surface.DrawRect(0, ScrH() * 0.35, ScrW(), ScrH() * 0.65)
+		local alpha = 255 * Lerp(k, otrub_dim_min, otrub_dim_max)
+		local sw, sh = ScrW(), ScrH()
+		local top, fade = sh * 0.3, sh * 0.3 -- с 30% высоты темнота нарастает, с 60% - полная
+		local strips = 48
+		local stripH = fade / strips
+		for i = 0, strips - 1 do
+			surface.SetDrawColor(0, 0, 0, alpha * (i + 0.5) / strips)
+			surface.DrawRect(0, math.floor(top + i * stripH), sw, math.ceil(stripH) + 1)
+		end
+		surface.SetDrawColor(0, 0, 0, alpha)
+		surface.DrawRect(0, math.floor(top + fade), sw, sh - math.floor(top + fade))
 	end
 end)
 
