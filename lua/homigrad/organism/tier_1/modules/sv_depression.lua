@@ -147,8 +147,6 @@ local depression_minigame_phrases = {
 
 util.AddNetworkString("rem_selfharm_press")
 util.AddNetworkString("rem_selfharm_end")
-util.AddNetworkString("rem_selfharm_cut") -- мини-игра (selfharm/cl_selfharm_game.lua): точку дотянуло до руки
-resource.AddSingleFile("materials/rem_selfharm/arm.png")
 
 local function isSelfHarmWeapon(wep)
 	if not IsValid(wep) or not wep.Canselfharm then return false end
@@ -311,8 +309,6 @@ local function doSelfHarmCut(owner)
 end
 
 local function updateSelfHarmCutTick(owner, org)
-	-- у игроков порезы делает мини-игра (selfharm/cl_selfharm_game.lua -> rem_selfharm_cut); тут - только боты
-	if owner:IsPlayer() and not owner:IsBot() then return end
 	local now = CurTime()
 
 	if not org.selfharmNextCut then return end
@@ -665,16 +661,4 @@ net.Receive("rem_selfharm_press", function(_, ply)
 	if not org.selfharmWaveEnd or org.selfharmWaveEnd < CurTime() then return end
 
 	org.selfharmPresses = (org.selfharmPresses or 0) + 1
-end)
-
--- мини-игра: руку с ножом дотянуло до предплечья - настоящий порез (не чаще раза в 0.7 с)
-net.Receive("rem_selfharm_cut", function(_, ply)
-	if not IsValid(ply) or not ply:IsPlayer() then return end
-	local org = ply.organism
-	if not org or not org.alive or org.otrub or org.heartstop then return end
-	if not org.selfharmWaveEnd or org.selfharmWaveEnd < CurTime() then return end
-	if (org.selfharmLastCut or 0) + 0.7 > CurTime() then return end
-	if not hasSelfHarmWeapon(ply) then return end
-	org.selfharmLastCut = CurTime()
-	doSelfHarmCut(ply)
 end)

@@ -83,13 +83,9 @@
   любой особой музыке - OtherMusic: Duck/Exempt других модулей, hg.CritMusicPlaying, PanicStation), дыхание чаще (cl_main.lua), прицел
   гуляет, мысли; кто-то внезапно появился - рефлекторный выстрел (NW2 rem_panic_fire + рывок прицела), непроизвольные шаги.
   С 0.7 - сам убегает от угрозы (rem_panic_flee_*). Действия тела - StartCommand в sh_panic.lua. Плитка "panic" в осмотре.
-- Самоповреждение - мини-игра как в Fading Vitality (`lua/homigrad/selfharm/cl_selfharm_game.lua`): во время позыва
-  (sv_depression.lua, NW rem_selfharm_wave_end, нож в руках) панель с контуром предплечья (`materials/rem_selfharm/arm.png`,
-  `tools/selfharm/make.py`) и точка-рука, её тянет к руке (сильнее к концу позыва), игрок мотает головой мышью влево-вправо
-  (InputMouseApply: каждая смена направления после размаха swingMin - толчок руки прочь, голова крутится в пределах
-  shakeYaw; ЛКМ/ПКМ заблокированы). Дотянуло - красный порез с каплями, затемнение, net "rem_selfharm_cut" -> сервер зовёт
-  DoSelfHarmCut ножа (не чаще 0.7 с). Старое "жми E" у игроков больше не режет (тик порезов - только ботам). Тест: `rem_depression_set [0..1]`
-  (админ, позыв через ~2-12 с при депрессии >= 0.4), `selfharm` - позыв сразу (нужна депрессия >= 0.5 и нож).
+- Самоповреждение (позыв при депрессии, жми E чтобы сопротивляться - старая механика, мини-игру с ножом убрали по просьбе):
+  `modules/sv_depression.lua`, `cl_suicideurges.lua`. Тест: `rem_depression_set [0..1]` (админ, позыв через ~2-12 с при
+  депрессии >= 0.4), `selfharm` - позыв сразу (нужна депрессия >= 0.5 и нож).
 - Музыка при уходе сознания (`lua/homigrad/remaudio/cl_fadingmusic.lua`): по org.consciousness (0.75 -> 0.35) вся музыка
   (каналы RemAudio, RA.IsMusic - не .wav и не heartstop/heartbeat) сначала с эхом (копии файла с задержкой, RA.Taps), потом
   "издалека" (RA.Global - общий множитель громкости в cl_remaudio.lua, playback rate 0.94, эхо гуще); otrub - трек гаснет
