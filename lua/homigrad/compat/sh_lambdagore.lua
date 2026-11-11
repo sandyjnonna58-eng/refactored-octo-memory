@@ -124,6 +124,68 @@ if SERVER then
 		return gib
 	end
 
+	-- Оторванная конечность у рэгдолла (свой рэгдолл игрока, труп) физически оставалась: невидимую ногу можно было
+	-- схватить. Как в Lambda: кости части - пустые (сквозь них проходят лучи и руки), без столкновений и массы,
+	-- без связи с телом, и держатся на месте отрыва.
+	local goneRags = {}
+	local function HideLimbPhysics(rag, bone)
+		if not IsValid(rag) or not rag:IsRagdoll() then return end
+		local top = rag:LookupBone(bone)
+		if not top then return end
+		local anchor = rag:TranslateBoneToPhysBone(rag:GetBoneParent(top))
+		local list = {top}
+		local i = 1
+		while list[i] do
+			for _, child in ipairs(rag:GetChildBones(list[i])) do list[#list + 1] = child end
+			i = i + 1
+		end
+		rag.remLGGone = rag.remLGGone or {}
+		for _, b in ipairs(list) do
+			local pb = rag:TranslateBoneToPhysBone(b)
+			if pb and pb >= 0 and pb ~= anchor and not rag.remLGGone[pb] then
+				local phys = rag:GetPhysicsObjectNum(pb)
+				if IsValid(phys) then
+					if phys:HasGameFlag(FVPHYSICS_PLAYER_HELD) then rag:ForcePlayerDrop() end
+					phys:SetContents(CONTENTS_EMPTY)
+					phys:EnableCollisions(false)
+					phys:SetMass(0.1)
+					phys:EnableGravity(false)
+					phys:EnableMotion(false)
+					rag:RemoveInternalConstraint(pb)
+					rag.remLGGone[pb] = anchor
+				end
+			end
+		end
+		goneRags[rag] = true
+	end
+	LG.HideLimbPhysics = HideLimbPhysics
+
+	timer.Create("rem_lambdagore_gone", 0.1, 0, function()
+		for rag in pairs(goneRags) do
+			if not IsValid(rag) then goneRags[rag] = nil continue end
+			for pb, anchor in pairs(rag.remLGGone or {}) do
+				local phys, ap = rag:GetPhysicsObjectNum(pb), anchor and anchor >= 0 and rag:GetPhysicsObjectNum(anchor)
+				if IsValid(phys) and IsValid(ap) then
+					phys:SetPos(ap:GetPos(), true)
+					phys:SetAngles(ap:GetAngles())
+				end
+			end
+		end
+	end)
+
+	local function HideAmputated(rag, org)
+		if not org or not LG.Enabled() then return end
+		for limb, bone in pairs(LG.LimbBone) do
+			if org[limb .. "amputated"] then HideLimbPhysics(rag, bone) end
+		end
+	end
+	-- новый рэгдолл игрока (упал, умер) - у него уже нет оторванных частей
+	hook.Add("Ragdoll_Create", "rem_lambdagore", function(ply, rag)
+		timer.Simple(0, function()
+			if IsValid(rag) and IsValid(ply) then HideAmputated(rag, ply.organism or rag.organism) end
+		end)
+	end)
+
 	hook.Add("OnAmputateLimb", "rem_lambdagore", function(org, ent, limb)
 		local bone = LG.LimbBone[limb]
 		if not bone or not IsValid(ent) or not LG.Enabled() then return end
@@ -150,6 +212,7 @@ if SERVER then
 			end
 		end
 		ProtectedCall(function() hook.Call("noob_gore_make_limb_blood", nil, ent, bone) end)
+		if ent:IsRagdoll() then HideLimbPhysics(ent, bone) end
 		ent:EmitSound("goremod_gib_sound")
 	end)
 end
@@ -217,6 +280,36 @@ if CLIENT then
 		while #limbs > max_limbs do RemoveLimb(1) end
 	end)
 
+	-- обрубки Lambda сделаны под пропорции L4D и прячутся в рукаве / штанине: увеличиваем вокруг места отрыва
+	-- и выдвигаем наружу вдоль плеча / бедра
+	local cvScale = CreateClientConVar("rem_lambdagore_stump_scale", 1.35, true, false, "Lambda gore stump size", 0.5, 3)
+	local cvPush = CreateClientConVar("rem_lambdagore_stump_push", 1.5, true, false, "Lambda gore stump shift out of the sleeve", -10, 10)
+	local STUMP_CUT = { -- кость обрубка -> кость, с которой начинается оторванная часть (место отрыва)
+		["ValveBiped.Bip01_L_UpperArm"] = "ValveBiped.Bip01_L_Forearm",
+		["ValveBiped.Bip01_R_UpperArm"] = "ValveBiped.Bip01_R_Forearm",
+		["ValveBiped.Bip01_L_Thigh"] = "ValveBiped.Bip01_L_Calf",
+		["ValveBiped.Bip01_R_Thigh"] = "ValveBiped.Bip01_R_Calf",
+	}
+	local function FitStump(self, count)
+		local parent = self:GetParent()
+		if not IsValid(parent) then return end
+		local k, push = cvScale:GetFloat(), cvPush:GetFloat()
+		for i = 0, count - 1 do
+			local cutName = STUMP_CUT[self:GetBoneName(i)]
+			local cut = cutName and parent:LookupBone(cutName)
+			local m = self:GetBoneMatrix(i)
+			local cm = cut and parent:GetBoneMatrix(cut)
+			if m and cm then
+				local p = cm:GetTranslation()
+				local fit = Matrix()
+				fit:Translate(p + m:GetForward() * push)
+				fit:Scale(Vector(k, k, k))
+				fit:Translate(-p)
+				self:SetBoneMatrix(i, fit * m)
+			end
+		end
+	end
+
 	local function ClearStumps(ent)
 		local t = stumps[ent]
 		if not t then return end
@@ -259,6 +352,7 @@ if CLIENT then
 					if IsValid(m) then
 						m:SetParent(ent)
 						m:AddEffects(EF_BONEMERGE)
+						m:AddCallback("BuildBonePositions", FitStump)
 						stumps[ent] = stumps[ent] or {}
 						stumps[ent][limb] = m
 					end

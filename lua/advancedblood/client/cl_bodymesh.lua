@@ -481,7 +481,16 @@ function Pose:Bone(b)
 	-- родителя с нормальной позицией: часть тела, которой нет, и не видна.
 	-- Так же сжимается оторванная конечность (Z.BoneHidden: организм говорит, что её нет) - Z-City прячет её только
 	-- при отрисовке, а здесь она читалась целой, и кровь текла по невидимой руке до земли.
-	if a14 ~= a14 or a24 ~= a24 or a34 ~= a34 or a14 * 0 ~= 0 or a24 * 0 ~= 0 or a34 * 0 ~= 0 or Z.BoneHidden(ent, b) then
+	local nan = a14 ~= a14 or a24 ~= a24 or a34 ~= a34 or a14 * 0 ~= 0 or a24 * 0 ~= 0 or a34 * 0 ~= 0
+	if not nan and Z.BoneHidden(ent, b) then
+		-- оторванная конечность: в точку на месте отрыва (локоть / колено - начало самой верхней пропавшей кости),
+		-- как её сжимает и движок; сжатие к плечу вытягивало плёнку лентой от плеча до среза
+		local top, p = b, ent:GetBoneParent(b)
+		while p and p >= 0 and Z.BoneHidden(ent, p) do top, p = p, ent:GetBoneParent(p) end
+		local TM = top ~= b and ent:GetBoneMatrix(top)
+		if TM then local t = TM:GetTranslation() a14, a24, a34 = t.x, t.y, t.z end
+		a11, a12, a13, a21, a22, a23, a31, a32, a33 = 0, 0, 0, 0, 0, 0, 0, 0, 0
+	elseif nan then
 		local px, py, pz
 		local p = ent:GetBoneParent(b)
 		while p and p >= 0 do
