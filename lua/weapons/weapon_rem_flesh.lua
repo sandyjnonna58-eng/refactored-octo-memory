@@ -71,13 +71,7 @@ if SERVER then
 end
 
 if CLIENT then
-	local ZERO, ONE = Vector(0, 0, 0), Vector(1, 1, 1)
 	local HOLD_POS, HOLD_ANG = Vector(-4, 0, -1.5), Angle(0, 0, 0) -- начало конечности у ладони, вдоль пальцев
-
-	local function Collect(ent, bone, out)
-		out[bone] = true
-		for _, c in ipairs(ent:GetChildBones(bone) or {}) do Collect(ent, c, out) end
-	end
 
 	-- копия модели тела, где видна только конечность; root - матрица начала конечности при модели в нуле
 	function SWEP:GetLimbModel()
@@ -93,9 +87,9 @@ if CLIENT then
 		cs:SetSkin(self:GetNW2Int("rem_limb_skin", 0))
 		local root = cs:LookupBone(boneName)
 		if not root then cs:Remove() return nil end
-		local keep = {}
-		Collect(cs, root, keep)
-		for b = 0, cs:GetBoneCount() - 1 do cs:ManipulateBoneScale(b, keep[b] and ONE or ZERO) end
+		-- всё, кроме конечности, - в одну точку у среза (organism/cl_severedlimbs.lua). Не ManipulateBoneScale:
+		-- на обычной модели ноль у плеча/бедра гасит и саму конечность
+		if hg.RemLimbCollapse then hg.RemLimbCollapse(cs, root) end
 		cs:SetPos(vector_origin)
 		cs:SetAngles(angle_zero)
 		cs:SetupBones()

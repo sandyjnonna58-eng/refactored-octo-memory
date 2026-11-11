@@ -151,8 +151,10 @@
   контекстное меню -> Amputate Limb -> Cut In Half (diagonal) (admintools/sh_player_properties.lua, id 6).
 - Отрубленные конечности (`organism/sv_severedlimbs.lua` + `cl_severedlimbs.lua`): на хук Z-City OnAmputateLimb (любое
   отрубание: катана, сильный режущий удар, взрыв, придавило) - копия регдолла, видны только голень+стопа / предплечье+кисть
-  (LIMB_BONE и потомки), остальные кости ManipulateBoneScale 0, их физ. кости без столкновений и каждый тик едут в начало
-  конечности (срез закрыт). COLLISION_GROUP_WEAPON - берётся руками/E, не мешает ходить. Кровь: NW2 rem_limb_bleed (45 с),
+  (LIMB_BONE и потомки), остальные кости: на сервере ManipulateBoneScale 0, физ. кости без столкновений и каждый тик едут в
+  начало конечности; на клиенте hg.RemLimbCollapse (cl_severedlimbs.lua, колбэк BuildBonePositions) ставит им всем нулевую
+  матрицу в точке среза - иначе кожа между точками сжатия тянется чёрными треугольниками, а на ClientsideModel (в руке)
+  ноль у родителя гасит саму конечность. COLLISION_GROUP_WEAPON - берётся руками/E, не мешает ходить. Кровь: NW2 rem_limb_bleed (45 с),
   клиент - hg.addBloodPart из среза (rem_limb_bone), удары о пол - util.Decal. Шапки/броня не копируются (Accessories none).
   rem_severed_limbs 0 - выкл., _life (300 с), _max (16). Катана: 5% отрубить конечность - раз за взмах (MultiDmg1 бьёт каждый тик).
   E на конечность (PlayerUse) -> предмет `weapon_rem_flesh` (в руке - ClientsideModel тела, видна только конечность,
