@@ -44,6 +44,12 @@ end
 
 HI.Shown = HI.Shown or false
 
+-- без сознания осмотр (силуэт с ранами и плитки) виден сам, тускло и "дышит" в темноте - как в Fading Vitality
+local cvOtrubInspect = CreateClientConVar("rem_otrub_inspect", 1, true, false, "Show the afflictions panel dimly while unconscious", 0, 1)
+local otrub_dim_min, otrub_dim_max = 0.35, 0.65 -- сколько темноты поверх осмотра в отключке (пульсирует)
+local otrub_dim_period = 4.5
+local otrub_silhouette_min = 0.45                -- силуэт не темнее этого (иначе сознание 0 - чёрный)
+
 local limbBones = {
 	lleg = "ValveBiped.Bip01_L_Thigh",
 	rleg = "ValveBiped.Bip01_R_Thigh",
@@ -632,7 +638,8 @@ hook.Add("HUDPaint", "rem_health_indicator", function()
 
 	local org = ply.organism
 	local otrub = org and org.otrub
-	local shown = HI.Shown and not otrub
+	local otrubView = otrub and cvOtrubInspect:GetBool()
+	local shown = (HI.Shown and not otrub) or otrubView
 
 	if not currentX then currentX = ScreenScaleFixed(POS_HIDDEN_X) end
 	currentX = Lerp(FrameTime() * 2, currentX, ScreenScaleFixed(shown and POS_VISIBLE_X or POS_HIDDEN_X))
@@ -705,6 +712,7 @@ hook.Add("HUDPaint", "rem_health_indicator", function()
 		render.MaterialOverride(whiteMat)
 
 		local col = math.Clamp(org and org.consciousness or 1, 0, 1)
+		if otrubView then col = math.max(col, otrub_silhouette_min) end
 		render.SetColorModulation(col, col, col)
 
 		healthModel:SetPos(modelOffset)
@@ -735,6 +743,13 @@ hook.Add("HUDPaint", "rem_health_indicator", function()
 		render.SetColorModulation(1, 1, 1)
 		render.SuppressEngineLighting(false)
 	cam.End3D()
+
+	-- в отключке всё это еле видно: поверх - темнота, медленно сгущается и отступает
+	if otrubView then
+		local k = (math.sin(time * math.pi * 2 / otrub_dim_period) + 1) / 2
+		surface.SetDrawColor(0, 0, 0, 255 * Lerp(k, otrub_dim_min, otrub_dim_max))
+		surface.DrawRect(0, ScrH() * 0.35, ScrW(), ScrH() * 0.65)
+	end
 end)
 
 hook.Add("ShutDown", "rem_health_indicator", ResetModels)
