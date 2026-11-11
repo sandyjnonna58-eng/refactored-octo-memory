@@ -1,0 +1,10 @@
+"LightmappedGeneric"
+{
+	"$basetexture" "advancedblood/decals/soak1"
+	"$decal" 1
+	"$decalscale" 0.00390625
+	"$translucent" 1
+	"$vertexcolor" 1
+	"$vertexalpha" 1
+	"$modelmaterial" "advancedblood/decals/soak1_model"
+}

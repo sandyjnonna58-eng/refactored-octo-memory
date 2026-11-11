@@ -5,10 +5,10 @@
 # Запуск из корня репозитория: python3 tools/downloads/make.py
 import subprocess
 
-EXT = ('.vmt', '.vtf', '.png', '.jpg', '.mdl', '.vvd', '.vtx', '.phy', '.ani', '.wav', '.mp3', '.ogg', '.ttf', '.otf', '.pcf')
+EXT = ('.vmt', '.vtf', '.png', '.jpg', '.mdl', '.vvd', '.vtx', '.phy', '.ani', '.wav', '.mp3', '.ogg', '.ttf', '.otf', '.pcf', '.dat')
 SKIP = ('rem_wd_private', 'rem_drinks_private')
 
-out = subprocess.run(['git', 'ls-files', '-z', 'materials', 'sound', 'models', 'resource', 'particles'],
+out = subprocess.run(['git', 'ls-files', '-z', 'materials', 'sound', 'models', 'resource', 'particles', 'data_static'],
                      capture_output=True, check=True).stdout.decode()
 files = sorted(f for f in out.split('\0') if f.lower().endswith(EXT) and not any(s in f for s in SKIP))
 
