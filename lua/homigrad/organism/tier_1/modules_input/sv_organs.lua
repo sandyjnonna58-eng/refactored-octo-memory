@@ -107,6 +107,9 @@ local function damageBrainLobe(org, bone, dmg, dmgInfo, key)
 	local profile = brainLobeProfiles[key]
 	if not profile then return 0 end
 	if dmgInfo:IsDamageType(DMG_BLAST) then dmg = dmg / 50 end
+	-- тупой удар (кулак, бита) мозг почти не задевает - череп держит; без этого один удар кулаком
+	-- выбивал сознание в 0 и сразу запускал судороги
+	if not dmgInfo:IsDamageType(DMG_BULLET + DMG_BUCKSHOT + DMG_SLASH + DMG_BLAST) then dmg = dmg * 0.1 end
 
 	local oldBrainLobeDamage = getBrainLobeDamage(org)
 	local oldDmg = org[key] or 0

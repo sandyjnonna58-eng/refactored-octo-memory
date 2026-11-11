@@ -25,6 +25,7 @@ local seizure_leg_buckle = 46
 local seizure_shake_freq = 5.8
 local seizure_shake_amp = 1.35
 local seizure_brain_trauma_gain_mul = 2
+local seizure_trauma_gain_max = 0.3
 local seizure_brain_heal_gain_mul = 1.1
 local seizure_temperature_gain_mul = 0.013
 local seizure_temperature_low_start = 35
@@ -745,14 +746,12 @@ hook.Add("Org Think", "Main", function(owner, org, timeValue)
 	end
 
 	local brainDelta = (org.brain or 0) - oldSeizureBrain
-	local lobeDelta = lobeDamage - oldSeizureLobeDamage
+	-- урон долям мозга уже входит в org.brain - отдельно его не считаем (раньше считался дважды);
+	-- за одну травму не больше seizure_trauma_gain_max, чтобы судороги не начинались с одного удара
 	if brainDelta > 0 then
-		hg.organism.AddSeizure(org, math.Clamp(brainDelta * seizure_brain_trauma_gain_mul, 0, 1))
+		hg.organism.AddSeizure(org, math.Clamp(brainDelta * seizure_brain_trauma_gain_mul, 0, seizure_trauma_gain_max))
 	elseif brainDelta < 0 and oldSeizureBrain > 0 then
 		hg.organism.AddSeizure(org, math.Clamp(-brainDelta * seizure_brain_heal_gain_mul, 0, 1))
-	end
-	if lobeDelta > 0 then
-		hg.organism.AddSeizure(org, math.Clamp(lobeDelta * seizure_brain_trauma_gain_mul, 0, 1))
 	end
 
 	local temperature = org.temperature or 36.7
