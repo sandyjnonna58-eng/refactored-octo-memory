@@ -17,12 +17,10 @@
 - Чужой защищённый контент (видео, фото товаров, выдранные модели) - не в публичный репозиторий, а в приватные паки,
   они в `.gitignore` (`materials/rem_wd_private`, `sound/rem_wd_private`, `materials/rem_drinks_private`),
   раздаются через FastDL-циклы в `lua/homigrad/skills/sv_skills.lua`.
-- Раздача при входе: игрок качает только текущую карту, аддоны Мастерской сервера (engine.GetAddons; аддоны-карты - только
-  тот, где текущая карта) + `rem_workshop_extra`, и Lua (AddCSLuaFile - всегда целиком): `lua/autorun/server/rem_downloads.lua`.
-  Отдельные файлы (resource.AddFile/AddSingleFile у всех аддонов) по умолчанию глушит `lua/autorun/!!rem_download_gate.lua`;
-  `rem_download_loose 1` возвращает их и список файлов аддона `lua/rem_downloads/list.lua` (после добавления контента вне
-  папок rem_* - перегенерировать `python3 tools/downloads/make.py`). Новые звуки/текстуры всё равно регистрировать
-  `resource.AddSingleFile` - на случай включённой раздачи.
+- Новые звуки/текстуры - `resource.AddSingleFile` на сервере, иначе у игроков их не будет. Общая раздача при входе -
+  `lua/autorun/server/rem_downloads.lua`: файлы аддона по списку `lua/rem_downloads/list.lua` (после добавления контента
+  вне папок rem_* - перегенерировать `python3 tools/downloads/make.py`) + все аддоны Мастерской сервера (engine.GetAddons)
+  + `rem_workshop_extra`. Lua игрокам отдаёт загрузчик (AddCSLuaFile).
 - Генераторы текстур - в `tools/` (Python + PIL), запуск из корня репозитория.
 
 ## Устройство
@@ -98,22 +96,9 @@
   hg.Fake обёрнут - в рэгдолл не уронить, сердце не встаёт, боли нет. Команда `zb_lastbattle [stop] <ник>` / `!lastbattle`.
 - Музыка при уходе сознания (`lua/homigrad/remaudio/cl_remaudio_fading.lua`): по близости отключки Near() (худшее из сознания,
   боли, крови, кислорода, стадии шока; эхо до 0.35, "издалека" с 0.6; тест - `rem_fadingmusic_test 0..1`) вся музыка
-  (каналы RemAudio, RA.IsMusic - только явный список RA.MusicPatterns в cl_remaudio.lua; звуки эффектов туда не
-  добавлять - эхо их удвоит) сначала с эхом (копии файла с задержкой, RA.Taps), потом
+  (каналы RemAudio, RA.IsMusic - не .wav и не heartstop/heartbeat) сначала с эхом (копии файла с задержкой, RA.Taps), потом
   "издалека" (RA.Global - общий множитель громкости в cl_remaudio.lua, playback rate 0.94, эхо гуще); otrub - трек гаснет
   за 1.2 с, хвост эха за 3 с; очнулся - возврат за 2.5 с.
-- Судороги (`sv_organism.lua`, start_seizure): от ударов НЕТ (по просьбе) - рост урона мозга в течение seizure_hit_grace
-  после попадания (org.lastHitTime, хук rem_seizure_hittime) счётчик не растит; тупой удар по долям мозга x0.03 (sv_organs.lua).
-- Инсульт (`modules/sv_stroke.lua`, `cl_stroke.lua` - замершая картинка и `rem_lobotomy.ogg`): только когда мозг сам слабеет до
-  порога 0.08, при кровоизлиянии или давлении. От ударов - НЕТ (по просьбе): 5 с после урона порог не срабатывает. Тест - `!stroke`.
-- BloodMark - только кровь (AdvancedBlood из чужого аддона «[ZCITY] BloodMark»; модули травм головы/мозга, лёгких и скелета
-  убраны по просьбе): `lua/autorun/advancedblood.lua` (ABL - кровь, раны, лужи, следы), код `lua/advancedblood/`, контент
-  `materials/advancedblood`. Тестовые сценарии разработчика (*test*, selftest, hostile) из сборки убраны. Настройки по умолчанию
-  снижены ради FPS (sh_config.lua: abl_quality 2 - без отражений в лужах, abl_budget_ms 1.5, abl_sim_hz 100, меньше лимитов;
-  у игроков со старыми настройками применяются один раз, метка data/abl_perf_v1.txt). К homigrad цепляется после загрузки
-  (InitPostEntity / HomigradRun) и ОБОРАЧИВАЕТ (не заменяет) наши хуки: "organism-think-client-blood" (cl_main.lua),
-  "ResponsiveHits_..." (sv_util.lua, брызги крови - вместо них своя кровь). Хук с таким же именем у нас - сначала смотреть,
-  не обёрнут ли он BloodMark. Файлы раздаются через rem_downloads. `tools/vtf/halve.py` - уменьшение VTF вдвое без перекодирования.
 - Совместимость с InfMap (бесконечные карты): `lua/autorun/!zcity_infmap.lua` + `lua/zcity_infmap/`, описание в `INFMAP.md`.
   Работает только на картах InfMap, выключается `zc_infmap 0`. Новое net-сообщение с позицией - дописать в списки
   `lua/zcity_infmap/sh_net.lua`.
