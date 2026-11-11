@@ -49,7 +49,9 @@
   звуки `sound/rem_speech/`. Крики при боли 75%+ («ITHURTSITHURTS...») - `lua/homigrad/sh_status_messages.lua`.
 - Экранные эффекты: `lua/homigrad/screenfx/` - `cl_screenfx.lua` (удар, вспышка, боль: пульсирует с сердцем, дрожит,
   наплыв при скачке боли), `cl_fading.lua` (засветка при кровопотере, туннель при уходе сознания).
-- Таймер смерти «вихрь» (84 с, ничего не вращается, медленно растёт): `lua/homigrad/vortexdeath/`.
+- Таймер смерти «вихрь» (84 с, ничего не вращается, медленно растёт): `lua/homigrad/vortexdeath/`. Запускается (sv_organism.lua,
+  `dying`) только без сознания и если: сердце стоит, крови < death_blood (2500), кислорода < death_o2 (1 - мозг начал умирать)
+  или мозг >= death_brain (0.4); тогда же incapacitated. Позвоночник/трахея и т.п. - только incapacitated, без таймера.
 - Экран смерти и выбор звука смерти (`rem_deathsound`, настройка Gameplay -> «Death sound: heart stop»):
   `lua/autorun/client/cl_cdeath.lua`, настройки - `lua/initpost/menu-n-derma/derma/cl_menu_options.lua`.
 - Панель состояний (плитки, как в Fading Vitality: ряд слева направо от панели силуэта, первым всегда сердце «pulse» (бьётся
