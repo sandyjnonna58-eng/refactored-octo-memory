@@ -72,6 +72,8 @@ end)
 
 -- от ударов инсульта нет: запоминаем время урона, чтобы порог мозга сразу после него не сработал
 hook.Add("HomigradDamage", "rem_stroke_headhit", function(ply)
+	-- лежащему в рэгдолле сюда приходит сам рэгдолл
+	if IsValid(ply) and not ply:IsPlayer() then ply = hg.RagdollOwner and hg.RagdollOwner(ply) or ply:GetNWEntity("ply") end
 	if IsValid(ply) and ply:IsPlayer() then ply.strokeHitAt = CurTime() end
 end)
 

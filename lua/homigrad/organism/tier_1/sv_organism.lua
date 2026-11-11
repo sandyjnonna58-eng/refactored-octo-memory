@@ -26,6 +26,7 @@ local seizure_shake_freq = 5.8
 local seizure_shake_amp = 1.35
 local seizure_brain_trauma_gain_mul = 2
 local seizure_trauma_gain_max = 0.3
+local seizure_hit_grace = 1 -- столько секунд после попадания рост урона мозга не идёт в судороги
 local seizure_brain_heal_gain_mul = 1.1
 local seizure_temperature_gain_mul = 0.013
 local seizure_temperature_low_start = 35
@@ -746,9 +747,10 @@ hook.Add("Org Think", "Main", function(owner, org, timeValue)
 	end
 
 	local brainDelta = (org.brain or 0) - oldSeizureBrain
-	-- урон долям мозга уже входит в org.brain - отдельно его не считаем (раньше считался дважды);
-	-- за одну травму не больше seizure_trauma_gain_max, чтобы судороги не начинались с одного удара
-	if brainDelta > 0 then
+	-- от ударов судорог нет (по просьбе): урон мозгу от попадания (кулак, любое оружие) счётчик судорог не растит;
+	-- растёт он только от того, что мозг сам слабеет (нехватка кислорода, кровоизлияние), а не в момент удара
+	local hitRecently = curTime - (org.lastHitTime or -100) < seizure_hit_grace
+	if brainDelta > 0 and not hitRecently then
 		hg.organism.AddSeizure(org, math.Clamp(brainDelta * seizure_brain_trauma_gain_mul, 0, seizure_trauma_gain_max))
 	elseif brainDelta < 0 and oldSeizureBrain > 0 then
 		hg.organism.AddSeizure(org, math.Clamp(-brainDelta * seizure_brain_heal_gain_mul, 0, 1))
@@ -1340,4 +1342,10 @@ hook.Add("OnEntityWaterLevelChanged", "ClearBlood", function(ent, old, new)
 		if ent:IsOnFire() then ent:Extinguish() end
 		ent:RemoveAllDecals()
 	end
+end)
+
+-- время последнего попадания: урон мозгу от него не превращается в судороги (см. seizure_hit_grace)
+hook.Add("HomigradDamage", "rem_seizure_hittime", function(ply)
+	local org = IsValid(ply) and ply.organism
+	if org then org.lastHitTime = CurTime() end
 end)
