@@ -12,9 +12,10 @@ SWEP.DrugKind = "meth"
 SWEP.Dose = 0.9
 SWEP.Uses = 3
 SWEP.UseDelay = 2.5
-SWEP.UseSound = "player/breathe1.wav"
+SWEP.UseSound = "rem_drugs/snort.wav" -- свой (tools/sounds/make_snort.py); player/breathe1 зациклен - играл вечно
 SWEP.DeploySnd = "physics/plastic/plastic_barrel_impact_soft1.wav"
 SWEP.FallSnd = "physics/plastic/plastic_box_impact_soft1.wav"
+if SERVER then resource.AddSingleFile("sound/rem_drugs/snort.wav") end
 if CLIENT then
 	SWEP.WepSelectIcon = Material("vgui/wep_jack_hmcd_painpills")
 	SWEP.IconOverride = "vgui/wep_jack_hmcd_painpills.png"

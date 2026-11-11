@@ -164,6 +164,7 @@
   Героин - analgesia, сон, передоз > 1.8 - кислород падает (налоксон выводит); мет - выносливость, пульс (org.remHRAdd ->
   sv_pulse.lua), паранойя, передоз > 2.5 - AddCardiacStress и жар; кислота - трип, > 2 бэд-трип (org.panic, страх).
   Привыкание героина и мета - виды в hg.Addiction.Kinds (свои effects и craving ломки, sv_addiction.lua их зовёт).
+  Звук мета - свой sound/rem_drugs/snort.wav (tools/sounds/make_snort.py); НЕ player/breathe1.wav - он зациклен.
   NW2 rem_high («Веселье», плитка euphoria), rem_heroin / rem_meth / rem_lsd; плитки heroin_wd / meth_wd. Тест: rem_drug_set.
   Смерть / возрождение (PlayerDeath, PlayerSpawn, "Player Spawn") - ResetDrugs: наркотики, тошнота и их NW2 в ноль
   (организм Z-City тот же - иначе эффекты остаются); зависимость и ломка тоже сбрасываются при смерти (sv_addiction.lua ResetAddiction).

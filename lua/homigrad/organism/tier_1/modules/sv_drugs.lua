@@ -174,6 +174,9 @@ local function ResetDrugs(ply)
 	end
 	for _, key in ipairs({"rem_high", "rem_heroin", "rem_meth", "rem_lsd", "rem_nausea"}) do ply:SetNW2Float(key, 0) end
 	ply.rem_fleshBites = 0
+	-- старая версия мета ставила зацикленный player/breathe1.wav - глушим, если ещё играет
+	ply:StopSound("player/breathe1.wav")
+	if IsValid(ply.FakeRagdoll) then ply.FakeRagdoll:StopSound("player/breathe1.wav") end
 end
 hook.Add("PlayerDeath", "rem_drugs_reset", ResetDrugs)
 hook.Add("PlayerSpawn", "rem_drugs_reset", function(ply)
