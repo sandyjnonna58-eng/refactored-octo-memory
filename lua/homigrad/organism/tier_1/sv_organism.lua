@@ -939,6 +939,9 @@ hook.Add("Org Think", "Main", function(owner, org, timeValue)
 		end
 	end
 
+	-- последний бой (lastbattle/sv_lastbattle.lua): не вырубить и не уронить в рэгдолл - модули ниже его думания
+	-- могли снова поставить needotrub/needfake
+	if lastBattle then org.needotrub, org.needfake = false, false end
 	org.otrub = org.needotrub
 	org.fake = org.needfake
 	

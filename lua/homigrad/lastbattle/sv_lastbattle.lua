@@ -1,9 +1,10 @@
--- Последний бой: музыка + таймер длиной в музыку.
--- Бывает только у отдельного игрока: может включиться сам, когда у него пошёл таймер смерти
--- (шанс 10% + 1% за каждую минуту жизни, максимум один раз за жизнь),
--- или командой. После смерти сразу снимается.
--- Пока идёт бой: нельзя потерять сознание, мозг всегда здоров, нет эпилепсии, кислород держится на 60%,
--- нет боли, депрессия не растёт, всё остальное не лечится.
+-- Последний бой: музыка, бой длится, пока она играет (таймера на экране нет).
+-- Бывает только у отдельного игрока: может включиться сам, пока у него идёт таймер смерти - попытка каждые
+-- roll_every секунд, на половине таймера и в самом конце, перед смертью (шанс 10% + 1% за каждую минуту жизни,
+-- максимум один раз за жизнь), или командой. После смерти сразу снимается.
+-- Начался - сердце запускается, таймер смерти снят, встаёшь из рэгдолла; на экране "Not like this." (cl_lastbattle.lua).
+-- Пока идёт бой: нельзя потерять сознание и упасть в рэгдолл, сердце не останавливается, мозг всегда здоров,
+-- нет эпилепсии, кислород держится на 60%, нет боли, депрессия не растёт, всё остальное не лечится.
 hg.LastBattle = hg.LastBattle or {}
 local LB = hg.LastBattle
 
@@ -24,6 +25,7 @@ local lastbattle_chance = ConVarExists("zb_lastbattle_chance") and GetConVar("zb
 local lastbattle_chance_add = ConVarExists("zb_lastbattle_chance_add") and GetConVar("zb_lastbattle_chance_add") or CreateConVar("zb_lastbattle_chance_add", 1, FCVAR_ARCHIVE, "Chance (%) added for every minute the player is alive", 0, 100)
 
 local consciousness_min = 0.45
+local roll_every = 30 -- попытка последнего боя каждые столько секунд таймера смерти
 local o2_hold = 0.6
 local length_wait_time = 5
 local update_interval = 0.2
@@ -129,6 +131,32 @@ local function ClearFloor(ply)
 	if IsValid(ply) and ply.organism then ply.organism.lastBattleFloor = nil end
 end
 
+-- сердце запускается, таймер смерти снят, сознание вернулось, встаёт из рэгдолла
+local function Revive(ply)
+	local org = ply.organism
+	if not org then return end
+	org.heartstop = false
+	org.fibrillation = false
+	org.arrhythmia = 0
+	org.heartbeat = math.Clamp(org.heartbeat or 90, 80, 120)
+	org.pulse = math.max(org.pulse or 0, 60)
+	org.bloodPressure = math.max(org.bloodPressure or 0, 70)
+	org.cardiacOutput = math.max(org.cardiacOutput or 0, 0.6)
+	org.myocardialOxygen = math.max(org.myocardialOxygen or 0, 0.5)
+	org.deathStateEnd = nil
+	org.deathStateKilled = nil
+	org.lastBattleTimer = nil
+	org.otrub, org.needotrub = false, false
+	org.fake, org.needfake = false, false
+	org.incapacitated = false
+	org.consciousness = math.max(org.consciousness or 0, 0.8)
+	ply:SetNWFloat("rem_vortex_until", 0)
+	ply.fullsend = true
+	timer.Simple(0, function()
+		if IsValid(ply) and ply:Alive() and IsValid(ply.FakeRagdoll) and hg.FakeUp then hg.FakeUp(ply, true) end
+	end)
+end
+
 function LB.StartPersonal(ply)
 	if not IsValid(ply) or LB.IsActiveFor(ply) then return false end
 
@@ -137,6 +165,7 @@ function LB.StartPersonal(ply)
 
 	ply.LastBattle = session
 	ClearFloor(ply)
+	Revive(ply)
 	SendState(ply)
 
 	hook.Run("HG_LastBattleStart", ply)
@@ -214,7 +243,7 @@ end)
 hook.Add("Org Clear", "rem_lastbattle", function(org)
 	org.lastBattleFloor = nil
 	org.lastBattleUsed = nil
-	org.lastBattleRolled = nil
+	org.lastBattleTimer = nil
 	org.lastBattleSpawn = CurTime()
 	if IsValid(org.owner) and org.owner:IsPlayer() then LB.StopPersonal(org.owner) end
 end)
@@ -324,20 +353,40 @@ function LB.GetChance(org)
 	return math.Clamp(lastbattle_chance:GetFloat() + minutes * lastbattle_chance_add:GetFloat() + perk, 0, 100)
 end
 
--- шанс бросается один раз на каждый таймер смерти
+-- попытки во время таймера смерти: каждые roll_every секунд, на его половине и в самом конце (перед смертью)
 local function RollLastBattle(org)
 	if not org.deathStateEnd or org.deathStateKilled then
-		org.lastBattleRolled = nil
+		org.lastBattleTimer = nil
 		return false
 	end
-
-	if org.lastBattleRolled or org.lastBattleUsed or not lastbattle_auto:GetBool() then return false end
-	org.lastBattleRolled = true
+	if org.lastBattleUsed or not lastbattle_auto:GetBool() then return false end
 
 	-- этот таймер уже стал последними моментами (lastmoments/sv_lastmoments.lua)
 	if IsValid(org.owner) and org.owner:IsPlayer() and org.owner:GetNWFloat("rem_lastmoments_until", 0) > CurTime() then return false end
 
-	return math.Rand(0, 100) < LB.GetChance(org)
+	local now = CurTime()
+	local t = org.lastBattleTimer
+	if not t then
+		t = {start = now, nextRoll = now + roll_every}
+		org.lastBattleTimer = t
+	end
+
+	local roll = false
+	if now >= t.nextRoll then
+		t.nextRoll = t.nextRoll + roll_every
+		roll = true
+	end
+	if not t.half and now >= t.start + (org.deathStateEnd - t.start) * 0.5 then
+		t.half = true
+		roll = true
+	end
+	-- последний шанс: убивает в тот тик, когда время вышло, - бросаем чуть раньше
+	if not t.final and now >= org.deathStateEnd - 0.5 then
+		t.final = true
+		roll = true
+	end
+
+	return roll and math.Rand(0, 100) < LB.GetChance(org)
 end
 
 -- вызывается из "Org Think" Main перед тем, как применяется otrub; true - бой идёт для этого игрока
@@ -353,7 +402,15 @@ function LB.OrganismThink(owner, org)
 	end
 
 	org.needotrub = false
+	org.needfake = false
 	org.consciousness = math.max(org.consciousness or 1, consciousness_min)
+	-- сердце в бою не встаёт
+	if org.heartstop then
+		org.heartstop = false
+		org.fibrillation = false
+		org.heartbeat = math.max(org.heartbeat or 0, 80)
+		org.pulse = math.max(org.pulse or 0, 60)
+	end
 	ForceBrain(org)
 	RemovePain(org)
 	StopSeizure(owner, org)
@@ -409,3 +466,18 @@ concommand.Add("zb_lastbattle", function(ply, cmd, args)
 	if IsValid(ply) and not ply:IsAdmin() then ply:ChatPrint("You don't have access") return end
 	RunCommand(ply, args)
 end)
+
+-- в бою в рэгдолл не уронить ничем (взрывы, подсечки, оглушения - всё идёт через hg.Fake); готовый рэгдолл (второй
+-- аргумент) - это не падение, его не трогаем
+local function WrapFake()
+	if not hg.Fake or hg.RemLBFakeWrapped then return end
+	hg.RemLBFakeWrapped = true
+	local orig = hg.Fake
+	hg.Fake = function(ply, ragdoll, ...)
+		if not IsValid(ragdoll) and IsValid(ply) and ply:IsPlayer() and ply:Alive() and LB.IsActiveFor(ply) then return end
+		return orig(ply, ragdoll, ...)
+	end
+end
+WrapFake()
+timer.Simple(0, WrapFake)
+hook.Add("InitPostEntity", "rem_lastbattle_fake", WrapFake)
