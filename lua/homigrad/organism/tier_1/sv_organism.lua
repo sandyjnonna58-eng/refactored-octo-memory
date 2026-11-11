@@ -16,10 +16,11 @@ local panicattack_heart_roll_chance = 1
 local panicattack_damage_scale = 0.006
 local panicattack_witness_radius = 850
 local panicattack_death_radius = 900
--- таймер смерти (ниже, в Org Think): крови меньше death_blood мл, кислорода меньше death_o2, мозг от death_brain
+-- таймер смерти (ниже, в Org Think): крови меньше death_blood мл или мозг теряет клетки - его повреждение само растёт
+-- (нет кислорода, кровоизлияние) не медленнее death_brain_rate в секунду уже death_brain_hold с
 local death_blood = 2500
-local death_o2 = 1
-local death_brain = 0.4
+local death_brain_rate = 0.0015 -- 0.15% в секунду (без кислорода мозг теряет 0.3-0.8% в секунду)
+local death_brain_hold = 2
 local seizure_duration = 90
 local seizure_brain_damage_start = 80
 local seizure_brain_damage_final = 0.99
@@ -916,10 +917,19 @@ hook.Add("Org Think", "Main", function(owner, org, timeValue)
 	end
 
 	-- Таймер смерти - только когда человек правда умирает (по просьбе): остановилось сердце, крови очень мало или
-	-- мозг начал умирать (кислород кончился - с этого мозг получает урон, sv_lungs.lua; или мозг уже повреждён).
+	-- мозг начал умирать (теряет клетки: повреждение само растёт - без кислорода, от кровоизлияния; sv_lungs.lua).
 	-- Сломанный позвоночник, трахея и т.п. не дают встать самому (incapacitated), но таймер не запускают.
-	local dying = org.alive and (org.heartstop or (org.blood or 5000) < death_blood
-		or (istable(org.o2) and (org.o2[1] or 30) < death_o2) or (org.brain or 0) >= death_brain)
+	-- мозг теряет клетки: повреждение растёт само; скачки от попаданий (больше 0.05 за тик) и лечение не считаем
+	if timeValue >= 0.05 then
+		local brainNow = org.brain or 0
+		local d = brainNow - (org.remBrainPrev or brainNow)
+		org.remBrainPrev = brainNow
+		local rate = (d > 0.05 or d < 0) and 0 or d / timeValue
+		org.remBrainRate = Lerp(math.min(timeValue * 2, 1), org.remBrainRate or 0, rate)
+		org.remBrainDyingT = (org.remBrainRate >= death_brain_rate) and (org.remBrainDyingT or 0) + timeValue or 0
+	end
+	local brainDying = (org.remBrainDyingT or 0) >= death_brain_hold
+	local dying = org.alive and (org.heartstop or (org.blood or 5000) < death_blood or brainDying)
 	if dying then org.incapacitated = true end -- умирающий не встаёт сам (и клиент показывает экран умирания)
 
 	if isPly and org.otrub and dying then
