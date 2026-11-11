@@ -24,6 +24,19 @@ local cvSpikeCooldown = CreateConVar("rem_profiler_spike_cooldown", "10", FCVAR_
 local cvTop = CreateConVar("rem_profiler_top", "20", FCVAR_ARCHIVE, "im falling into despair trying to optimize this shit", 5, 80)
 local cvMin = CreateConVar("rem_profiler_min_ms", "0.05", FCVAR_ARCHIVE, "im falling into despair trying to optimize this shit", 0, 100)
 
+-- Выключен (по умолчанию) - ничего не оборачиваем: раньше каждый хук, таймер (и каждый timer.Simple с debug.getinfo),
+-- net-приёмник и команда сервера шли через обёртку даже с выключенным профайлером. Включить: rem_profiler_enabled 1
+-- и сменить карту. Разовый замер без перезапуска - rem_profile_sv (homigrad/sh_hookprofiler.lua).
+if not cvEnabled:GetBool() then
+	local function off(ply)
+		if IsValid(ply) and not ply:IsSuperAdmin() then return end
+		print("[RemorseProfiler] off: set rem_profiler_enabled 1 and change the map (or use rem_profile_sv for a quick sample)")
+	end
+	concommand.Add("rem_profiler_report", off)
+	concommand.Add("rem_profiler_reset", off)
+	return
+end
+
 local oldHookAdd = hook.Add
 local oldTimerCreate = timer.Create
 local oldTimerSimple = timer.Simple
