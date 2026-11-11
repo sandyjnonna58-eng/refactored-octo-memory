@@ -164,7 +164,7 @@ function E.Draw(x, y, w, h, org, a)
 	if flat then hr = 0 end
 
 	-- поле графика чуть темнее панели
-	surface.SetDrawColor(18, 26, 22, 170 * a)
+	surface.SetDrawColor(14, 22, 18, 235 * a)
 	surface.DrawRect(gx, gy, n * P, rows * P)
 
 	draw.SimpleText(("BPM: %d  SpO2: %d%%"):format(hr, o2), font, x + pad, y + pad * 0.5,

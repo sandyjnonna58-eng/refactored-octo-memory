@@ -712,7 +712,9 @@ hook.Add("HUDPaint", "rem_health_indicator", function()
 	if ecgOn then
 		surface.SetDrawColor(colOutline.r, colOutline.g, colOutline.b, colOutline.a * 0.5)
 		surface.DrawRect(backdropX + 1, backdropY, w * 0.92 - 2, 1)
-		hg.ECG.Draw(backdropX, backdropY - monH, w * 0.92, monH, org, 1)
+		-- панель заходит за левый край экрана на BACKDROP_OFFSET_X - монитор рисуем только в видимой части
+		local hidden = -ScreenScaleFixed(BACKDROP_OFFSET_X)
+		hg.ECG.Draw(backdropX + hidden, backdropY - monH, w * 0.92 - hidden, monH, org, 1)
 	end
 
 	local camPos = Vector(95, 0, 65)
