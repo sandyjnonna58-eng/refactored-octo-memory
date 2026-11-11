@@ -1,7 +1,8 @@
 -- Мини-игра самоповреждения, как в Fading Vitality. Во время позыва (modules/sv_depression.lua, NW "rem_selfharm_wave_end";
 -- нож уже в руках - сервер сам его достаёт) вместо "жми E" на экране тёмная панель с белым контуром предплечья
--- (materials/rem_selfharm/arm.png, tools/selfharm/make.py) и точка - рука с ножом. Точку всё время тянет к руке, игрок
--- сопротивляется мышью (взгляд при этом не крутится, нож не машет). Дотянуло - порез: красная рваная полоса вдоль предплечья,
+-- (materials/rem_selfharm/arm.png, tools/selfharm/make.py) и точка - рука с ножом. Точку всё время тянет к руке; игрок
+-- сопротивляется, мотая головой мышью туда-сюда: каждый размах в другую сторону отбрасывает руку от предплечья, голова
+-- (взгляд) при этом правда мотается, но не дальше SHAKE_YAW от начала; вверх-вниз мышь не работает, нож не машет. Дотянуло - порез: красная рваная полоса вдоль предплечья,
 -- капли, экран на миг чернеет, серверу уходит "rem_selfharm_cut" и нож режет по-настоящему (DoSelfHarmCut). Чем дольше
 -- позыв, тем сильнее тянет. Позыв кончился - панель гаснет.
 local G = {
@@ -9,7 +10,10 @@ local G = {
 	cx = 0.24, cy = 0.5, -- центр панели, доли экрана (как в оригинале - левее середины)
 	pullStart = 0.16,    -- притяжение в начале позыва, панелей в секунду
 	pullEnd = 0.55,      -- в конце
-	sens = 1 / 380,      -- панелей на пиксель мыши
+	swingMin = 70,       -- пикселей мыши в одну сторону, чтобы размах засчитался
+	push = 0.075,        -- на сколько панели отбрасывает руку за размах
+	yawPerPx = 0.03,     -- градусов поворота головы на пиксель
+	shakeYaw = 28,       -- дальше этого от начала голова не поворачивается
 	armR = 0.085,        -- полуширина предплечья, доля панели
 	cutCooldown = 1.2,   -- после пореза точку отбрасывает и тянуть начинает снова через столько секунд
 	cutLen = 0.42,       -- длина пореза, доля панели
@@ -26,6 +30,9 @@ for i = 1, 4 do grain[i] = Material("rem_death/vortex_static" .. i .. ".png") en
 local active = false
 local startTime, endTime = 0, 0
 local px, py = 0.88, 0.5 -- точка в долях панели
+local swingDir, swing = 0, 0 -- текущее направление размаха мышью и его длина
+local baseYaw, headYaw = 0, 0 -- взгляд в начале позыва и текущий поворот головы от него
+local shakeKick = 0 -- толчок панели от последнего размаха (для отдачи на экране)
 local cuts = {}
 local lastCut = -100
 local jitterSeed = 0
@@ -69,6 +76,8 @@ hook.Add("Think", "rem_selfharm_game", function()
 		active = true
 		startTime = now
 		px, py = 0.88, 0.5
+		swingDir, swing, headYaw = 0, 0, 0
+		baseYaw = LocalPlayer():EyeAngles().y
 		cuts = {}
 		lastCut = -100
 	elseif not want and active then
@@ -94,13 +103,37 @@ hook.Add("Think", "rem_selfharm_game", function()
 		if dist < G.armR then DoCut(t) end
 	end
 	px, py = math.Clamp(px, 0.03, 0.97), math.Clamp(py, 0.03, 0.97)
+	shakeKick = math.Approach(shakeKick, 0, dt * 4)
 end)
 
--- мышь двигает точку, взгляд не крутится
-hook.Add("InputMouseApply", "rem_selfharm_game", function(cmd)
+-- размах засчитан: руку отбрасывает от предплечья (к правому краю, где она была в начале)
+local function Push(dir)
+	local t, dist, nx, ny = Nearest(px, py)
+	local ax, ay = px - nx, py - ny
+	local l = math.sqrt(ax * ax + ay * ay)
+	if l < 0.001 then ax, ay, l = 1, 0, 1 end
+	px = px + ax / l * G.push + math.Rand(-0.01, 0.01)
+	py = py + ay / l * G.push * 0.5 + math.Rand(-0.02, 0.02)
+	shakeKick = dir
+end
+
+-- мотаешь головой: мышь влево-вправо крутит голову (в пределах shakeYaw), каждая смена направления после
+-- достаточного размаха - толчок руки прочь от предплечья; вверх-вниз - ничего
+hook.Add("InputMouseApply", "rem_selfharm_game", function(cmd, x, y, ang)
 	if not active then return end
-	local dx, dy = cmd:GetMouseX(), cmd:GetMouseY()
-	px, py = px + dx * G.sens, py + dy * G.sens
+	local dx = cmd:GetMouseX()
+	if dx ~= 0 then
+		local dir = dx > 0 and 1 or -1
+		if dir ~= swingDir then
+			if swingDir ~= 0 and swing >= G.swingMin and CurTime() > lastCut + 0.25 then Push(dir) end
+			swingDir, swing = dir, 0
+		end
+		swing = swing + math.abs(dx)
+		headYaw = math.Clamp(headYaw - dx * G.yawPerPx, -G.shakeYaw, G.shakeYaw)
+	end
+	local a = cmd:GetViewAngles()
+	a.y = baseYaw + headYaw
+	cmd:SetViewAngles(a)
 	cmd:SetMouseX(0)
 	cmd:SetMouseY(0)
 	return true
@@ -136,7 +169,7 @@ hook.Add("HUDPaint", "rem_selfharm_game", function()
 	end
 
 	local S = math.floor(math.min(ScrW(), ScrH()) * G.panel)
-	local x0, y0 = math.floor(ScrW() * G.cx - S * 0.5), math.floor(ScrH() * G.cy - S * 0.5)
+	local x0, y0 = math.floor(ScrW() * G.cx - S * 0.5 + shakeKick * S * 0.03), math.floor(ScrH() * G.cy - S * 0.5)
 
 	-- панель: тёмная, с зерном
 	surface.SetDrawColor(0, 0, 0, 175)
@@ -194,7 +227,7 @@ hook.Add("HUDPaint", "rem_selfharm_game", function()
 
 	-- подсказка
 	local col = Color(255, 255 - 120 * (0.5 + 0.5 * math.sin(now * 6)), 255 - 120 * (0.5 + 0.5 * math.sin(now * 6)), 220)
-	draw.SimpleText("PULL AWAY", "HomigradFontSmall", x0 + S * 0.5 + math.random(-2, 2), y0 + S + ScreenScale(6) + math.random(-1, 1), col, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+	draw.SimpleText("< SHAKE IT OFF >", "HomigradFontSmall", x0 + S * 0.5 + math.random(-2, 2), y0 + S + ScreenScale(6) + math.random(-1, 1), col, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
 	if black > 0 then
 		surface.SetDrawColor(0, 0, 0, math.floor(255 * black))
