@@ -220,14 +220,15 @@ end
 local remBadHeartbeatSound = file.Exists("sound/rem_heart/heartbeat_bad.mp3", "GAME") and "rem_heart/heartbeat_bad.mp3" or "rem_heartbeatbad.mp3"
 local remNextBadHeartbeat = 0
 
--- аритмия: свой фон (sound/rem_heart/arrhythmia.mp3, по кругу), громче с силой аритмии; затихает за 2 с
+-- аритмия: свой фон (sound/rem_heart/arrhythmia.mp3, по кругу) - с того же порога, что и плитка "Arrhythmia" в осмотре
+-- (cl_health_indicator.lua: > 0.1), громче с силой аритмии; затихает за 2 с
 local remArrhythmiaPath = "sound/rem_heart/arrhythmia.mp3"
-local remArrhythmiaFrom = 0.3
+local remArrhythmiaFrom = 0.1
 local remArrhythmiaStation, remArrhythmiaLoading
 local remArrhythmiaVol = 0
 local function ThinkArrhythmiaSound(org)
- local arr = org and not org.heartstop and not org.fibrillation and not org.otrub and (org.arrhythmia or 0) or 0
- local want = arr >= remArrhythmiaFrom and math.Clamp(0.35 + (arr - remArrhythmiaFrom) / (1 - remArrhythmiaFrom) * 0.65, 0, 1) or 0
+ local arr = org and not org.heartstop and not org.fibrillation and (org.arrhythmia or 0) or 0
+ local want = arr > remArrhythmiaFrom and math.Clamp(0.4 + (arr - remArrhythmiaFrom) / (1 - remArrhythmiaFrom) * 0.6, 0, 1) or 0
  if want > 0 and not IsValid(remArrhythmiaStation) and not remArrhythmiaLoading then
   if not file.Exists(remArrhythmiaPath, "GAME") then return end
   remArrhythmiaLoading = true
@@ -235,6 +236,7 @@ local function ThinkArrhythmiaSound(org)
    remArrhythmiaLoading = nil
    if not IsValid(station) then return end
    remArrhythmiaStation = station
+   if hg.RemAudio and hg.RemAudio.SetExempt then hg.RemAudio.SetExempt(station) end -- музыку глушим, этот звук - нет
    station:EnableLooping(true)
    station:SetVolume(0)
    station:Play()
@@ -262,7 +264,13 @@ local function ThinkBadHeartbeat(org)
  local bpm = math.Clamp(org.heartbeat or org.pulse or 70, 30, 200)
  local jitter = 1 + math.Rand(-0.4, 0.4) * math.Clamp(org.arrhythmia or 0, 0, 1)
  remNextBadHeartbeat = now + 60 / bpm * jitter
- surface.PlaySound(remBadHeartbeatSound)
+ -- удар поверх всего: напрямую, на полной громкости и без глушения (музыку глушит RemCardiacSounds)
+ sound.PlayFile("sound/" .. remBadHeartbeatSound, "noblock", function(station)
+  if not IsValid(station) then return end
+  if hg.RemAudio and hg.RemAudio.SetExempt then hg.RemAudio.SetExempt(station) end
+  station:SetVolume(1)
+  station:Play()
+ end)
 end
 
 hook.Add("Think", "RemCardiacSounds", function()
@@ -282,7 +290,10 @@ hook.Add("Think", "RemCardiacSounds", function()
   StopRemFibrillationSound()
  end
 
- if org and not heartstop and not fibrillation and IsHeartCritical(org) then ThinkBadHeartbeat(org) end
+ local critical = org and not heartstop and not fibrillation and IsHeartCritical(org)
+ if critical then ThinkBadHeartbeat(org) end
+ -- пока сердце плохое, вся музыка тише (до 25%) - удары сердца перекрывают её
+ if hg.RemAudio and hg.RemAudio.Duck then hg.RemAudio.Duck("rem_badheart", critical and 0.25 or nil) end
  ThinkArrhythmiaSound(org)
 end)
 

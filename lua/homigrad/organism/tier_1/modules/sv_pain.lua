@@ -3,10 +3,10 @@ resource.AddSingleFile("sound/rem_excruciatingpain.ogg") -- невыносима
 --local Organism = hg.organism
 hg.organism.module.pain = {}
 local module = hg.organism.module.pain
--- вырубиться труднее (было 0.3 / 0.38): отключка - от сильной боли (ниже), шока 4-й стадии, большой кровопотери,
--- удушья, аритмии и низкого давления (sv_pulse.lua - сознание там уходит медленно)
-local consciousness_otrub_threshold = 0.2
-local consciousness_fake_threshold = 0.28
+-- пороги отключки - как было (по просьбе: от боли вырубает как обычно); аритмия и низкое давление гасят сознание
+-- медленно (sv_pulse.lua)
+local consciousness_otrub_threshold = 0.3
+local consciousness_fake_threshold = 0.38
 local consciousness_recovery_speed = 12
 local low_consciousness_recovery_speed = 16
 local otrub_consciousness_recovery_speed = 20
@@ -51,7 +51,7 @@ local function updateShock(owner, org, timeValue)
 	local score = getShockScore(org)
 	local total = math.max(score, org.shock or 0)
 	local stage = getShockStage(total)
-	local target = stage == 4 and 0.04 or stage == 3 and 0.3 or stage == 2 and 0.55 or stage == 1 and 0.8 or 1
+	local target = stage == 4 and 0.04 or stage == 3 and 0.2 or stage == 2 and 0.52 or stage == 1 and 0.78 or 1
 
 	org.shockScore = score
 	org.shockStage = stage
@@ -66,7 +66,7 @@ local function updateShock(owner, org, timeValue)
 		org.needfake = true
 	end
 	if stage > 0 then
-		org.consciousness = Approach(org.consciousness, target, timeValue / (stage == 4 and 6 or stage == 3 and 14 or stage == 2 and 22 or 30))
+		org.consciousness = Approach(org.consciousness, target, timeValue / (stage == 4 and 3 or stage == 3 and 7 or stage == 2 and 14 or 30))
 	end
 
 	if stage >= 4 then
