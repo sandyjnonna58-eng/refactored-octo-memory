@@ -90,6 +90,10 @@
   shakeYaw; ЛКМ/ПКМ заблокированы). Дотянуло - красный порез с каплями, затемнение, net "rem_selfharm_cut" -> сервер зовёт
   DoSelfHarmCut ножа (не чаще 0.7 с). Старое "жми E" у игроков больше не режет (тик порезов - только ботам). Тест: `rem_depression_set [0..1]`
   (админ, позыв через ~2-12 с при депрессии >= 0.4), `selfharm` - позыв сразу (нужна депрессия >= 0.5 и нож).
+- Музыка при уходе сознания (`lua/homigrad/remaudio/cl_fadingmusic.lua`): по org.consciousness (0.75 -> 0.35) вся музыка
+  (каналы RemAudio, RA.IsMusic - не .wav и не heartstop/heartbeat) сначала с эхом (копии файла с задержкой, RA.Taps), потом
+  "издалека" (RA.Global - общий множитель громкости в cl_remaudio.lua, playback rate 0.94, эхо гуще); otrub - трек гаснет
+  за 1.2 с, хвост эха за 3 с; очнулся - возврат за 2.5 с.
 - Совместимость с InfMap (бесконечные карты): `lua/autorun/!zcity_infmap.lua` + `lua/zcity_infmap/`, описание в `INFMAP.md`.
   Работает только на картах InfMap, выключается `zc_infmap 0`. Новое net-сообщение с позицией - дописать в списки
   `lua/zcity_infmap/sh_net.lua`.

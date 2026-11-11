@@ -10,20 +10,45 @@ RA.Channels = RA.Channels or setmetatable({}, {__mode = "k"}) -- канал -> �
 RA.Exempt = RA.Exempt or setmetatable({}, {__mode = "k"})
 RA.Requests = RA.Requests or {}
 RA.Factor = RA.Factor or 1
+RA.Global = RA.Global or 1 -- общий множитель для ВСЕХ каналов, и особых тоже (уход сознания, cl_fadingmusic.lua)
+RA.Taps = RA.Taps or setmetatable({}, {__mode = "k"}) -- каналы-эхо: их громкость ставит cl_fadingmusic.lua сам
 
 local meta = FindMetaTable("IGModAudioChannel")
 meta.RemRawSetVolume = meta.RemRawSetVolume or meta.SetVolume
 local rawSetVolume = meta.RemRawSetVolume
 
+-- музыка ли это (а не звук вроде остановки сердца): .wav и звуки тела общий множитель и эхо не трогают
+local notMusic = {"heartstop", "heartbeat"}
+local musicCache = setmetatable({}, {__mode = "k"})
+function RA.IsMusic(chan)
+	local v = musicCache[chan]
+	if v ~= nil then return v end
+	local name = string.lower(chan:GetFileName() or "")
+	v = name ~= "" and not string.EndsWith(name, ".wav")
+	for _, s in ipairs(notMusic) do
+		if string.find(name, s, 1, true) then v = false break end
+	end
+	musicCache[chan] = v
+	return v
+end
+
+local function Apply(chan, vol)
+	local f = (RA.Exempt[chan] or RA.Factor >= 1) and 1 or RA.Factor
+	local g = (RA.Global < 1 and RA.IsMusic(chan)) and RA.Global or 1
+	rawSetVolume(chan, vol * f * g)
+end
+RA.Apply = Apply
+
 function meta:SetVolume(vol)
+	if RA.Taps[self] then rawSetVolume(self, vol) return end
 	RA.Channels[self] = vol
-	rawSetVolume(self, (RA.Exempt[self] or RA.Factor >= 1) and vol or vol * RA.Factor)
+	Apply(self, vol)
 end
 
 local function Track(play)
 	return function(path, flags, callback, ...)
 		return play(path, flags, function(chan, ...)
-			if IsValid(chan) and RA.Channels[chan] == nil then RA.Channels[chan] = 1 end
+			if IsValid(chan) and RA.Channels[chan] == nil and not RA.Taps[chan] then RA.Channels[chan] = 1 end
 			if callback then return callback(chan, ...) end
 		end, ...)
 	end
@@ -50,9 +75,10 @@ hook.Add("Think", "rem_audio_duck", function()
 
 	local old = RA.Factor
 	RA.Factor = math.Approach(RA.Factor, target, FrameTime() / duck_fade)
-	if RA.Factor >= 1 and old >= 1 then return end
+	if RA.Factor >= 1 and old >= 1 and RA.Global >= 1 and not RA.GlobalDirty then return end
+	RA.GlobalDirty = RA.Global < 1
 
 	for chan, vol in pairs(RA.Channels) do
-		if not RA.Exempt[chan] and IsValid(chan) then rawSetVolume(chan, vol * RA.Factor) end
+		if IsValid(chan) then Apply(chan, vol) end
 	end
 end)
