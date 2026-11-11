@@ -4,8 +4,8 @@
 -- Сила - насколько близко отключка (Near): худшее из сознания, боли, крови, кислорода и стадии шока - так эффект
 -- приходит заранее, а не в последний миг (обычно вырубает боль/кровь, а сознание падает уже перед самой отключкой).
 -- Проверка без ранений: rem_fadingmusic_test 0..1 (0 - выкл).
-local RA = hg.RemAudio
-if not RA then return end
+-- имя файла - после cl_remaudio.lua (загрузчик идёт по алфавиту), и всё равно hg.RemAudio берём лениво, в Think
+local RA
 
 local C = {
 	-- "скоро отключка": с какого значения начинается и на каком - уже на грани (отключка - сознание 0.3, боль 130%
@@ -31,7 +31,7 @@ local C = {
 	resync = 0.08,     -- эхо разошлось с треком больше чем на столько - подтягиваем
 }
 
-local rawSetVolume = FindMetaTable("IGModAudioChannel").RemRawSetVolume
+local rawSetVolume
 local echoes = setmetatable({}, {__mode = "k"}) -- трек -> {[i] = канал эха}
 local loading = setmetatable({}, {__mode = "k"})
 local rateSet = setmetatable({}, {__mode = "k"})
@@ -88,6 +88,9 @@ local function SpawnTap(chan, i)
 end
 
 hook.Add("Think", "rem_fadingmusic", function()
+	RA = RA or hg.RemAudio
+	rawSetVolume = rawSetVolume or FindMetaTable("IGModAudioChannel").RemRawSetVolume
+	if not RA or not rawSetVolume then return end
 	local org = Org()
 	local now, dt = CurTime(), FrameTime()
 

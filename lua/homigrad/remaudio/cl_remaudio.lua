@@ -10,8 +10,8 @@ RA.Channels = RA.Channels or setmetatable({}, {__mode = "k"}) -- канал -> �
 RA.Exempt = RA.Exempt or setmetatable({}, {__mode = "k"})
 RA.Requests = RA.Requests or {}
 RA.Factor = RA.Factor or 1
-RA.Global = RA.Global or 1 -- общий множитель для ВСЕХ каналов, и особых тоже (уход сознания, cl_fadingmusic.lua)
-RA.Taps = RA.Taps or setmetatable({}, {__mode = "k"}) -- каналы-эхо: их громкость ставит cl_fadingmusic.lua сам
+RA.Global = RA.Global or 1 -- общий множитель для ВСЕХ каналов, и особых тоже (уход сознания, cl_remaudio_fading.lua)
+RA.Taps = RA.Taps or setmetatable({}, {__mode = "k"}) -- каналы-эхо: их громкость ставит cl_remaudio_fading.lua сам
 
 local meta = FindMetaTable("IGModAudioChannel")
 meta.RemRawSetVolume = meta.RemRawSetVolume or meta.SetVolume
