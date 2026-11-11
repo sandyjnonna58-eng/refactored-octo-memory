@@ -87,8 +87,10 @@
   взрыв тела у Z-City свои. От Lambda только картинка на OnAmputateLimb (руки - Forearm, ноги - Calf): оторванная часть
   падает рэгдоллом (LG.DropLimb: сервер - prop_ragdoll без отрисовки, клиент - bonemerge-копия с одеждой-сабматериалами,
   net rem_lgore_limb), от взрыва вместо целой - куски goremod_CustomGibs; кровь - хук noob_gore_make_limb_blood.
-  Обрубки - Lambda (LG.Stump, bonemerge на плечо/бедро, клиент вешает на того, кем нарисован игрок, и на трупы,
-  timer rem_lambdagore_stumps; FitStump - наружный срез обрубка (STUMP_END, посчитан по вершинам моделей) в место отрыва, одинаково слева и справа: rem_lambdagore_stump_scale / _push);
+  Обрубки - Lambda (LG.Stump; клиент держит их на том, кем нарисован игрок, и на трупах - timer rem_lambdagore_stumps).
+  НЕ bonemerge (кости такой модели не правятся): DrawStumps рисует сам после тела (PostDrawAppearance, трупы -
+  PostDrawOpaqueRenderables); STUMP - кость, место отрыва, p2b из .mdl и endLocal (наружный срез, по вершинам):
+  срез ставится в место отрыва + rem_lambdagore_stump_push вдоль кости, размер rem_lambdagore_stump_scale;
   свой обрубок Z-City (cl_main.lua GoreCalc) при работающем Lambda не рисуется. Физика оторванной части у рэгдоллов
   (LG.HideLimbPhysics: CONTENTS_EMPTY, без столкновений, держится у места отрыва) - на отрыве и в Ragdoll_Create.
   BloodMark: оторванная конечность (организм) и кости с NaN-позицией (разрез пополам) - Z.BoneHidden / Z.BoneMatrix

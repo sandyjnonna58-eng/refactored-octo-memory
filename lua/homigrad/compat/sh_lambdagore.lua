@@ -281,49 +281,72 @@ if CLIENT then
 	end)
 
 	-- Обрубки Lambda нарисованы на разном расстоянии от кости (левый обрубок ноги на ~2.5 юнита дальше правого)
-	-- и под пропорции L4D - через bonemerge они прятались в рукаве / штанине и выглядели по-разному слева и справа.
-	-- Ставим каждый одинаково: наружный срез обрубка (STUMP_END - точка в пространстве его кости, посчитана по
-	-- вершинам моделей) - ровно в место отрыва плюс rem_lambdagore_stump_push наружу, и увеличиваем вокруг этой точки.
-	local cvScale = CreateClientConVar("rem_lambdagore_stump_scale", 1.2, true, false, "Lambda gore stump size", 0.5, 3)
-	local cvPush = CreateClientConVar("rem_lambdagore_stump_push", 0.4, true, false, "Lambda gore stump shift out of the sleeve", -10, 10)
-	local STUMP_END = {
-		["models/noob_dev2323/gib/l_arm67.mdl"] = Vector(11.6, -0.08, -0.68),
-		["models/noob_dev2323/gib/r_arm67.mdl"] = Vector(11.4, -0.06, 0.83),
-		["models/noob_dev2323/gib/l_leg_gap.mdl"] = Vector(18.0, -0.18, -0.41),
-		["models/noob_dev2323/gib/r_leg_gap.mdl"] = Vector(15.6, -0.03, 0.24),
+	-- и под пропорции L4D. Через bonemerge их нельзя было ни сдвинуть, ни увеличить (движок не даёт править кости
+	-- такой модели), поэтому рисуем сами, сразу после тела: наружный срез обрубка (endLocal - точка в пространстве
+	-- его кости, посчитана по вершинам моделей) ставим ровно в место отрыва плюс rem_lambdagore_stump_push вдоль
+	-- плеча / бедра (меньше - глубже в рукав, больше - наружу), размер - rem_lambdagore_stump_scale.
+	local cvScale = CreateClientConVar("rem_lambdagore_stump_scale", 1.2, true, false, "Lambda gore stump size", 0.3, 3)
+	local cvPush = CreateClientConVar("rem_lambdagore_stump_push", 0.4, true, false, "Lambda gore stump shift along the limb (- deeper, + outwards)", -15, 15)
+	local function P2B(t) -- поза модели -> пространство кости (из .mdl)
+		return Matrix({{t[1], t[2], t[3], t[4]}, {t[5], t[6], t[7], t[8]}, {t[9], t[10], t[11], t[12]}, {0, 0, 0, 1}})
+	end
+	local STUMP = {
+		["models/noob_dev2323/gib/l_arm67.mdl"] = {bone = "ValveBiped.Bip01_L_UpperArm", cut = "ValveBiped.Bip01_L_Forearm",
+			endLocal = Vector(11.6, -0.08, -0.68),
+			p2b = P2B({0.64490, 0.04698, -0.76282, 39.54004, -0.03033, 0.99890, 0.03588, -3.81807, 0.76366, 0, 0.64562, -43.65706})},
+		["models/noob_dev2323/gib/r_arm67.mdl"] = {bone = "ValveBiped.Bip01_R_UpperArm", cut = "ValveBiped.Bip01_R_Forearm",
+			endLocal = Vector(11.4, -0.06, 0.83),
+			p2b = P2B({-0.64491, 0.04698, -0.76282, 39.53996, 0.03033, 0.99890, 0.03588, -3.81802, 0.76366, 0, -0.64562, 43.65717})},
+		["models/noob_dev2323/gib/l_leg_gap.mdl"] = {bone = "ValveBiped.Bip01_L_Thigh", cut = "ValveBiped.Bip01_L_Calf",
+			endLocal = Vector(18.0, -0.18, -0.41),
+			p2b = P2B({0.00522, 0.05182, -0.99864, 38.52194, -0.00027, 0.99866, 0.05182, -1.46448, 0.99999, 0, 0.00522, -4.09180})},
+		["models/noob_dev2323/gib/r_leg_gap.mdl"] = {bone = "ValveBiped.Bip01_R_Thigh", cut = "ValveBiped.Bip01_R_Calf",
+			endLocal = Vector(15.6, -0.03, 0.24),
+			p2b = P2B({-0.00522, 0.05182, -0.99864, 38.52194, 0.00027, 0.99866, 0.05182, -1.46444, 0.99999, 0, -0.00522, 4.09189})},
 	}
-	local STUMP_CUT = { -- кость обрубка -> кость, с которой начинается оторванная часть (место отрыва)
-		["ValveBiped.Bip01_L_UpperArm"] = "ValveBiped.Bip01_L_Forearm",
-		["ValveBiped.Bip01_R_UpperArm"] = "ValveBiped.Bip01_R_Forearm",
-		["ValveBiped.Bip01_L_Thigh"] = "ValveBiped.Bip01_L_Calf",
-		["ValveBiped.Bip01_R_Thigh"] = "ValveBiped.Bip01_R_Calf",
-	}
-	local function FitStump(self, count)
-		local parent = self:GetParent()
-		local endLocal = STUMP_END[self:GetModel()]
-		if not IsValid(parent) or not endLocal then return end
+	local drawnFrame = {}
+
+	local function DrawStumps(ent)
+		local t = stumps[ent]
+		if not t or not IsValid(ent) then return end
+		drawnFrame[ent] = FrameNumber()
 		local k, push = cvScale:GetFloat(), cvPush:GetFloat()
-		for i = 0, count - 1 do
-			local cutName = STUMP_CUT[self:GetBoneName(i)]
-			local cut = cutName and parent:LookupBone(cutName)
-			local m = self:GetBoneMatrix(i)
-			local cm = cut and parent:GetBoneMatrix(cut)
+		for _, cs in pairs(t) do
+			local info = IsValid(cs) and STUMP[cs:GetModel()]
+			local b = info and ent:LookupBone(info.bone)
+			local c = info and ent:LookupBone(info.cut)
+			local m = b and ent:GetBoneMatrix(b)
+			local cm = c and ent:GetBoneMatrix(c)
 			if m and cm then
+				local R = m * info.p2b                      -- куда встала бы модель при bonemerge
+				local E = m * info.endLocal                 -- где тогда был бы её срез
 				local target = cm:GetTranslation() + m:GetForward() * push
-				local fit = Matrix()
-				fit:Translate(target)
-				fit:Scale(Vector(k, k, k))
-				fit:Translate(-(m * endLocal))
-				self:SetBoneMatrix(i, fit * m)
+				cs:SetRenderOrigin(target + (R:GetTranslation() - E) * k)
+				cs:SetRenderAngles(R:GetAngles())
+				if cs.remScale ~= k then cs:SetModelScale(k, 0) cs.remScale = k end
+				cs:SetupBones()
+				cs:DrawModel()
 			end
 		end
 	end
+
+	-- игрок и его рэгдолл: сразу после тела (кости уже на месте, в т.ч. от первого лица)
+	hook.Add("PostDrawAppearance", "rem_lambdagore", function(ent) if stumps[ent] then DrawStumps(ent) end end)
+	-- остальные (трупы, которые рисует движок)
+	hook.Add("PostDrawOpaqueRenderables", "rem_lambdagore", function(depth, sky, sky3d)
+		if sky or sky3d then return end
+		local f = FrameNumber()
+		for ent in pairs(stumps) do
+			if IsValid(ent) and drawnFrame[ent] ~= f and not ent:IsDormant() and not ent:GetNoDraw() then DrawStumps(ent) end
+		end
+	end)
 
 	local function ClearStumps(ent)
 		local t = stumps[ent]
 		if not t then return end
 		for _, m in pairs(t) do if IsValid(m) then m:Remove() end end
 		stumps[ent] = nil
+		drawnFrame[ent] = nil
 	end
 
 	-- обрубки на теле: у игрока - на том, кем он сейчас нарисован (сам игрок или его рэгдолл), и на трупах
@@ -351,7 +374,6 @@ if CLIENT then
 
 		for ent, org in pairs(want) do
 			local torsoSevered = ent:GetNWBool("hgTorsoSevered", false) -- ноги у разорванного пополам - отдельно
-			local hidden = ent:IsDormant() or ent:GetNoDraw()
 			for limb, model in pairs(LG.Stump) do
 				local need = org[limb .. "amputated"] and not (torsoSevered and (limb == "lleg" or limb == "rleg"))
 				local t = stumps[ent]
@@ -359,9 +381,7 @@ if CLIENT then
 				if need and not IsValid(m) then
 					m = ClientsideModel(model)
 					if IsValid(m) then
-						m:SetParent(ent)
-						m:AddEffects(EF_BONEMERGE)
-						m:AddCallback("BuildBonePositions", FitStump)
+						m:SetNoDraw(true) -- рисует DrawStumps
 						stumps[ent] = stumps[ent] or {}
 						stumps[ent][limb] = m
 					end
@@ -369,7 +389,6 @@ if CLIENT then
 					m:Remove()
 					t[limb] = nil
 				end
-				if IsValid(m) then m:SetNoDraw(hidden) end
 			end
 		end
 	end
