@@ -1,8 +1,0 @@
-"UnlitGeneric"
-{
-	"$basetexture" "advancedblood/wounds/clothtear3"
-	"$translucent" 1
-	"$vertexcolor" 1
-	"$vertexalpha" 1
-	"$nocull" 1
-}
