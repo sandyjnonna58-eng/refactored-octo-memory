@@ -221,9 +221,9 @@ local remBadHeartbeatSound = file.Exists("sound/rem_heart/heartbeat_bad.mp3", "G
 local remNextBadHeartbeat = 0
 
 -- аритмия: свой фон (sound/rem_heart/arrhythmia.mp3, по кругу) - с того же порога, что и плитка "Arrhythmia" в осмотре
--- (cl_health_indicator.lua: > 0.1), громче с силой аритмии; затихает за 2 с
+-- (cl_health_indicator.lua: фибрилляция > 15%), громче с силой; затихает за 2 с. Удары "плохого сердца" - с 60% (как в SCAV)
 local remArrhythmiaPath = "sound/rem_heart/arrhythmia.mp3"
-local remArrhythmiaFrom = 0.1
+local remArrhythmiaFrom = 0.15 -- = fib 15% (плитка "Arrhythmia")
 local remArrhythmiaStation, remArrhythmiaLoading
 local remArrhythmiaVol = 0
 local function ThinkArrhythmiaSound(org)
@@ -253,7 +253,7 @@ end
 
 local function IsHeartCritical(org)
  local pulse = org.pulse or 70
- return (org.heart or 0) >= 0.6 or (org.arrhythmia or 0) >= 0.5 or (org.myocardialOxygen or 1) <= 0.45
+ return (org.heart or 0) >= 0.6 or (org.arrhythmia or 0) > 0.6 or (org.myocardialOxygen or 1) <= 0.45
   or (org.heartStrain or 0) >= 0.75 or pulse < 40 or pulse > 160
 end
 

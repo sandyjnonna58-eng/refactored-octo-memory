@@ -298,13 +298,25 @@ local function CollectAfflictionIcons(ply, org)
 	if shock > 10 then add("shock", shock / 40, "Shock") end
 	if org.critical then add("critical", 1, "Critical condition") end
 
-	-- сердце и давление
+	-- сердце и давление: стадии шкалы фибрилляции 0..100 (sv_pulse.lua, как в SCAV Prototype)
+	local fib = org.fib ~= nil and Num(org.fib) or Num(org.arrhythmia) * 100
+	local hr = Num(org.heartbeat)
 	if org.heartstop then
-		add("cardiac_arrest", 1, "Cardiac arrest")
-	elseif org.fibrillation then
-		add("fibrillation", 1, "Fibrillation")
-	elseif Num(org.arrhythmia) > 0.1 then
-		add("arrhythmia", Num(org.arrhythmia), "Arrhythmia")
+		add("cardiac_arrest", 1, "Cardiac arrest", nil, "Asystole. The heart is not pumping - CPR or a defibrillator, fast.")
+	elseif fib > 75 then
+		add("fibrillation", 1, "Ventricular fibrillation", nil, "Chaotic rhythm, the heart barely pumps. Cardiac arrest is close - defibrillate.")
+	elseif fib > 50 then
+		add("vtach", 0.6 + (fib - 50) / 25 * 0.4, "Ventricular tachycardia", nil, "Severe irregular heartbeat. Will turn into ventricular fibrillation if not treated.")
+	elseif fib > 15 then
+		add("arrhythmia", 0.25 + (fib - 15) / 35 * 0.35, "Arrhythmia", nil, "Abnormal heart rhythm from strain on the body. Worsens if the cause stays.")
+	end
+	-- частота (если ритм не сорван)
+	if not org.heartstop and fib <= 50 and hr > 0 then
+		if hr > 110 then
+			add("tachycardia", math.Clamp((hr - 110) / 90, 0.15, 1), "Tachycardia", nil, "Heart rate: " .. math.Round(hr) .. " bpm")
+		elseif hr < 60 then
+			add("bradycardia", math.Clamp((60 - hr) / 40, 0.15, 1), "Bradycardia", nil, "Heart rate: " .. math.Round(hr) .. " bpm")
+		end
 	end
 	if Num(org.heart) > 0.1 then add("heart", Num(org.heart), "Heart damage") end
 	if Num(org.hypotension) > 0.2 then add("pressure_low", Num(org.hypotension), "Low blood pressure") end

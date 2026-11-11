@@ -38,6 +38,36 @@ def tabler(name, out):
     im.alpha_composite(icon, (8, 8))
     im.save(out)
 
+def heart_with(out, lines, width=3.6):
+    # сердце-контур и рисунок внутри (не касаясь контура - на плитке станет цветной деталью)
+    import math
+    S = 4
+    im = Image.new('RGBA', (SIZE * S, SIZE * S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    cx, cy, k = 48, 47, 2.4
+    pts = []
+    for i in range(240):
+        t = i / 240 * math.tau
+        x = 16 * math.sin(t) ** 3
+        y = 13 * math.cos(t) - 5 * math.cos(2 * t) - 2 * math.cos(3 * t) - math.cos(4 * t)
+        pts.append(((cx + x * k) * S, (cy - y * k) * S))
+    d.line(pts + [pts[0]], fill='white', width=int(6.5 * S), joint='curve')
+    for line in lines:
+        d.line([(x * S, y * S) for x, y in line], fill='white', width=int(width * S), joint='curve')
+    im.resize((SIZE, SIZE), Image.LANCZOS).save(out)
+
+def vtach(out):
+    # желудочковая тахикардия: ровная частая "пила"
+    heart_with(out, [[(31, 52), (36, 43), (41, 58), (46, 43), (51, 58), (56, 43), (61, 58), (64, 50)]])
+
+def tachycardia(out):
+    # тахикардия: две стрелки вверх
+    heart_with(out, [[(34, 52), (40, 45), (46, 52)], [(50, 52), (56, 45), (62, 52)]], 4)
+
+def bradycardia(out):
+    # брадикардия: две стрелки вниз
+    heart_with(out, [[(34, 46), (40, 53), (46, 46)], [(50, 46), (56, 53), (62, 46)]], 4)
+
 def arrhythmia(out):
     # аритмия: сердце, внутри неровная кардиограмма - зубцы разной высоты и пропущенный удар (своя, не Tabler)
     import math
@@ -162,6 +192,8 @@ mark(os.path.join(OUT, 'pressure_low.png'), False)
 o2(os.path.join(OUT, 'hypoxia.png'))
 liver(os.path.join(OUT, 'liver.png'))
 arrhythmia(os.path.join(OUT, 'arrhythmia.png'))
+for f in (vtach, tachycardia, bradycardia):
+    f(os.path.join(OUT, f.__name__ + '.png'))
 for f in (wound, internal, immobilized, amputation, dislocation):
     f(os.path.join(OUT, f.__name__ + '.png'))
 print(len(TABLER) + 7, 'icons')

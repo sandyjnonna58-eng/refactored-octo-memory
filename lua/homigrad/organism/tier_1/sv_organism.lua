@@ -258,6 +258,7 @@ local function send_organism(org, ply)
 	sendtable.arrhythmia = org.arrhythmia
 	sendtable.fibrillation = org.fibrillation
 	sendtable.heartstop = org.heartstop -- без этого клиент не знал об остановке сердца (стук "плохого сердца" шёл дальше)
+	sendtable.fib = org.fib -- шкала фибрилляции 0..100 (sv_pulse.lua): стадии, ЭКГ
 	sendtable.myocardialOxygen = org.myocardialOxygen
 	sendtable.heartStrain = org.heartStrain
 	sendtable.heart = org.heart
@@ -342,6 +343,7 @@ local function send_bareinfo(org)
 	sendtable.arrhythmia = org.arrhythmia
 	sendtable.fibrillation = org.fibrillation
 	sendtable.heartstop = org.heartstop -- без этого клиент не знал об остановке сердца (стук "плохого сердца" шёл дальше)
+	sendtable.fib = org.fib -- шкала фибрилляции 0..100 (sv_pulse.lua): стадии, ЭКГ
 	sendtable.myocardialOxygen = org.myocardialOxygen
 	sendtable.heartStrain = org.heartStrain
 	sendtable.heart = org.heart

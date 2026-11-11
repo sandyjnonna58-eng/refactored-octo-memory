@@ -20,42 +20,69 @@ for _, f in ipairs({"sound/rem_heart/heartbeat_bad.mp3", "sound/rem_heart/arrhyt
 	if file.Exists(f, "GAME") then resource.AddSingleFile(f) end
 end
 
--- Аритмия:
---   * от потери крови: с 4.0 л начинается (не ниже arr_blood_min), к 3.5 л - сильная (arr_blood_max);
---   * от попадания в сердце - почти всегда (sv_organs.lua, hg.organism.AddCardiacStress);
---   * сознание при ней уходит медленно: держится не выше 1 - аритмия * arr_consc_mul, спуск за arr_consc_time с.
-local arr_blood_start, arr_blood_full = 4000, 3500
-local arr_blood_min, arr_blood_max = 0.3, 0.65
-local arr_consc_from = 0.25
+-- Сердце по образцу SCAV Prototype (scavprototype.wiki.gg/wiki/Heart_rate). Главное - шкала фибрилляции org.fib 0..100:
+--   > 15 - аритмия, > 50 - желудочковая тахикардия, > 75 - фибрилляция желудочков, 100 - остановка сердца.
+--   org.arrhythmia (= fib / 100) и org.fibrillation (= fib >= 75) - производные: их по-прежнему читают и меняют
+--   дефибриллятор, последний бой, жизнеобеспечение, лечение - такие правки переносятся в шкалу (SyncFibIn).
+-- Растёт 1%/с (при пульсе выше 280 - 4%/с), сама спадает 0.75%/с, если причин нет.
+--   "Сильные" причины (как в SCAV, без потолка - ведут к остановке): пульс > 200, давление < 88 (начинается < 78),
+--   кислород < 60% (начинается < 50%), температура < 28.5 (начинается < 28), принудительная (попадание в сердце).
+--   "Мягкие" (плохое сердце) - только до своего потолка: повреждение сердца, ишемия, перегрузка, кровь < 4.0 л
+--   (к 3.5 л - до тахикардии), шок 3+, высокое давление.
+-- Пульс: +1 за процент фибрилляции, +4 за каждый процент выше 75, +30 выше 95; ниже 20 - сразу остановка.
+local fib_rate, fib_rate_fast, fib_fall = 1, 4, 0.75
+local fib_fast_hr = 280
+local fib_hr_start = 200
+local fib_sys_start, fib_sys_rise = 78, 88
+local fib_o2_start, fib_o2_rise = 50, 60           -- % кислорода
+local fib_temp_start, fib_temp_rise = 28, 28.5
+local fib_hr_arrest = 20
+local fib_blood_start, fib_blood_full = 4000, 3500
+-- сознание при аритмии/тахикардии уходит медленно: не выше 1 - fib/100 * arr_consc_mul, спуск за arr_consc_time с
+local arr_consc_from = 25
 local arr_consc_mul = 0.9
 local arr_consc_time = 45
--- давление и фибрилляция тоже гасят сознание не сразу, а за столько секунд (раньше - мгновенно)
+-- давление и фибрилляция желудочков гасят сознание не сразу, а за столько секунд
 local hypotension_consc_time = 15
--- "плохое сердце" для аритмии (иначе она не начинается и быстро проходит)
-local arr_bad_heart = 0.2          -- повреждение сердца
-local arr_bad_ischemia = 0.35      -- нехватка кислорода сердцу (1 - myocardialOxygen)
-local arr_bad_strain = 0.5         -- перегрузка
-local arr_bad_hypotension = 0.35
-local arr_bad_hypertension = 0.6
 local fibrillation_consc_time = 6
 
-local function addArrhythmia(org, amount)
-	org.arrhythmia = Clamp((org.arrhythmia or 0) + amount, 0, 1)
-	org.nextArrhythmiaRoll = math.min(org.nextArrhythmiaRoll or CurTime(), CurTime() + 4)
+-- производные поля из шкалы и обратно (правки снаружи - в шкалу)
+local function SyncFibOut(org)
+	org.fib = Clamp(org.fib or 0, 0, 100)
+	org.arrhythmia = org.fib / 100
+	org.fibrillation = org.fib >= 75
+	org.remArrOut, org.remFibOut = org.arrhythmia, org.fibrillation
 end
+local function SyncFibIn(org)
+	org.fib = org.fib or 0
+	if org.remFibOut ~= nil and org.fibrillation ~= org.remFibOut then
+		if org.fibrillation then org.fib = math.max(org.fib, 76) org.fibForced = true else org.fib = math.min(org.fib, 74) end
+	end
+	if org.remArrOut ~= nil and math.abs((org.arrhythmia or 0) - org.remArrOut) > 0.0005 then
+		org.fib = Clamp((org.arrhythmia or 0) * 100, 0, 100)
+	end
+	if org.fib <= 0 then org.fibForced = false end
+end
+hg.organism.SyncFibOut = SyncFibOut
 
+-- нагрузка на сердце (попадание в сердце и т.п.): сразу добавляет фибрилляции
 function hg.organism.AddCardiacStress(org, amount)
 	if not org or not isnumber(amount) or amount <= 0 then return 0 end
-	addArrhythmia(org, amount)
+	SyncFibIn(org)
+	org.fib = Clamp(org.fib + amount * 60, 0, 100)
 	org.heartStrain = Clamp((org.heartStrain or 0) + amount * 0.45, 0, 1)
+	SyncFibOut(org)
 	return org.arrhythmia
 end
 
+-- сразу фибрилляция желудочков, растёт сама, пока не дефибриллируют (принудительная)
 function hg.organism.StartFibrillation(org)
 	if not org or org.heartstop then return end
-	org.fibrillation = true
-	org.arrhythmia = math.max(org.arrhythmia or 0, 0.8)
+	SyncFibIn(org)
+	org.fib = math.max(org.fib, 76)
+	org.fibForced = true
 	org.fibrillationStart = CurTime()
+	SyncFibOut(org)
 end
 
 function hg.organism.TryRestartHeartWithCPR(org, cprMul)
@@ -69,8 +96,8 @@ function hg.organism.TryRestartHeartWithCPR(org, cprMul)
 	if math.random(100) > chance then return false end
 
 	org.heartstop = false
-	org.fibrillation = false
-	org.arrhythmia = 0
+	org.fib, org.fibForced = 0, false
+	SyncFibOut(org)
 	org.heartbeat = Clamp(org.heartbeat or 70, 55, 90)
 	org.pulse = max(org.pulse or 0, 25)
 	org.bloodPressure = max(org.bloodPressure or 0, 35)
@@ -91,6 +118,9 @@ module[1] = function(org)
 	org.cardiacOutput = 1
 	org.arrhythmia = 0
 	org.fibrillation = false
+	org.fib = 0
+	org.fibForced = false
+	org.remArrOut, org.remFibOut = 0, false
 	org.fibrillationStart = 0
 	org.myocardialOxygen = 1
 	org.heartStrain = 0
@@ -115,6 +145,8 @@ function hg.organism.should_gain_fear(org)
 end
 
 module[2] = function(owner, org, timeValue)
+	SyncFibIn(org)
+	local fib = org.fib
 	if not org.heartstop and not org.fibrillation and (org.arrhythmia or 0) < 0.25 and (org.myocardialOxygen or 1) > 0.55 then
 		org.heartStrain = Approach(org.heartStrain or 0, 0, timeValue / 45)
 	end
@@ -135,7 +167,8 @@ module[2] = function(owner, org, timeValue)
 	-- сужение сосудов поднимает давление, расширение роняет (modules/sv_vessels.lua)
 	vascularTone = vascularTone * (1 - (org.vessels or 0) * 0.18)
 	local pressureBase = 92 * bloodVolume * heart * vascularTone * Clamp(Remap(org.temperature, 28, 36.7, 0.55, 1), 0.45, 1.1)
-	local rhythmMul = org.fibrillation and 0.18 or Clamp(1 - (org.arrhythmia or 0) * 0.22, 0.5, 1)
+	-- насколько сердце качает при сбитом ритме: аритмия чуть хуже, тахикардия желудочков - плохо, фибрилляция - почти никак
+	local rhythmMul = fib < 50 and 1 - fib * 0.002 or fib < 75 and Remap(fib, 50, 75, 0.9, 0.45) or Clamp(Remap(fib, 75, 100, 0.4, 0.05), 0.05, 0.4)
 	local defibGrace = (org.defibDeathGrace or 0) > CurTime()
 	local arrestPressure = defibGrace and 45 or 0
 	local pressure = org.alive and (org.heartstop and arrestPressure or pressureBase * rhythmMul) or 0
@@ -171,51 +204,65 @@ module[2] = function(owner, org, timeValue)
 	heartbeat = heartbeat - 160 * (1 - math.Clamp(math.Remap(org.temperature, 28, 36.7, 0, 1), 0, 1))
 	heartbeat = heartbeat + (org.hypotension or 0) * 55
 	heartbeat = heartbeat - (org.myocardialOxygen and (1 - org.myocardialOxygen) or 0) * 35
-	if (org.arrhythmia or 0) > 0.05 and not org.fibrillation then heartbeat = heartbeat + math.Rand(-70, 90) * org.arrhythmia end
-	if org.fibrillation then heartbeat = math.Rand(180, 360) end
+	-- фибрилляция гонит пульс (SCAV): +1 за процент, +4 выше 75, +30 выше 95; при аритмии он ещё и скачет
+	heartbeat = heartbeat + fib + max(fib - 75, 0) * 4 + max(fib - 95, 0) * 30
+	if fib > 15 and fib < 75 then heartbeat = heartbeat + math.Rand(-0.6, 0.6) * fib end
 
 	org.heartbeat = math.Approach(org.heartbeat, heartbeat, heartbeat > org.heartbeat and timeValue * 5 or timeValue * 3)
 	
 	local ischemia = Clamp(1 - (org.myocardialOxygen or 1), 0, 1)
-	local stress = Clamp((org.heart or 0) * 0.9 + ischemia * 0.8 + (org.hypertension or 0) * 0.35 + (org.hypotension or 0) * 0.3 + Clamp(org.shock, 0, 80) / 180 + max(org.pain - 60, 0) / 220 + max(org.heartbeat - 165, 0) / 190, 0, 2)
-	-- аритмия только при плохом сердце (иначе бег, страх и боль давали её здоровому - плитка и звук без причины):
-	-- повреждено, мало кислорода, перегружено, давление сильно не в норме, крови мало, тяжёлый шок
-	local heartBad = (org.heart or 0) >= arr_bad_heart or ischemia >= arr_bad_ischemia or (org.heartStrain or 0) >= arr_bad_strain
-		or (org.hypotension or 0) >= arr_bad_hypotension or (org.hypertension or 0) >= arr_bad_hypertension
-		or (org.blood or 5000) < arr_blood_start or (org.shockStage or 0) >= 3
-	local arrTarget = heartBad and Clamp(stress * 0.42, 0, 1) or 0
-	if org.alive and (org.blood or 5000) < arr_blood_start then
-		arrTarget = math.max(arrTarget, Clamp(Remap(org.blood, arr_blood_start, arr_blood_full, arr_blood_min, arr_blood_max), arr_blood_min, arr_blood_max))
-	end
-	-- плохое сердце: растёт за ~25 с, отпускает медленно; сердце в порядке - проходит за ~20 с
-	local arrDecay = heartBad and timeValue / 90 or timeValue / 20
-	org.arrhythmia = Approach(org.arrhythmia or 0, arrTarget, arrTarget > (org.arrhythmia or 0) and timeValue / 25 or arrDecay)
+	-- шкала фибрилляции
+	local o2pct = istable(org.o2) and (org.o2[1] or 30) / (org.o2.range or 30) * 100 or 100
+	local sys = org.systolic or 120
+	local hr = org.heartbeat or 70
+	local alive = org.alive and not org.heartstop
+	local strongStart = alive and (hr > fib_hr_start or sys < fib_sys_start or o2pct < fib_o2_start or org.temperature < fib_temp_start)
+	local strongRise = alive and (hr > fib_hr_start or sys < fib_sys_rise or o2pct < fib_o2_rise or org.temperature < fib_temp_rise or org.fibForced)
+	-- "плохое сердце": растёт только до своего потолка
+	local ceil = 0
+	if (org.heart or 0) >= 0.2 then ceil = max(ceil, 20 + org.heart * 70) end
+	if ischemia >= 0.35 then ceil = max(ceil, ischemia * 80) end
+	if (org.heartStrain or 0) >= 0.5 then ceil = max(ceil, org.heartStrain * 50) end
+	if (org.blood or 5000) < fib_blood_start then ceil = max(ceil, Clamp(Remap(org.blood, fib_blood_start, fib_blood_full, 20, 60), 20, 60)) end
+	if (org.shockStage or 0) >= 3 then ceil = max(ceil, 40) end
+	if (org.hypertension or 0) >= 0.6 then ceil = max(ceil, 30) end
+	if not alive then ceil = 0 end
 
-	-- сердце сбилось - сначала мысль, потом сознание медленно уходит
-	local arr = org.arrhythmia or 0
-	if arr >= arr_consc_from and not org.fibrillation and not org.heartstop then
-		local cap = Clamp(1 - arr * arr_consc_mul, 0, 1)
+	if fib <= 0 and (strongStart or ceil > 0) then fib = 1 end
+	if fib > 0 then
+		if strongRise or fib < ceil then
+			fib = fib + timeValue * (hr > fib_fast_hr and fib_rate_fast or fib_rate)
+		elseif not org.fibForced then
+			fib = max(fib - timeValue * fib_fall, 0)
+		end
+	end
+	fib = Clamp(fib, 0, 100)
+	if fib >= 100 and alive then
+		org.heartstop = true -- фибрилляция дошла до конца - остановка сердца
+	end
+	org.fib = fib
+
+	-- аритмия / тахикардия: сначала мысль, потом сознание медленно уходит
+	if fib >= arr_consc_from and fib < 75 and alive then
+		local cap = Clamp(1 - fib / 100 * arr_consc_mul, 0, 1)
 		if org.consciousness > cap then org.consciousness = Approach(org.consciousness, cap, timeValue / arr_consc_time) end
 		if org.isPly and not org.otrub and CurTime() >= (org.remArrhythmiaSaid or 0) then
 			org.remArrhythmiaSaid = CurTime() + math.Rand(50, 80)
-			local lines = {"My heart... it's skipping beats.", "Something's wrong with my heart.", "My chest... it's fluttering.", "Why is my heart beating like that?"}
+			local lines = fib < 50 and {"My heart... it's skipping beats.", "Something's wrong with my heart.", "My chest... it's fluttering."}
+				or {"My heart is racing... I can't breathe.", "It's pounding out of my chest!", "Something is horribly wrong."}
 			if org.owner.Notify then org.owner:Notify(lines[math.random(#lines)], true, "arrhythmia", 0, nil, Color(255, 170, 170)) end
 		end
 	end
-	if stress > 0.65 and CurTime() >= (org.nextArrhythmiaRoll or 0) then
-		org.nextArrhythmiaRoll = CurTime() + Clamp(Remap(stress, 0.65, 1.6, 14, 3), 3, 14)
-		if math.Rand(0, 1) < Clamp((stress - 0.65) * 0.12, 0.01, 0.18) then hg.organism.StartFibrillation(org) end
-	end
 
-	if org.heartbeat > 300 then
-		hg.organism.StartFibrillation(org)
-	end
-
-	if org.fibrillation then
+	-- фибрилляция желудочков: сердце почти не качает
+	if fib >= 75 and alive then
 		local cap = Clamp(org.bloodPressure / 55, 0, 1)
 		if org.consciousness > cap then org.consciousness = Approach(org.consciousness, cap, timeValue / fibrillation_consc_time) end
-		org.o2[1] = max(org.o2[1] - timeValue * 1.8, 0)
-		if (org.fibrillationStart or CurTime()) + 24 < CurTime() or org.bloodPressure < 8 then org.heartstop = true end
+		org.o2[1] = max(org.o2[1] - timeValue * 1.8 * Remap(fib, 75, 100, 0.5, 1), 0)
+	end
+	-- пульс ниже 20 - сразу остановка сердца (SCAV)
+	if alive and hr < fib_hr_arrest and org.heartbeat > 0 and (org.consciousness or 1) >= 0 then
+		org.heartstop = true
 	end
 	if org.hypertension > 0.35 then org.heartStrain = Clamp((org.heartStrain or 0) + timeValue * org.hypertension / 360, 0, 1) end
 	if ischemia > 0.35 then org.heartStrain = Clamp((org.heartStrain or 0) + timeValue * ischemia / 260, 0, 1) end
@@ -236,6 +283,7 @@ module[2] = function(owner, org, timeValue)
 		org.pulse = Approach(org.pulse or 0, arrestPressure, timeValue * arrestFallSpeed)
 		org.fibrillation = false
 		org.arrhythmia = 0
+		org.fib, org.fibForced = 0, false
 	end
 
 	org.fear = math.Approach(org.fear, (org.otrub and 0 or (org.fearadd > 0 and 1 or -1)), org.otrub and timeValue * 0.5 or (org.fearadd > 0 and (org.fear < 0 and timeValue * 5 * org.fearadd or timeValue / 5 * org.fearadd) or (org.fear <= 0 and timeValue / 240 or timeValue / 50)))
@@ -250,6 +298,7 @@ module[2] = function(owner, org, timeValue)
 	if org.heartstop then
 		org.fibrillation = false
 		org.arrhythmia = 0
+		org.fib, org.fibForced = 0, false
 	end
 
 	if org.temperature < 34 or org.temperature > 38 or org.blood < 4000 or org.pain > 20 then
@@ -298,6 +347,8 @@ module[2] = function(owner, org, timeValue)
 		
 		org.lastsoundtime = CurTime() + math.random(25,35)
 	end
+
+	SyncFibOut(org)
 end
 
 --if org.heartstop then org.needotrub = true end --не совсем...
