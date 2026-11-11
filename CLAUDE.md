@@ -87,7 +87,8 @@
   взрыв тела у Z-City свои. От Lambda только картинка на OnAmputateLimb (руки - Forearm, ноги - Calf): оторванная часть
   падает рэгдоллом (LG.DropLimb: сервер - prop_ragdoll без отрисовки, клиент - bonemerge-копия с одеждой-сабматериалами,
   net rem_lgore_limb), от взрыва вместо целой - куски goremod_CustomGibs; кровь - хук noob_gore_make_limb_blood.
-  Обрубков Lambda нет (были внутри рукава) - обрубок свой у Z-City (cl_main.lua GoreCalc).
+  Обрубки - Lambda (LG.Stump, bonemerge на плечо/бедро, клиент вешает на того, кем нарисован игрок, и на трупы,
+  timer rem_lambdagore_stumps); свой обрубок Z-City (cl_main.lua GoreCalc) при работающем Lambda не рисуется.
   BloodMark: оторванная конечность (организм) и кости с NaN-позицией (разрез пополам) - Z.BoneHidden / Z.BoneMatrix
   (sh_zcity.lua) и сжатие в Pose:Bone (cl_bodymesh.lua), иначе кровь течёт по невидимой руке / тянется в бесконечность.
 - Ярость (3 стадии, растёт ТОЛЬКО от: удара игрока, жеста «фак», «фак»/fuck в чате; удар - рывок и x2, без удара не выше 2-й):

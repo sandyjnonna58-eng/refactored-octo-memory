@@ -3,8 +3,9 @@
 -- хук OnAmputateLimb), свои разрыв пополам (organism/sv_torsohalve.lua) и взрыв тела целиком (headgib).
 -- Поэтому собственную логику Lambda (порча трупов по костям, разрез пополам, взрыв тела, живая расчленёнка NPC,
 -- кэш урона игроков) под Z-City выключаем - иначе он рвал бы и рэгдоллы живых игроков. От него берём только картинку:
--- оторванная часть падает отдельным куском (в одежде этого человека), из обрубка бьёт кровь, летят куски мяса,
--- звук разрыва. Обрубок на теле - свой у Z-City (cl_main.lua GoreCalc). Выключить: rem_lambdagore 0.
+-- оторванная часть падает отдельным куском (в одежде этого человека), на месте среза - обрубок, из обрубка бьёт кровь,
+-- летят куски мяса, звук разрыва. Свой обрубок Z-City (cl_main.lua GoreCalc), пока работает Lambda, не рисуется.
+-- Выключить: rem_lambdagore 0.
 hg.LambdaGore = hg.LambdaGore or {}
 local LG = hg.LambdaGore
 
@@ -18,10 +19,18 @@ LG.LimbBone = {
 	lleg = "ValveBiped.Bip01_L_Calf",
 	rleg = "ValveBiped.Bip01_R_Calf",
 }
+-- обрубки Lambda: сетка висит на кости плеча / бедра, к телу цепляются через bonemerge
+LG.Stump = {
+	larm = "models/noob_dev2323/gib/l_arm67.mdl",
+	rarm = "models/noob_dev2323/gib/r_arm67.mdl",
+	lleg = "models/noob_dev2323/gib/l_leg_gap.mdl",
+	rleg = "models/noob_dev2323/gib/r_leg_gap.mdl",
+}
+
 function LG.Enabled()
 	if not cv:GetBool() then return false end
 	if SERVER then return gore_mod_slice_gib ~= nil and noob_gore_TransferBones ~= nil end
-	if LG.installed == nil then LG.installed = file.Exists("models/noob_dev2323/gib/l_arm67.mdl", "GAME") end
+	if LG.installed == nil then LG.installed = file.Exists(LG.Stump.larm, "GAME") end
 	return LG.installed
 end
 
@@ -147,6 +156,7 @@ end
 
 if CLIENT then
 	local limbs = {}  -- {model = ClientsideModel, parent = рэгдолл-кусок}
+	local stumps = {} -- [ent] = {[limb] = ClientsideModel}
 	local max_limbs = 24
 
 	local function CopyLook(from, to)
@@ -207,15 +217,64 @@ if CLIENT then
 		while #limbs > max_limbs do RemoveLimb(1) end
 	end)
 
-	-- (обрубок на теле не ставим: у Z-City свой - кусок мяса на конце руки / ноги, cl_main.lua GoreCalc;
-	-- обрубки Lambda под пропорции L4D оказывались внутри рукава)
-	timer.Create("rem_lambdagore_limbs", 1, 0, function()
+	local function ClearStumps(ent)
+		local t = stumps[ent]
+		if not t then return end
+		for _, m in pairs(t) do if IsValid(m) then m:Remove() end end
+		stumps[ent] = nil
+	end
+
+	-- обрубки на теле: у игрока - на том, кем он сейчас нарисован (сам игрок или его рэгдолл), и на трупах
+	local function SyncStumps()
 		for i = #limbs, 1, -1 do
 			if not IsValid(limbs[i].parent) or not IsValid(limbs[i].model) then RemoveLimb(i) end
 		end
-	end)
 
+		local want = {}
+		if LG.Enabled() then
+			for _, ply in player.Iterator() do
+				local org = ply.organism
+				local char = hg.GetCurrentCharacter and hg.GetCurrentCharacter(ply)
+				if org and IsValid(char) and ply:Alive() then want[char] = org end
+			end
+			for _, rag in ipairs(ents.FindByClass("prop_ragdoll")) do
+				local org = rag.new_organism or rag.organism
+				if org and not want[rag] then want[rag] = org end
+			end
+		end
+
+		for ent in pairs(stumps) do
+			if not IsValid(ent) or not want[ent] then ClearStumps(ent) end
+		end
+
+		for ent, org in pairs(want) do
+			local torsoSevered = ent:GetNWBool("hgTorsoSevered", false) -- ноги у разорванного пополам - отдельно
+			local hidden = ent:IsDormant() or ent:GetNoDraw()
+			for limb, model in pairs(LG.Stump) do
+				local need = org[limb .. "amputated"] and not (torsoSevered and (limb == "lleg" or limb == "rleg"))
+				local t = stumps[ent]
+				local m = t and t[limb]
+				if need and not IsValid(m) then
+					m = ClientsideModel(model)
+					if IsValid(m) then
+						m:SetParent(ent)
+						m:AddEffects(EF_BONEMERGE)
+						stumps[ent] = stumps[ent] or {}
+						stumps[ent][limb] = m
+					end
+				elseif not need and IsValid(m) then
+					m:Remove()
+					t[limb] = nil
+				end
+				if IsValid(m) then m:SetNoDraw(hidden) end
+			end
+		end
+	end
+	timer.Create("rem_lambdagore_stumps", 0.3, 0, function() ProtectedCall(SyncStumps) end)
+
+	hook.Add("EntityRemoved", "rem_lambdagore", function(ent) ClearStumps(ent) end)
 	hook.Add("PreCleanupMap", "rem_lambdagore", function()
+		for ent in pairs(stumps) do ClearStumps(ent) end
 		for i = #limbs, 1, -1 do RemoveLimb(i) end
 	end)
 end
