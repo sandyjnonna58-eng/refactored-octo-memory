@@ -216,12 +216,12 @@ local function StopRemFibrillationSound()
 end
 
 -- сердце в критическом состоянии: каждый удар слышен (у остановки и фибрилляции свои звуки).
--- Звук из Fading Vitality лежит в приватной папке sound/rem_heart_private (не в репозитории); нет его - старый.
-local remBadHeartbeatSound = file.Exists("sound/rem_heart_private/heartbeat_bad.mp3", "GAME") and "rem_heart_private/heartbeat_bad.mp3" or "rem_heartbeatbad.mp3"
+-- Звук - sound/rem_heart/heartbeat_bad.mp3 (Fading Vitality, без авторских прав по словам владельца); нет его - старый.
+local remBadHeartbeatSound = file.Exists("sound/rem_heart/heartbeat_bad.mp3", "GAME") and "rem_heart/heartbeat_bad.mp3" or "rem_heartbeatbad.mp3"
 local remNextBadHeartbeat = 0
 
--- аритмия: свой фон (sound/rem_heart_private/arrhythmia.mp3, по кругу), громче с силой аритмии; затихает за 2 с
-local remArrhythmiaPath = "sound/rem_heart_private/arrhythmia.mp3"
+-- аритмия: свой фон (sound/rem_heart/arrhythmia.mp3, по кругу), громче с силой аритмии; затихает за 2 с
+local remArrhythmiaPath = "sound/rem_heart/arrhythmia.mp3"
 local remArrhythmiaFrom = 0.3
 local remArrhythmiaStation, remArrhythmiaLoading
 local remArrhythmiaVol = 0

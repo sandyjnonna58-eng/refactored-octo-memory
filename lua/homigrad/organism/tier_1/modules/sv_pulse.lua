@@ -15,8 +15,8 @@ local function getHeartEfficiency(org)
 	return Clamp(heart - ischemia * 0.35 - strain * 0.25, 0, 1)
 end
 
--- звуки сердца из Fading Vitality (приватная папка, не в репозитории; cl_main.lua) - раздать, если лежат на сервере
-for _, f in ipairs({"sound/rem_heart_private/heartbeat_bad.mp3", "sound/rem_heart_private/arrhythmia.mp3"}) do
+-- звуки сердца (sound/rem_heart, cl_main.lua) - раздать игрокам
+for _, f in ipairs({"sound/rem_heart/heartbeat_bad.mp3", "sound/rem_heart/arrhythmia.mp3"}) do
 	if file.Exists(f, "GAME") then resource.AddSingleFile(f) end
 end
 

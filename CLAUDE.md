@@ -15,7 +15,7 @@
 - Серверный профайлер `lua/autorun/00_remorse_profiler.lua` работает только если `rem_profiler_enabled 1` на старте карты
   (иначе ничего не оборачивает); разовый замер - `rem_profile_sv` / `rem_profile` (homigrad/sh_hookprofiler.lua).
 - Чужой защищённый контент (видео, фото товаров, выдранные модели) - не в публичный репозиторий, а в приватные паки,
-  они в `.gitignore` (`materials/rem_wd_private`, `sound/rem_wd_private`, `materials/rem_drinks_private`, `sound/rem_heart_private`),
+  они в `.gitignore` (`materials/rem_wd_private`, `sound/rem_wd_private`, `materials/rem_drinks_private`),
   раздаются через FastDL-циклы в `lua/homigrad/skills/sv_skills.lua`.
 - Раздача при входе: игрок качает только текущую карту, аддоны Мастерской сервера (engine.GetAddons; аддоны-карты - только
   тот, где текущая карта) + `rem_workshop_extra`, и Lua (AddCSLuaFile - всегда целиком): `lua/autorun/server/rem_downloads.lua`.
@@ -121,8 +121,8 @@
   давление, шок, боль), от крови ниже 4.0 л (не меньше 0.3) до сильной к 3.5 л (0.65), попадание в сердце - 90% сразу
   (sv_organs.lua input_list.heart); при аритмии от 0.25 сознание медленно уходит (cap 1 - arr*0.9 за 45 с) + мысль.
   Низкое давление и фибрилляция тоже гасят сознание плавно. Отключка труднее (sv_pain.lua: порог 0.2, ragdoll 0.28,
-  шок мягче; удар по черепу 1x вместо 2x). Звуки из Fading Vitality - приватные `sound/rem_heart_private/`
-  (heartbeat_bad.mp3 - удар при критическом сердце вместо rem_heartbeatbad.mp3; arrhythmia.mp3 - фон при аритмии от 0.3).
+  шок мягче; удар по черепу 1x вместо 2x). Звуки `sound/rem_heart/` (Fading Vitality, без авторских прав по словам
+  пользователя): heartbeat_bad.mp3 - удар при критическом сердце вместо rem_heartbeatbad.mp3; arrhythmia.mp3 - фон при аритмии от 0.3.
 - Осколки (гранаты ent_hg_grenade, взрывы hg.PropExplosion / StartShrapnel в explosives/sv_explosives.lua, СВУ weapon_traitor_ied):
   попадание в стену / проп -> `hg.ShrapnelImpact` - короткая пуля Z-City (FireLuaBullets, урон 1) у места попадания: след и
   пробоина, её видят аддоны пробоин через EntityFireBullets / PostEntityFireBullets / callback. Лимит на взрыв `rem_frag_impacts`.
