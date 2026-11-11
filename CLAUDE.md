@@ -99,15 +99,14 @@
   (каналы RemAudio, RA.IsMusic - не .wav и не heartstop/heartbeat) сначала с эхом (копии файла с задержкой, RA.Taps), потом
   "издалека" (RA.Global - общий множитель громкости в cl_remaudio.lua, playback rate 0.94, эхо гуще); otrub - трек гаснет
   за 1.2 с, хвост эха за 3 с; очнулся - возврат за 2.5 с.
-- BloodMark (чужой аддон «[ZCITY] BloodMark», добавлен в сборку по просьбе): `lua/autorun/advancedblood.lua` (ABL - кровь, раны,
-  лужи, следы), `neurotrauma.lua` (NeuroTrauma - травмы головы, мозг), `respiratory.lua` (лёгкие), `skeleton.lua` (скелет);
-  код в `lua/advancedblood|neurotrauma|respiratory|skeleton/`, контент `materials/advancedblood`, `materials/neurotrauma`,
-  `materials/models/hemogen`, `models/hemogen`, `data_static/neurotrauma`. К homigrad цепляется после загрузки (InitPostEntity /
-  HomigradRun) и ОБОРАЧИВАЕТ (не заменяет) наши хуки: "organism-think-client-blood" (cl_main.lua), "ResponsiveHits_..."
-  (sv_util.lua, брызги крови - вместо них своя кровь), HG_PlayerSay "huy" и HG_PlayerCanHearPlayersVoice "BrainDamage"
-  (речь при травме мозга). Хук с таким же именем у нас - сначала смотреть, не обёрнут ли он BloodMark. Свои файлы аддон
-  игрокам не раздавал - теперь они в списке rem_downloads. Карты нормалей коры мозга уменьшены 2048->1024
-  (`tools/vtf/halve.py` - уменьшение VTF вдвое без перекодирования).
+- BloodMark - только кровь (AdvancedBlood из чужого аддона «[ZCITY] BloodMark»; модули травм головы/мозга, лёгких и скелета
+  убраны по просьбе): `lua/autorun/advancedblood.lua` (ABL - кровь, раны, лужи, следы), код `lua/advancedblood/`, контент
+  `materials/advancedblood`. Тестовые сценарии разработчика (*test*, selftest, hostile) из сборки убраны. Настройки по умолчанию
+  снижены ради FPS (sh_config.lua: abl_quality 2 - без отражений в лужах, abl_budget_ms 1.5, abl_sim_hz 100, меньше лимитов;
+  у игроков со старыми настройками применяются один раз, метка data/abl_perf_v1.txt). К homigrad цепляется после загрузки
+  (InitPostEntity / HomigradRun) и ОБОРАЧИВАЕТ (не заменяет) наши хуки: "organism-think-client-blood" (cl_main.lua),
+  "ResponsiveHits_..." (sv_util.lua, брызги крови - вместо них своя кровь). Хук с таким же именем у нас - сначала смотреть,
+  не обёрнут ли он BloodMark. Файлы раздаются через rem_downloads. `tools/vtf/halve.py` - уменьшение VTF вдвое без перекодирования.
 - Совместимость с InfMap (бесконечные карты): `lua/autorun/!zcity_infmap.lua` + `lua/zcity_infmap/`, описание в `INFMAP.md`.
   Работает только на картах InfMap, выключается `zc_infmap 0`. Новое net-сообщение с позицией - дописать в списки
   `lua/zcity_infmap/sh_net.lua`.

@@ -1,9 +1,0 @@
-"VertexLitGeneric"
-{
-	"$basetexture" "models/hemogen/lungs/lobe_ll"
-	"$bumpmap" "models/hemogen/lungs/lobe_ll_n"
-	"$phong" "1"
-	"$phongexponent" "16"
-	"$phongboost" "0.9"
-	"$phongfresnelranges" "[0.4 0.75 1]"
-}

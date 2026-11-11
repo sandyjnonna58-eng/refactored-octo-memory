@@ -26,7 +26,7 @@ C.sv = {
 if CLIENT then
 	C.cl = {
 		enabled     = CreateClientConVar("abl_cl_enabled", "1", true, false, "Client-side AdvancedBlood simulation/rendering.", 0, 1),
-		quality     = CreateClientConVar("abl_quality", "3", true, false, "0 = low, 1 = medium, 2 = high, 3 = ultra, 4 = extreme.", 0, 4),
+		quality     = CreateClientConVar("abl_quality", "2", true, false, "0 = low, 1 = medium, 2 = high, 3 = ultra, 4 = extreme.", 0, 4),
 		wound3d     = CreateClientConVar("abl_wound_3d", "1", true, false, "1 = a wound has a recess behind its opening (real depth, seen through the opening); 0 = the painted opening alone.", 0, 1),
 		woundMarks  = CreateClientConVar("abl_wound_marks", "1", true, false, "1 = wounds are drawn on bodies (openings, bruises, the blood round them); 0 = none are drawn (they are kept, and are there again with 1).", 0, 1),
 		woundMax    = CreateClientConVar("abl_wound_max", "14", true, false, "Wound marks kept for one character at the most; the oldest go first.", 2, 40),
@@ -36,25 +36,25 @@ if CLIENT then
 		woundForm   = CreateClientConVar("abl_wound_form", "1", true, false, "1 = a wound is one piece of lit geometry on the body: a raised rim, a lip that turns in, and the inside behind it; 0 = the recess as it was before (no rim, not lit).", 0, 1),
 		woundIntensity = CreateClientConVar("abl_wound_intensity", "1", true, false, "How strongly bruises and the blood round a wound are drawn (0.4 faint .. 1.6 strong).", 0.4, 1.6),
 		woundDebug  = CreateClientConVar("abl_wound_debug", "0", false, false, "1 = each wound says where it was put when it is made, and its place and the skin's normal are drawn.", 0, 1),
-		budget      = CreateClientConVar("abl_budget_ms", "2.5", true, false, "Target CPU milliseconds per frame for the blood simulation.", 0.3, 20),
-		simHz       = CreateClientConVar("abl_sim_hz", "165", true, false, "Target update rate (Hz) of high-priority blood (near, visible); lowered automatically when over abl_budget_ms.", 30, 240),
-		maxDrops    = CreateClientConVar("abl_max_droplets", "420", true, false, "Hard cap: simulated droplets.", 16, 4000),
+		budget      = CreateClientConVar("abl_budget_ms", "1.5", true, false, "Target CPU milliseconds per frame for the blood simulation.", 0.3, 20),
+		simHz       = CreateClientConVar("abl_sim_hz", "100", true, false, "Target update rate (Hz) of high-priority blood (near, visible); lowered automatically when over abl_budget_ms.", 30, 240),
+		maxDrops    = CreateClientConVar("abl_max_droplets", "300", true, false, "Hard cap: simulated droplets.", 16, 4000),
 		maxBlobs    = CreateClientConVar("abl_max_blobs", "120", true, false, "Hard cap: body-surface blobs.", 8, 1000),
-		maxSegs     = CreateClientConVar("abl_max_body_segments", "2400", true, false, "Hard cap: body-surface streak segments (all characters).", 64, 20000),
-		maxPools    = CreateClientConVar("abl_max_pools", "56", true, false, "Hard cap: pools of all characters together (over it the least important one becomes a flat stain).", 4, 400),
+		maxSegs     = CreateClientConVar("abl_max_body_segments", "1600", true, false, "Hard cap: body-surface streak segments (all characters).", 64, 20000),
+		maxPools    = CreateClientConVar("abl_max_pools", "40", true, false, "Hard cap: pools of all characters together (over it the least important one becomes a flat stain).", 4, 400),
 		poolsPerBody = CreateClientConVar("abl_max_pools_per_body", "5", true, false, "Hard cap: pools kept for one bleeding character. Over it the least important of its own becomes a flat stain, never another character's (0 = no limit of its own).", 0, 64),
 		poolMaxSize = CreateClientConVar("abl_pool_max_size", "48", true, false, "Units: a pool grows no wider than about this; blood that reaches it after that is taken up by the floor (0 = no limit).", 0, 220),
 		poolMinSize = CreateClientConVar("abl_pool_min_size", "0", true, false, "Units: drops form a pool only once they bring enough blood for one this wide (2 ml at the least, whatever this says).", 0, 12),
 		bodyCatch   = CreateClientConVar("abl_body_catch", "1", true, false, "Blood that lands on another character runs down that body (1) or only leaves a spot there (0).", 0, 1),
 		maxRunoff   = CreateClientConVar("abl_max_runoff", "72", true, false, "Hard cap: world runoff rivulets.", 4, 600),
-		maxOverlays = CreateClientConVar("abl_max_overlays", "450", true, false, "Hard cap: wet-stain overlays.", 16, 4000),
+		maxOverlays = CreateClientConVar("abl_max_overlays", "300", true, false, "Hard cap: wet-stain overlays.", 16, 4000),
 		maxParts    = CreateClientConVar("abl_max_particles", "260", true, false, "Hard cap: cheap GMod particles.", 0, 3000),
-		maxTraces   = CreateClientConVar("abl_max_traces", "150", true, false, "Hard cap: collision traces per frame.", 10, 2000),
+		maxTraces   = CreateClientConVar("abl_max_traces", "100", true, false, "Hard cap: collision traces per frame.", 10, 2000),
 		maxGround   = CreateClientConVar("abl_max_ground_stains", "320", true, false, "Hard cap: blood stains from droplets landing on the ground (oldest removed first).", 16, 4000),
 		maxGroundBody = CreateClientConVar("abl_max_ground_stains_per_body", "200", true, false, "Hard cap: ground and wall stains kept of one character's blood. Over it that character's own oldest go first, never another's (so one body bleeding hard does not wipe out everybody else's stains).", 8, 4000),
 		maxBodyDecals = CreateClientConVar("abl_max_body_decals", "12", true, false, "Hard cap: blood decals kept on one character's model (the spots of drops, soaked cloth round a wound); the oldest go first. 0 = none are placed.", 0, 40),
 		decalRate   = CreateClientConVar("abl_decals_per_sec", "60", true, false, "Hard cap: engine decals placed per second.", 1, 1000),
-		drawDist    = CreateClientConVar("abl_draw_distance", "3500", true, false, "Blood effects beyond this distance are skipped.", 256, 20000),
+		drawDist    = CreateClientConVar("abl_draw_distance", "2800", true, false, "Blood effects beyond this distance are skipped.", 256, 20000),
 		sounds      = CreateClientConVar("abl_sounds", "1", true, false, "Drip / splash sounds.", 0, 1),
 		takeover    = CreateClientConVar("abl_zcity_takeover", "1", true, false, "In Z-City: AdvancedBlood is the only blood on screen (1), or Z-City's own blood particles and decals run next to it (0). Z-City's physiology runs either way.", 0, 1),
 		fleshDecals = CreateClientConVar("abl_engine_hit_decals", "0", true, false, "The engine's own red splat decal on a body at every bullet hit: keep it (1), or clear it and show AdvancedBlood's wound alone (0).", 0, 1),
@@ -68,6 +68,18 @@ if CLIENT then
 		p22         = CreateClientConVar("abl_pool_p22", "1", true, false, "Ground pools as phase 22 has them (1: the floor under a pool is as uneven as its surface, so the liquid stands deeper and darker in its hollows and its edge goes round its rises; each part can be turned off in C.P22), or as phase 21 left them (0).", 0, 1),
 		p23         = CreateClientConVar("abl_pool_p23", "1", true, false, "Ground pools as phase 23 draws them (1: an outline smooth at any angle, the meniscus's light restrained; each part can be turned off in C.P23), or as phase 22 left them (0).", 0, 1),
 	}
+
+	-- remorseism: настройки по умолчанию снижены ради FPS (качество 2 - без отражений в лужах, бюджет 1.5 мс, 100 Гц,
+	-- меньше капель/луж/следов). GMod запоминает настройки у игрока, поэтому у тех, кто уже запускал аддон со старыми
+	-- (ultra), новые ставятся один раз (метка data/abl_perf_v1.txt); дальше игрок может менять их как хочет.
+	if not file.Exists("abl_perf_v1.txt", "DATA") then
+		local perf = {
+			abl_quality = 2, abl_budget_ms = 1.5, abl_sim_hz = 100, abl_max_droplets = 300, abl_max_body_segments = 1600,
+			abl_max_pools = 40, abl_max_overlays = 300, abl_max_traces = 100, abl_draw_distance = 2800,
+		}
+		for name, value in pairs(perf) do RunConsoleCommand(name, tostring(value)) end
+		file.Write("abl_perf_v1.txt", "1")
+	end
 end
 
 ------------------------------------------------------------------------------------------

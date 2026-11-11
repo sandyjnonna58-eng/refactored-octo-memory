@@ -40,26 +40,13 @@ local shared = {
 	"sh_zcity.lua",
 }
 
+-- (тестовые сценарии разработчика - *test*, selftest, hostile - из сборки убраны: в игре они не нужны)
 local server = {
 	"server/sv_main.lua",
 	"server/sv_woundstore.lua",
 	"server/sv_compat.lua",
 	"server/sv_persist.lua",
 	"server/sv_dev.lua",
-	"server/sv_selftest.lua",
-	"server/sv_flowtest.lua",
-	"server/sv_filmtest.lua",
-	"server/sv_bleedtest.lua",
-	"server/sv_conttest.lua",
-	"server/sv_acctest.lua",
-	"server/sv_v19test.lua",
-	"server/sv_p21test.lua",
-	"server/sv_p22test.lua",
-	"server/sv_p23test.lua",
-	"server/sv_headtest.lua",
-	"server/sv_skeltest.lua",
-	"server/sv_hostile.lua",
-	"server/sv_looktest.lua",
 }
 
 -- Order matters: later modules capture tables created by earlier ones.
@@ -99,19 +86,6 @@ local client = {
 	"client/cl_sim.lua",
 	"client/cl_debug.lua",
 	"client/cl_accum.lua",
-	"client/cl_selftest.lua",
-	"client/cl_flowtest.lua",
-	"client/cl_filmtest.lua",
-	"client/cl_acctest.lua",
-	"client/cl_v19test.lua",
-	"client/cl_p21test.lua",
-	"client/cl_p22test.lua",
-	"client/cl_p23test.lua",
-	"client/cl_bleedtest.lua",
-	"client/cl_headtest.lua",
-	"client/cl_skeltest.lua",
-	"client/cl_hostile.lua",
-	"client/cl_looktest.lua",
 }
 
 for _, f in ipairs(shared) do
