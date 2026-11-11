@@ -1,8 +1,0 @@
-"VertexLitGeneric"
-{
-	"$basetexture" "advancedblood/decals/smear2"
-	"$decal" 1
-	"$decalscale" 0.001953125
-	"$translucent" 1
-	"$color2" "[0.62 0.58 0.58]"
-}
