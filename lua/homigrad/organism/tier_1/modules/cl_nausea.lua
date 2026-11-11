@@ -15,7 +15,9 @@ local function Level()
 end
 
 hook.Add("RenderScreenspaceEffects", "rem_nausea", function()
-	shown = math.Approach(shown, Level(), FrameTime() * 0.5) -- плавно (приходит шагами по 0.1)
+	local lvl = Level()
+	if lvl <= 0 and not LocalPlayer():Alive() then shown = 0 end -- умер - сразу без эффекта
+	shown = math.Approach(shown, lvl, FrameTime() * 0.5) -- плавно (приходит шагами по 0.1)
 	if shown < 0.2 then return end
 	local k = (shown - 0.2) / 0.8
 	local t = CurTime()

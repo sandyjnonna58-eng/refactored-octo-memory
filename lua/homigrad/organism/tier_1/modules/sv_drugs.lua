@@ -161,3 +161,23 @@ concommand.Add("rem_drug_set", function(ply, _, args)
 	if not C[kind] then return end
 	ply.organism[kind] = math.Clamp(tonumber(args[2]) or 1, 0, 6)
 end)
+
+-- смерть и возрождение: организм Z-City тот же, поэтому наркотики и тошноту сбрасываем сами
+-- (иначе эффекты на экране остаются после смерти и продолжаются после возрождения). Зависимость остаётся.
+local function ResetDrugs(ply)
+	if not IsValid(ply) then return end
+	local org = ply.organism
+	if org then
+		org.heroin, org.meth, org.lsd, org.remHRAdd = 0, 0, 0, 0
+		org.nausea, org.nauseaStage, org.nauseaSent = 0, 0, 0
+		for _, key in ipairs({"rem_high", "rem_heroin", "rem_meth", "rem_lsd"}) do org["drugSent_" .. key] = 0 end
+	end
+	for _, key in ipairs({"rem_high", "rem_heroin", "rem_meth", "rem_lsd", "rem_nausea"}) do ply:SetNW2Float(key, 0) end
+	ply.rem_fleshBites = 0
+end
+hook.Add("PlayerDeath", "rem_drugs_reset", ResetDrugs)
+hook.Add("PlayerSpawn", "rem_drugs_reset", function(ply)
+	ResetDrugs(ply)
+	timer.Simple(0, function() ResetDrugs(ply) end) -- после того как Z-City соберёт организм заново
+end)
+hook.Add("Player Spawn", "rem_drugs_reset", ResetDrugs)
