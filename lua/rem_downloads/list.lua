@@ -467,7 +467,6 @@ return {
 	"sound/rem_laststand.mp3",
 	"sound/rem_letitgo.mp3",
 	"sound/rem_levelup.mp3",
-	"sound/rem_lobotomy.ogg",
 	"sound/rem_loud_funkshenanigans.mp3",
 	"sound/rem_loud_yatebyamognu.mp3",
 	"sound/rem_newroundcommence.mp3",
