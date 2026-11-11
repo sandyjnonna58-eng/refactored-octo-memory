@@ -1,19 +1,29 @@
 -- Музыка при уходе сознания: вся музыка (каналы sound.PlayFile, cl_remaudio.lua) сначала начинает звучать эхом
 -- (к каждому треку - отстающие копии того же файла), потом будто издалека: тише, чуть медленнее, эхо гуще;
 -- отключился (org.otrub) - сам трек быстро гаснет, последним тает хвост эха - и тишина. Очнулся - всё возвращается.
--- Сила - от org.consciousness (клиенту приходит из sendtable): с C.start начинается, к C.full - полностью.
+-- Сила - насколько близко отключка (Near): худшее из сознания, боли, крови, кислорода и стадии шока - так эффект
+-- приходит заранее, а не в последний миг (обычно вырубает боль/кровь, а сознание падает уже перед самой отключкой).
+-- Проверка без ранений: rem_fadingmusic_test 0..1 (0 - выкл).
 local RA = hg.RemAudio
 if not RA then return end
 
 local C = {
-	start = 0.75, full = 0.35,   -- сознание: начало эффекта и полный эффект (отключка - около 0.3)
-	echoFrom = 0, farFrom = 0.45, -- с какой силы эффекта эхо и "издалека"
-	taps = { -- эхо: задержка (с) и громкость от трека; первые - сразу, остальные - когда "издалека"
-		{delay = 0.19, vol = 0.45, far = false},
-		{delay = 0.41, vol = 0.32, far = true},
-		{delay = 0.68, vol = 0.22, far = true},
+	-- "скоро отключка": с какого значения начинается и на каком - уже на грани (отключка - сознание 0.3, боль 130%
+	-- полторы секунды, кровь ~2400, кислород 4, шок 4-й стадии)
+	consciousness = {0.85, 0.33},
+	pain = {110, 152},           -- org.pain (100% = 120)
+	blood = {3400, 2500},
+	o2 = {15, 5},
+	shock = {[2] = 0.3, [3] = 0.6, [4] = 0.9},
+	echoUntil = 0.35,  -- эхо набирает силу до этой близости
+	farFrom = 0.6,     -- отсюда "шаг до отключки": музыка эхом и издалека
+	taps = { -- эхо: задержка (с) и громкость от трека; первое - сразу, остальные - когда "издалека"
+		{delay = 0.21, vol = 0.6, far = false},
+		{delay = 0.44, vol = 0.45, far = true},
+		{delay = 0.72, vol = 0.32, far = true},
+		{delay = 1.05, vol = 0.22, far = true},
 	},
-	farVolume = 0.3,   -- громкость самого трека "издалека"
+	farVolume = 0.25,  -- громкость самого трека "издалека"
 	farRate = 0.94,    -- и скорость (чуть ниже и медленнее)
 	lostMain = 1.2,    -- отключился: за столько секунд гаснет трек
 	lostTail = 3.0,    -- и хвост эха
@@ -34,6 +44,19 @@ local function Org()
 end
 
 local function Smooth(x) x = math.Clamp(x, 0, 1) return x * x * (3 - 2 * x) end
+local function Remap01(v, from, to) return math.Clamp((v - from) / (to - from), 0, 1) end
+
+local testCvar = CreateClientConVar("rem_fadingmusic_test", "0", false, false, "Test the losing-consciousness music effect, 0..1 (0 = off)", 0, 1)
+
+-- насколько близко отключка, 0..1
+local function Near(org)
+	local k = Remap01(org.consciousness or 1, C.consciousness[1], C.consciousness[2])
+	k = math.max(k, Remap01(org.pain or 0, C.pain[1], C.pain[2]))
+	k = math.max(k, Remap01(org.blood or 5000, C.blood[1], C.blood[2]))
+	k = math.max(k, Remap01(istable(org.o2) and org.o2[1] or 30, C.o2[1], C.o2[2]))
+	k = math.max(k, C.shock[org.shockStage or 0] or 0)
+	return k
+end
 
 local function StopEchoes(chan)
 	for _, tap in pairs(echoes[chan] or {}) do
@@ -71,7 +94,9 @@ hook.Add("Think", "rem_fadingmusic", function()
 	-- сила эффекта
 	local target = 0
 	local otrub = org and org.otrub
-	if org and not otrub then target = Smooth((C.start - (org.consciousness or 1)) / (C.start - C.full)) end
+	if org and not otrub then target = Near(org) end
+	local test = testCvar:GetFloat()
+	if test > 0 then target, otrub = test, false end
 	if otrub then
 		lostSince = lostSince or now
 		target = 1
@@ -110,7 +135,7 @@ hook.Add("Think", "rem_fadingmusic", function()
 		local f = (RA.Exempt[chan] or RA.Factor >= 1) and 1 or RA.Factor
 		local heard = vol * f
 		for i, t in ipairs(C.taps) do
-			local want = t.far and far or Smooth(level / 0.4)
+			local want = t.far and far or Smooth(level / C.echoUntil)
 			local tap = echoes[chan] and echoes[chan][i]
 			if want > 0.01 and not IsValid(tap) then SpawnTap(chan, i) end
 			if IsValid(tap) then
