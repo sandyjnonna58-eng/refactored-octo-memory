@@ -46,7 +46,6 @@ local server = {
 	"server/sv_woundstore.lua",
 	"server/sv_compat.lua",
 	"server/sv_persist.lua",
-	"server/sv_dev.lua",
 }
 
 -- Order matters: later modules capture tables created by earlier ones.
