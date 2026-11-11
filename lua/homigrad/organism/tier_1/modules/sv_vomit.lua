@@ -51,10 +51,22 @@ function hg.organism.VomitNormal(owner)
 	if org.isPly and not org.otrub and owner.Notify then owner:Notify(table.Random(phrases), true, "vomit", 0) end
 end
 
+-- стадии тошноты - мысль при переходе (подкатывает -> сейчас вырвет)
+local stageThoughts = {
+	[1] = {"My stomach is turning...", "Ugh... I feel queasy...", "Something's not right with my stomach..."},
+	[2] = {"I'm going to throw up...", "Oh no... here it comes...", "Can't... hold it..."},
+}
+
 function hg.organism.AddNausea(owner, org, amount)
 	if not org or amount <= 0 then return end
 	org.nausea = math.min((org.nausea or 0) + amount, 1)
+	local stage = org.nausea >= 0.8 and 2 or org.nausea >= 0.45 and 1 or 0
+	if stage > (org.nauseaStage or 0) and org.isPly and not org.otrub and IsValid(owner) and owner.Notify then
+		owner:Notify(table.Random(stageThoughts[stage]), true, "rem_nausea_stage", 0)
+	end
+	org.nauseaStage = stage
 	if org.nausea >= 1 then
+		org.nauseaStage = 0
 		hg.organism.VomitNormal(owner)
 	elseif IsValid(owner) and owner:IsPlayer() then
 		local r = math.Round(org.nausea, 1)

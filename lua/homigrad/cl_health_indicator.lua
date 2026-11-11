@@ -353,7 +353,14 @@ local function CollectAfflictionIcons(ply, org)
 	if bac > 0.3 then add("alcohol", bac / 3, string.format("Drunk (%.1f‰)", bac)) end
 	local bacEff = ply:GetNW2Float("rem_bac_eff", bac)
 	local nausea = ply:GetNW2Float("rem_nausea", 0)
-	if Num(org.wantToVomit) > 0.3 or nausea > 0.2 or bacEff > 2.2 then add("nausea", math.max(Num(org.wantToVomit), nausea, (bacEff - 2.2) / 1.5), "Nausea") end
+	if Num(org.wantToVomit) > 0.3 or nausea > 0.2 or bacEff > 2.2 then
+		-- стадии (sv_vomit.lua): подташнивает -> тошнит -> сейчас вырвет
+		local n = math.max(Num(org.wantToVomit), nausea, (bacEff - 2.2) / 1.5)
+		local label, desc = "Queasy", "Your stomach is uneasy."
+		if n >= 0.8 then label, desc = "About to vomit", "It's coming up. Any second now."
+		elseif n >= 0.45 then label, desc = "Nauseous", "Everything sways. You might throw up." end
+		add("nausea", n, label, nil, desc)
+	end
 	if Num(org.analgesia) > 0.3 then add("painkillers", Num(org.analgesia), "Painkillers") end
 	if Num(org.adrenaline) > 0.5 then add("adrenaline", Num(org.adrenaline) / 2, "Adrenaline") end
 	if org.noradrenalineActive then add("haste", 0.45, "Noradrenaline") end

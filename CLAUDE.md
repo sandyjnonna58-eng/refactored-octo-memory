@@ -155,6 +155,18 @@
   конечности (срез закрыт). COLLISION_GROUP_WEAPON - берётся руками/E, не мешает ходить. Кровь: NW2 rem_limb_bleed (45 с),
   клиент - hg.addBloodPart из среза (rem_limb_bone), удары о пол - util.Decal. Шапки/броня не копируются (Accessories none).
   rem_severed_limbs 0 - выкл., _life (300 с), _max (16). Катана: 5% отрубить конечность - раз за взмах (MultiDmg1 бьёт каждый тик).
+  E на конечность (PlayerUse) -> предмет `weapon_rem_flesh` (в руке - ClientsideModel тела, видна только конечность,
+  PlaceRoot ставит начало конечности к ладони): ЛКМ - укус (5), сытость +6, тошнота 0.22 + 0.05 за каждый укус за жизнь.
+- Наркотики (`modules/sv_drugs.lua` + `cl_drugs.lua`, предметы `weapon_rem_heroin` / `_meth` / `_lsd` на основе
+  `weapon_rem_drug_base`): org.heroin / meth / lsd (доза ~1, выводятся минутами, тик из sv_organism после никотина).
+  Героин - analgesia, сон, передоз > 1.8 - кислород падает (налоксон выводит); мет - выносливость, пульс (org.remHRAdd ->
+  sv_pulse.lua), паранойя, передоз > 2.5 - AddCardiacStress и жар; кислота - трип, > 2 бэд-трип (org.panic, страх).
+  Привыкание героина и мета - виды в hg.Addiction.Kinds (свои effects и craving ломки, sv_addiction.lua их зовёт).
+  NW2 rem_high («Веселье», плитка euphoria), rem_heroin / rem_meth / rem_lsd; плитки heroin_wd / meth_wd. Тест: rem_drug_set.
+- Тошнота: стадии в sv_vomit.lua AddNausea (0.45 / 0.8 - мысль; плитка Queasy / Nauseous / About to vomit), экран -
+  `modules/cl_nausea.lua` (зеленеет, плывёт, качает). От вида расчленёнки - `modules/sv_gorenausea.lua` (раз в секунду:
+  конечности, разрубленные тела, без головы в поле зрения до 450; привыкание rem_goreTol до -90%; ярость и героин глушат;
+  тошнота сама проходит 0.003/с); от плоти - weapon_rem_flesh; от героина и ломки - sv_drugs.lua. rem_gore_nausea 0 - выкл.
 - Осколки (гранаты ent_hg_grenade, взрывы hg.PropExplosion / StartShrapnel в explosives/sv_explosives.lua, СВУ weapon_traitor_ied):
   попадание в стену / проп -> `hg.ShrapnelImpact` - короткая пуля Z-City (FireLuaBullets, урон 1) у места попадания: след и
   пробоина, её видят аддоны пробоин через EntityFireBullets / PostEntityFireBullets / callback. Лимит на взрыв `rem_frag_impacts`.
