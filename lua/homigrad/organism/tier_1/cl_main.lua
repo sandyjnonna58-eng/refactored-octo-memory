@@ -257,13 +257,22 @@ local function IsHeartCritical(org)
   or (org.heartStrain or 0) >= 0.75 or pulse < 40 or pulse > 160
 end
 
+local remLastEcgBeat
 local function ThinkBadHeartbeat(org)
- local now = CurTime()
- if now < remNextBadHeartbeat then return end
-
- local bpm = math.Clamp(org.heartbeat or org.pulse or 70, 30, 200)
- local jitter = 1 + math.Rand(-0.4, 0.4) * math.Clamp(org.arrhythmia or 0, 0, 1)
- remNextBadHeartbeat = now + 60 / bpm * jitter
+ -- каждый удар сердца: по счётчику ударов ЭКГ (cl_ecg.lua) - звук совпадает с зубцом на мониторе
+ local ecg = hg.ECG
+ if ecg and ecg.beats then
+  if remLastEcgBeat == ecg.beats then return end
+  local first = remLastEcgBeat == nil
+  remLastEcgBeat = ecg.beats
+  if first then return end
+ else
+  -- запасной вариант без ЭКГ: свой таймер по пульсу
+  local now = CurTime()
+  if now < remNextBadHeartbeat then return end
+  local bpm = math.Clamp(org.heartbeat or org.pulse or 70, 20, 300)
+  remNextBadHeartbeat = now + 60 / bpm * (1 + math.Rand(-0.4, 0.4) * math.Clamp(org.arrhythmia or 0, 0, 1))
+ end
  -- удар поверх всего: напрямую, на полной громкости и без глушения (музыку глушит RemCardiacSounds)
  sound.PlayFile("sound/" .. remBadHeartbeatSound, "noblock", function(station)
   if not IsValid(station) then return end
@@ -293,7 +302,7 @@ hook.Add("Think", "RemCardiacSounds", function()
  -- сердце не бьётся (остановка; heartbeat 0 приходит и при старых данных без heartstop) - ударов нет
  local beating = org and not heartstop and not fibrillation and (org.heartbeat or 70) > 0
  local critical = beating and IsHeartCritical(org)
- if critical then ThinkBadHeartbeat(org) end
+ if critical then ThinkBadHeartbeat(org) else remLastEcgBeat = hg.ECG and hg.ECG.beats end
  -- пока сердце плохое, вся музыка тише (до 25%) - удары сердца перекрывают её
  if hg.RemAudio and hg.RemAudio.Duck then hg.RemAudio.Duck("rem_badheart", critical and 0.25 or nil) end
  ThinkArrhythmiaSound(org)

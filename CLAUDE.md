@@ -130,7 +130,8 @@
   AddCardiacStress(x) = +x*60%; попадание в сердце - 90% сразу (sv_organs.lua). Аритмия 25..75 - сознание медленно уходит
   (cap за 45 с) + мысль; фибрилляция - через давление и кислород. Пороги отключки в sv_pain.lua прежние (0.3 / 0.38);
   удар по черепу 1x. Плитки: arrhythmia, vtach, fibrillation, cardiac_arrest, tachycardia (> 110) / bradycardia (< 60).
-  Удар плохого сердца - sound.PlayFile без глушения, музыка 25% (RA.Duck "rem_badheart"). Звуки `sound/rem_heart/`
+  Удар плохого сердца - на каждый удар по счётчику hg.ECG.beats (кардиограмма идёт в Think "rem_ecg" всегда),
+  sound.PlayFile без глушения, музыка 25% (RA.Duck "rem_badheart"). Звуки `sound/rem_heart/`
   (Fading Vitality, без авторских прав по словам пользователя): heartbeat_bad.mp3, arrhythmia.mp3 - фон при аритмии.
   ЭКГ-монитор - верхняя часть панели осмотра (общий фон/рамка, cl_health_indicator.lua): `lua/homigrad/cl_ecg.lua`
   (hg.ECG.Draw: BPM / SpO2, светлая полоса с давлением; линия пиксельная - столбики min/max, новое справа ярче со свечением).

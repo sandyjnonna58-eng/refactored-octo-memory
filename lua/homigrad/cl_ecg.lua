@@ -84,10 +84,25 @@ local function NextBeat(kind, hr, fib)
 	end
 end
 
+-- счётчик настоящих ударов сердца (hg.ECG.beats): по нему cl_main.lua играет звук плохого сердца на каждый удар.
+-- У аритмии волны на мониторе - трепетание, сами удары идут отдельно, неровно, с частотой пульса
+E.beats = E.beats or 0
+local pulseT, pulseLen = 0, 0.85
+
 local function Sample(kind, hr, fib, dt)
 	if kind == "flat" then beatT = 0 return 0 end
 	beatT = beatT + dt
-	if beatT >= beatLen then NextBeat(kind, hr, fib) end
+	if beatT >= beatLen then
+		NextBeat(kind, hr, fib)
+		if kind ~= "arr" and kind ~= "vf" then E.beats = E.beats + 1 end
+	end
+	if kind == "arr" then
+		pulseT = pulseT + dt
+		if pulseT >= pulseLen then
+			pulseT, pulseLen = 0, 60 / math.Clamp(hr, 20, 300) * math.Rand(0.6, 1.4)
+			E.beats = E.beats + 1
+		end
+	end
 	if kind == "vt" then return PL(beatT / beatLen, SHAPE.vt) end
 	if kind == "arr" or kind == "vf" then return PL(beatT / beatLen, SHAPE.wave) * beatAmp end
 	-- быстрый удар сжимается, если не влезает в период
@@ -106,6 +121,7 @@ end
 
 local function Update(org, n)
 	if n ~= C then Reset(n) end
+	E.n = C
 	local now = RealTime()
 	local dt = lastTime and math.min(now - lastTime, 0.25) or 0
 	lastTime = now
@@ -128,6 +144,16 @@ local function Update(org, n)
 		end
 	end
 end
+
+-- кардиограмма идёт всегда (а не только пока открыт осмотр): по ней же звучат удары
+hook.Add("Think", "rem_ecg", function()
+	local org = E.drawOrg
+	if not org or RealTime() - (E.drawTime or 0) > 0.5 then
+		local ply = LocalPlayer()
+		org = IsValid(ply) and ply:Alive() and (ply.new_organism or ply.organism) or nil
+	end
+	Update(org, E.n or 100)
+end)
 
 local LO, HI = -0.7, 1.1 -- диапазон значений по высоте графика
 
@@ -154,7 +180,7 @@ function E.Draw(x, y, w, h, org, a)
 	local n, rows = math.floor(gw / P), math.floor(gh / P)
 	gx = gx + math.floor((gw - n * P) / 2)
 	if n < 4 or rows < 4 then return end
-	Update(org, n)
+	E.drawOrg, E.drawTime, E.n = org, RealTime(), n
 	if a <= 0.01 then return end
 
 	local hr = org and math.Round(org.heartbeat or 0) or 0
