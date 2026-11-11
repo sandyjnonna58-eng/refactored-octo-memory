@@ -92,7 +92,8 @@
   PostDrawOpaqueRenderables); STUMP - кость, место отрыва, p2b из .mdl и endLocal (наружный срез, по вершинам):
   срез ставится в место отрыва + rem_lambdagore_stump_push вдоль кости, размер rem_lambdagore_stump_scale;
   свой обрубок Z-City (cl_main.lua GoreCalc) при работающем Lambda не рисуется. Физика оторванной части у рэгдоллов
-  (LG.HideLimbPhysics: CONTENTS_EMPTY, без столкновений, держится у места отрыва) - на отрыве и в Ragdoll_Create.
+  (LG.HideLimbPhysics: CONTENTS_EMPTY, без столкновений, масса 0.1, связь с суставом НЕ рвать - иначе обрубок дёргается;
+  физган её не берёт - PhysgunPickup) - на отрыве и в Ragdoll_Create.
   BloodMark: оторванная конечность (организм) и кости с NaN-позицией (разрез пополам) - Z.BoneHidden / Z.BoneMatrix
   (sh_zcity.lua) и сжатие в Pose:Bone (cl_bodymesh.lua: оторванная - в точку отрыва, NaN - к родителю), иначе кровь
   течёт по невидимой руке / тянется лентой или в бесконечность.

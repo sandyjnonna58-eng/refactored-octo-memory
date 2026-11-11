@@ -125,9 +125,9 @@ if SERVER then
 	end
 
 	-- Оторванная конечность у рэгдолла (свой рэгдолл игрока, труп) физически оставалась: невидимую ногу можно было
-	-- схватить. Как в Lambda: кости части - пустые (сквозь них проходят лучи и руки), без столкновений и массы,
-	-- без связи с телом, и держатся на месте отрыва.
-	local goneRags = {}
+	-- схватить. Кости части делаем пустыми (сквозь них проходят лучи и руки), без столкновений и почти без массы.
+	-- Связь с суставом оставляем: часть висит невидимой на локте / колене, и обрубок (его рисуют по началу этой
+	-- части) стоит на месте. (Раньше её отвязывали и раз в 0.1 с прижимали к плечу - обрубок дёргался.)
 	local function HideLimbPhysics(rag, bone)
 		if not IsValid(rag) or not rag:IsRagdoll() then return end
 		local top = rag:LookupBone(bone)
@@ -149,28 +149,19 @@ if SERVER then
 					phys:SetContents(CONTENTS_EMPTY)
 					phys:EnableCollisions(false)
 					phys:SetMass(0.1)
-					phys:EnableGravity(false)
-					phys:EnableMotion(false)
-					rag:RemoveInternalConstraint(pb)
-					rag.remLGGone[pb] = anchor
+					phys:SetDragCoefficient(5)
+					rag.remLGGone[pb] = true
 				end
 			end
 		end
-		goneRags[rag] = true
 	end
 	LG.HideLimbPhysics = HideLimbPhysics
 
-	timer.Create("rem_lambdagore_gone", 0.1, 0, function()
-		for rag in pairs(goneRags) do
-			if not IsValid(rag) then goneRags[rag] = nil continue end
-			for pb, anchor in pairs(rag.remLGGone or {}) do
-				local phys, ap = rag:GetPhysicsObjectNum(pb), anchor and anchor >= 0 and rag:GetPhysicsObjectNum(anchor)
-				if IsValid(phys) and IsValid(ap) then
-					phys:SetPos(ap:GetPos(), true)
-					phys:SetAngles(ap:GetAngles())
-				end
-			end
-		end
+	-- физган и руки не берут оторванную часть, даже если луч её всё-таки задел
+	hook.Add("PhysgunPickup", "rem_lambdagore", function(ply, ent)
+		if not IsValid(ent) or not ent.remLGGone then return end
+		local tr = ply:GetEyeTrace()
+		if tr.Entity == ent and tr.PhysicsBone and ent.remLGGone[tr.PhysicsBone] then return false end
 	end)
 
 	local function HideAmputated(rag, org)
