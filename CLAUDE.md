@@ -132,8 +132,10 @@
   удар по черепу 1x. Плитки: arrhythmia, vtach, fibrillation, cardiac_arrest, tachycardia (> 110) / bradycardia (< 60).
   Удар плохого сердца - sound.PlayFile без глушения, музыка 25% (RA.Duck "rem_badheart"). Звуки `sound/rem_heart/`
   (Fading Vitality, без авторских прав по словам пользователя): heartbeat_bad.mp3, arrhythmia.mp3 - фон при аритмии.
-  ЭКГ-монитор над силуэтом осмотра: `lua/homigrad/cl_ecg.lua` (hg.ECG.Draw, BPM / SpO2 / давление, форма по ритму:
-  синус, неровные удары + уродливые сокращения, пила ЖТ, мелкий хаос ФЖ, красная прямая); выкл. - `rem_ecg 0`.
+  ЭКГ-монитор - верхняя часть панели осмотра (общий фон/рамка, cl_health_indicator.lua): `lua/homigrad/cl_ecg.lua`
+  (hg.ECG.Draw: BPM / SpO2, светлая полоса с давлением; линия пиксельная - столбики min/max, новое справа ярче со свечением).
+  Формы с примеров пользователя (SHAPE): fast (> 110), slow (< 60), normal, vt (fib > 50, треугольники), wave - аритмия
+  (fib > 15) и фибрилляция (> 75: чаще, неровнее, слабеет), остановка/fib >= 99 - красная прямая; выкл. - `rem_ecg 0`.
 - Осколки (гранаты ent_hg_grenade, взрывы hg.PropExplosion / StartShrapnel в explosives/sv_explosives.lua, СВУ weapon_traitor_ied):
   попадание в стену / проп -> `hg.ShrapnelImpact` - короткая пуля Z-City (FireLuaBullets, урон 1) у места попадания: след и
   пробоина, её видят аддоны пробоин через EntityFireBullets / PostEntityFireBullets / callback. Лимит на взрыв `rem_frag_impacts`.

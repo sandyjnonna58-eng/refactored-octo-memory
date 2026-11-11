@@ -702,10 +702,18 @@ hook.Add("HUDPaint", "rem_health_indicator", function()
 
 	local backdropX = currentX + ScreenScaleFixed(BACKDROP_OFFSET_X)
 	local backdropY = y + ScreenScaleFixed(BACKDROP_OFFSET_Y)
+	-- ЭКГ-монитор (cl_ecg.lua) - верхняя часть той же панели: общий фон и рамка, тонкий разделитель
+	local ecgOn = hg.ECG and hg.ECG.Draw and hg.ECG.cv:GetBool()
+	local monH = ecgOn and math.floor(w * 0.46) or 0
 	surface.SetDrawColor(colBackdrop)
-	surface.DrawRect(backdropX, backdropY, w * 0.92, h * 0.92)
+	surface.DrawRect(backdropX, backdropY - monH, w * 0.92, h * 0.92 + monH)
 	surface.SetDrawColor(colOutline)
-	surface.DrawOutlinedRect(backdropX, backdropY, w * 0.92, h * 0.92, 1)
+	surface.DrawOutlinedRect(backdropX, backdropY - monH, w * 0.92, h * 0.92 + monH, 1)
+	if ecgOn then
+		surface.SetDrawColor(colOutline.r, colOutline.g, colOutline.b, colOutline.a * 0.5)
+		surface.DrawRect(backdropX + 1, backdropY, w * 0.92 - 2, 1)
+		hg.ECG.Draw(backdropX, backdropY - monH, w * 0.92, monH, org, 1)
+	end
 
 	local camPos = Vector(95, 0, 65)
 	local camRenderX = currentX + ScreenScaleFixed(SILHOUETTE_OFFSET_X)
@@ -755,12 +763,6 @@ hook.Add("HUDPaint", "rem_health_indicator", function()
 		render.SetColorModulation(1, 1, 1)
 		render.SuppressEngineLighting(false)
 	cam.End3D()
-
-	-- ЭКГ-монитор над силуэтом (cl_ecg.lua): та же ширина, едет вместе с панелью
-	if hg.ECG and hg.ECG.Draw and hg.ECG.cv:GetBool() then
-		local monW, monH = w * 0.92, math.floor(w * 0.36)
-		hg.ECG.Draw(backdropX, backdropY - monH - ScreenScaleFixed(3), monW, monH, org, 1)
-	end
 
 	-- в отключке всё это еле видно: поверх - темнота, медленно сгущается и отступает. Сверху вниз она нарастает
 	-- плавно (полосами по 1/48 высоты) - без резкого края: прямоугольник давал линию поперёк экрана
