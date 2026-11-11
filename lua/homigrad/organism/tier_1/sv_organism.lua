@@ -252,6 +252,7 @@ local function send_organism(org, ply)
 	sendtable.cardiacOutput = org.cardiacOutput
 	sendtable.arrhythmia = org.arrhythmia
 	sendtable.fibrillation = org.fibrillation
+	sendtable.heartstop = org.heartstop -- без этого клиент не знал об остановке сердца (стук "плохого сердца" шёл дальше)
 	sendtable.myocardialOxygen = org.myocardialOxygen
 	sendtable.heartStrain = org.heartStrain
 	sendtable.heart = org.heart
@@ -335,6 +336,7 @@ local function send_bareinfo(org)
 	sendtable.cardiacOutput = org.cardiacOutput
 	sendtable.arrhythmia = org.arrhythmia
 	sendtable.fibrillation = org.fibrillation
+	sendtable.heartstop = org.heartstop -- без этого клиент не знал об остановке сердца (стук "плохого сердца" шёл дальше)
 	sendtable.myocardialOxygen = org.myocardialOxygen
 	sendtable.heartStrain = org.heartStrain
 	sendtable.heart = org.heart

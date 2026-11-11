@@ -290,7 +290,9 @@ hook.Add("Think", "RemCardiacSounds", function()
   StopRemFibrillationSound()
  end
 
- local critical = org and not heartstop and not fibrillation and IsHeartCritical(org)
+ -- сердце не бьётся (остановка; heartbeat 0 приходит и при старых данных без heartstop) - ударов нет
+ local beating = org and not heartstop and not fibrillation and (org.heartbeat or 70) > 0
+ local critical = beating and IsHeartCritical(org)
  if critical then ThinkBadHeartbeat(org) end
  -- пока сердце плохое, вся музыка тише (до 25%) - удары сердца перекрывают её
  if hg.RemAudio and hg.RemAudio.Duck then hg.RemAudio.Duck("rem_badheart", critical and 0.25 or nil) end
