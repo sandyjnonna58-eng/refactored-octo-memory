@@ -10,7 +10,10 @@
   Исключение: локальная копия в `GarrysMod/garrysmod/addons/refactored-octo-memory-main` - распакованный zip без `.git`,
   там правим файлы напрямую, без коммитов и push.
 - Комментарии в коде - по-русски, коротко: что делает и почему.
-- В игре изменения проверяет пользователь; у Claude - только проверка синтаксиса Lua.
+- В игре изменения проверяет пользователь; у Claude - только проверка синтаксиса Lua: `python3 tools/luacheck/check.py [файлы]`
+  (без аргументов - все .lua; нужен pip-пакет luaparser).
+- Серверный профайлер `lua/autorun/00_remorse_profiler.lua` работает только если `rem_profiler_enabled 1` на старте карты
+  (иначе ничего не оборачивает); разовый замер - `rem_profile_sv` / `rem_profile` (homigrad/sh_hookprofiler.lua).
 - Чужой защищённый контент (видео, фото товаров, выдранные модели) - не в публичный репозиторий, а в приватные паки,
   они в `.gitignore` (`materials/rem_wd_private`, `sound/rem_wd_private`, `materials/rem_drinks_private`),
   раздаются через FastDL-циклы в `lua/homigrad/skills/sv_skills.lua`.
