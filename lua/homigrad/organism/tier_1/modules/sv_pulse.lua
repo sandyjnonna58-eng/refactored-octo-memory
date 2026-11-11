@@ -31,6 +31,12 @@ local arr_consc_mul = 0.9
 local arr_consc_time = 45
 -- давление и фибрилляция тоже гасят сознание не сразу, а за столько секунд (раньше - мгновенно)
 local hypotension_consc_time = 15
+-- "плохое сердце" для аритмии (иначе она не начинается и быстро проходит)
+local arr_bad_heart = 0.2          -- повреждение сердца
+local arr_bad_ischemia = 0.35      -- нехватка кислорода сердцу (1 - myocardialOxygen)
+local arr_bad_strain = 0.5         -- перегрузка
+local arr_bad_hypotension = 0.35
+local arr_bad_hypertension = 0.6
 local fibrillation_consc_time = 6
 
 local function addArrhythmia(org, amount)
@@ -172,11 +178,18 @@ module[2] = function(owner, org, timeValue)
 	
 	local ischemia = Clamp(1 - (org.myocardialOxygen or 1), 0, 1)
 	local stress = Clamp((org.heart or 0) * 0.9 + ischemia * 0.8 + (org.hypertension or 0) * 0.35 + (org.hypotension or 0) * 0.3 + Clamp(org.shock, 0, 80) / 180 + max(org.pain - 60, 0) / 220 + max(org.heartbeat - 165, 0) / 190, 0, 2)
-	local arrTarget = Clamp(stress * 0.42, 0, 1)
+	-- аритмия только при плохом сердце (иначе бег, страх и боль давали её здоровому - плитка и звук без причины):
+	-- повреждено, мало кислорода, перегружено, давление сильно не в норме, крови мало, тяжёлый шок
+	local heartBad = (org.heart or 0) >= arr_bad_heart or ischemia >= arr_bad_ischemia or (org.heartStrain or 0) >= arr_bad_strain
+		or (org.hypotension or 0) >= arr_bad_hypotension or (org.hypertension or 0) >= arr_bad_hypertension
+		or (org.blood or 5000) < arr_blood_start or (org.shockStage or 0) >= 3
+	local arrTarget = heartBad and Clamp(stress * 0.42, 0, 1) or 0
 	if org.alive and (org.blood or 5000) < arr_blood_start then
 		arrTarget = math.max(arrTarget, Clamp(Remap(org.blood, arr_blood_start, arr_blood_full, arr_blood_min, arr_blood_max), arr_blood_min, arr_blood_max))
 	end
-	org.arrhythmia = Approach(org.arrhythmia or 0, arrTarget, arrTarget > (org.arrhythmia or 0) and timeValue / 25 or timeValue / 90)
+	-- плохое сердце: растёт за ~25 с, отпускает медленно; сердце в порядке - проходит за ~20 с
+	local arrDecay = heartBad and timeValue / 90 or timeValue / 20
+	org.arrhythmia = Approach(org.arrhythmia or 0, arrTarget, arrTarget > (org.arrhythmia or 0) and timeValue / 25 or arrDecay)
 
 	-- сердце сбилось - сначала мысль, потом сознание медленно уходит
 	local arr = org.arrhythmia or 0

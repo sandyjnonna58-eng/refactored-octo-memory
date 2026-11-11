@@ -20,7 +20,7 @@ STYLE = {
     'alcohol_wd': ('fill', (225, 165, 85)),
     'amputation': ('fill', (226, 182, 150), (200, 25, 25)),
     'anger': ('face', (255, 70, 60)),
-    'arrhythmia': ('fill', (255, 130, 130)),
+    'arrhythmia': ('fill', (236, 210, 204), (205, 25, 25)),
     'arterial': ('fill', (200, 18, 18)),
     'bleeding': ('fill', (205, 22, 22)),
     'blind': ('fill', (232, 226, 218)),

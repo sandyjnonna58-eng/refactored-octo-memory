@@ -58,6 +58,7 @@
   (силуэт не темнее 0.45, поверх пульсирующая темнота 35-65%), выкл. - `rem_otrub_inspect 0`.
   Значки - в стиле Fading Vitality (свои рисунки): белая основа `tools/affliction_icons/base` (make.py из Tabler),
   стиль и цвета - `tools/affliction_icons/make_fv.py` -> `materials/rem_affl`. Новый значок: в make.py и в STYLE make_fv.py.
+  Свои рисунки в make.py: hypoxia, liver, arrhythmia (сердце с красной рваной кардиограммой - деталь не должна касаться контура).
 - Алкоголь, никотин, привыкание, сосуды, рвота: `lua/homigrad/organism/tier_1/modules/` (`sv_alcohol`, `sv_nicotine`,
   `sv_addiction`, `sv_vessels`, `sv_vomit` и их `cl_`). Напитки - `weapon_hg_vodka` (база) и наследники, сигареты -
   `weapon_hg_cigarettes`.
@@ -118,8 +119,9 @@
   дальней стороне), PostDrawOpaqueRenderables показывает его трафаретом в рваном отверстии. Зовёт камера Z-City
   (cl_camera.lua renderscene, во всех ветках), без неё - свой хук RenderScene. rem_crater_portals (сколько сразу, 0 - выкл.),
   rem_crater_portal_res (доля экрана).
-- Сердце (`modules/sv_pulse.lua`, звуки - `cl_main.lua` RemCardiacSounds): аритмия от «нагрузки» (повреждение, ишемия,
-  давление, шок, боль), от крови ниже 4.0 л (не меньше 0.3) до сильной к 3.5 л (0.65), попадание в сердце - 90% сразу
+- Сердце (`modules/sv_pulse.lua`, звуки - `cl_main.lua` RemCardiacSounds): аритмия ТОЛЬКО при плохом сердце (heartBad:
+  повреждение >= 0.2, ишемия >= 0.35, перегрузка >= 0.5, давление, кровь < 4.0 л, шок 3+; иначе проходит за ~20 с),
+  сила - от «нагрузки», от крови ниже 4.0 л (не меньше 0.3) до сильной к 3.5 л (0.65), попадание в сердце - 90% сразу
   (sv_organs.lua input_list.heart); при аритмии от 0.25 сознание медленно уходит (cap 1 - arr*0.9 за 45 с) + мысль.
   Низкое давление и фибрилляция тоже гасят сознание плавно. Пороги отключки и шок в sv_pain.lua - прежние (0.3 / 0.38,
   от боли вырубает как обычно); удар по черепу 1x вместо 2x. Удар плохого сердца - sound.PlayFile без глушения, музыка

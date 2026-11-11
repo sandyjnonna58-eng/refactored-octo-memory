@@ -16,7 +16,7 @@ TABLER = {
     'fracture': 'bone', 'skull': 'skull',
     'concussion': 'spiral', 'brain': 'brain', 'seizure': 'bolt', 'unconscious': 'zzz',
     'pain': 'mood-nervous', 'shock': 'activity', 'critical': 'alert-triangle',
-    'arrhythmia': 'heart-rate-monitor', 'fibrillation': 'activity-heartbeat', 'cardiac_arrest': 'heart-off',
+    'fibrillation': 'activity-heartbeat', 'cardiac_arrest': 'heart-off',
     'heart': 'heart-broken', 'pressure_low': 'gauge', 'pressure_high': 'gauge',
     'lungs': 'lungs', 'lung_failure': 'lungs-off', 'hot': 'temperature-plus', 'cold': 'temperature-minus',
     'freezing': 'snowflake', 'vessels_narrow': 'arrows-minimize', 'vessels_wide': 'arrows-maximize',
@@ -37,6 +37,26 @@ def tabler(name, out):
     im = Image.new('RGBA', (SIZE, SIZE), (0, 0, 0, 0))
     im.alpha_composite(icon, (8, 8))
     im.save(out)
+
+def arrhythmia(out):
+    # аритмия: сердце, внутри неровная кардиограмма - зубцы разной высоты и пропущенный удар (своя, не Tabler)
+    import math
+    S = 4
+    im = Image.new('RGBA', (SIZE * S, SIZE * S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    cx, cy, k = 48, 47, 2.4
+    pts = []
+    for i in range(240):
+        t = i / 240 * math.tau
+        x = 16 * math.sin(t) ** 3
+        y = 13 * math.cos(t) - 5 * math.cos(2 * t) - 2 * math.cos(3 * t) - math.cos(4 * t)
+        pts.append(((cx + x * k) * S, (cy - y * k) * S))
+    d.line(pts + [pts[0]], fill='white', width=int(6.5 * S), joint='curve')
+    # кардиограмма (внутри, не касаясь контура - на плитке она станет красной деталью)
+    ecg = [(30, 50), (36, 50), (39, 46), (41, 50), (44, 50), (47, 42), (51, 61), (54, 50), (57, 50),
+           (59, 45), (61, 56), (63, 50)]
+    d.line([(x * S, y * S) for x, y in ecg], fill='white', width=int(3.6 * S), joint='curve')
+    im.resize((SIZE, SIZE), Image.LANCZOS).save(out)
 
 def o2(out):
     # кислород: маленькая "O2" и график, который падает вниз (ломаная со стрелкой у самого низа)
@@ -141,6 +161,7 @@ mark(os.path.join(OUT, 'pressure_high.png'), True)
 mark(os.path.join(OUT, 'pressure_low.png'), False)
 o2(os.path.join(OUT, 'hypoxia.png'))
 liver(os.path.join(OUT, 'liver.png'))
+arrhythmia(os.path.join(OUT, 'arrhythmia.png'))
 for f in (wound, internal, immobilized, amputation, dislocation):
     f(os.path.join(OUT, f.__name__ + '.png'))
 print(len(TABLER) + 7, 'icons')
