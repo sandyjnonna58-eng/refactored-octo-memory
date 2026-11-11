@@ -254,8 +254,10 @@ local function CollectAfflictionIcons(ply, org)
 
 	if not org then return icons end
 
-	-- сердце - всегда первое, как в Fading Vitality (в отрисовке бьётся с пульсом)
-	add("pulse", 0.05, "Heart", false, "Pulse: " .. math.Round(Num(org.pulse)) .. " bpm")
+	-- плитка сердца - только если ЭКГ выключена (rem_ecg 0): пульс показывает монитор над силуэтом
+	if not (hg.ECG and hg.ECG.cv and hg.ECG.cv:GetBool()) then
+		add("pulse", 0.05, "Heart", false, "Pulse: " .. math.Round(Num(org.pulse)) .. " bpm")
+	end
 
 	-- раны и кровь
 	local wounds = ply.wounds or ply:GetNetVar("wounds")

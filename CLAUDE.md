@@ -54,8 +54,8 @@
   растёт >= death_brain_rate 0.15%/с уже death_brain_hold 2 с; скачки от попаданий не в счёт); тогда же incapacitated. Позвоночник/трахея и т.п. - только incapacitated, без таймера.
 - Экран смерти и выбор звука смерти (`rem_deathsound`, настройка Gameplay -> «Death sound: heart stop»):
   `lua/autorun/client/cl_cdeath.lua`, настройки - `lua/initpost/menu-n-derma/derma/cl_menu_options.lua`.
-- Панель состояний (плитки, как в Fading Vitality: ряд слева направо от панели силуэта, первым всегда сердце «pulse» (бьётся
-  с org.pulsethink), остальные в порядке появления (iconOrder), пропала плитка - следующие скользят к сердцу (tileSlotX);
+- Панель состояний (плитки, как в Fading Vitality: ряд слева направо от панели силуэта, первым сердце «pulse» (бьётся
+  с org.pulsethink; только при rem_ecg 0 - иначе пульс на ЭКГ), остальные в порядке появления (iconOrder), пропала плитка - следующие скользят к сердцу (tileSlotX);
   тяжёлые приподняты и светятся): `lua/homigrad/cl_health_indicator.lua`. Без сознания осмотр показывается сам, тускло
   (силуэт не темнее 0.45, поверх пульсирующая темнота 35-65%), выкл. - `rem_otrub_inspect 0`.
   Значки - в стиле Fading Vitality (свои рисунки): белая основа `tools/affliction_icons/base` (make.py из Tabler),
