@@ -1,5 +1,5 @@
 -- Привыкание и ломка (алкоголь - sv_alcohol.lua, никотин - sv_nicotine.lua).
--- Зависимость (0..1) хранится на игроке, а не в организме: после смерти и возрождения она остаётся (пока игрок на сервере),
+-- Зависимость (0..1) хранится на игроке, а не в организме; при смерти зависимость и ломка сбрасываются (ResetAddiction),
 -- без употребления медленно проходит (полностью - примерно за 40 минут).
 --   растёт, пока вещество в крови: алкоголь - ~2 бутылки водки до сильной зависимости, никотин - ~5-6 сигарет;
 --   толерантность: при зависимости алкоголь действует слабее (до -40%), сигарета не вызывает кашля и головокружения;
@@ -103,11 +103,13 @@ function hg.organism.Addiction(owner, org, timeValue)
 end
 
 -- после возрождения ломка начинается заново (зависимость остаётся)
-hook.Add("PlayerSpawn", "rem_addiction_spawn", function(ply)
-	if not ply.rem_addict then return end
+-- смерть - конец зависимости и ломки: новая жизнь начинается чистой (по просьбе)
+local function ResetAddiction(ply)
+	if not IsValid(ply) or not ply.rem_addict then return end
 	for kind, d in pairs(ply.rem_addict) do
-		d.wd = 0
-		d.vomit = 0
+		d.dep, d.wd, d.vomit = 0, 0, 0
 		Sync(ply, kind, d)
 	end
-end)
+end
+hook.Add("PlayerDeath", "rem_addiction_death", ResetAddiction)
+hook.Add("PlayerSpawn", "rem_addiction_spawn", ResetAddiction)

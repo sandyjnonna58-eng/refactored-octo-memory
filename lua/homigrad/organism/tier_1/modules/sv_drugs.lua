@@ -163,7 +163,7 @@ concommand.Add("rem_drug_set", function(ply, _, args)
 end)
 
 -- смерть и возрождение: организм Z-City тот же, поэтому наркотики и тошноту сбрасываем сами
--- (иначе эффекты на экране остаются после смерти и продолжаются после возрождения). Зависимость остаётся.
+-- (иначе эффекты на экране остаются после смерти и продолжаются после возрождения). Зависимость - sv_addiction.lua.
 local function ResetDrugs(ply)
 	if not IsValid(ply) then return end
 	local org = ply.organism

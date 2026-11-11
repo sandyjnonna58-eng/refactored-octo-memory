@@ -164,7 +164,7 @@
   Привыкание героина и мета - виды в hg.Addiction.Kinds (свои effects и craving ломки, sv_addiction.lua их зовёт).
   NW2 rem_high («Веселье», плитка euphoria), rem_heroin / rem_meth / rem_lsd; плитки heroin_wd / meth_wd. Тест: rem_drug_set.
   Смерть / возрождение (PlayerDeath, PlayerSpawn, "Player Spawn") - ResetDrugs: наркотики, тошнота и их NW2 в ноль
-  (организм Z-City тот же - иначе эффекты остаются), зависимость остаётся.
+  (организм Z-City тот же - иначе эффекты остаются); зависимость и ломка тоже сбрасываются при смерти (sv_addiction.lua ResetAddiction).
 - Тошнота: стадии в sv_vomit.lua AddNausea (0.45 / 0.8 - мысль; плитка Queasy / Nauseous / About to vomit), экран -
   `modules/cl_nausea.lua` (зеленеет, плывёт, качает). От вида расчленёнки - `modules/sv_gorenausea.lua` (раз в секунду:
   конечности, разрубленные тела, без головы в поле зрения до 450; привыкание rem_goreTol до -90%; ярость и героин глушат;
