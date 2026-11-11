@@ -1567,7 +1567,7 @@ end
 -- The body mesh is still being built: remember the hit in bone space (position and bullet
 -- direction: the body may fall and turn before the mark can be placed) and place it once ready.
 function W.Pending(src, body, bone, lpos, dir, r)
-	local M = body:GetBoneMatrix(bone)
+	local M = ABL.ZC.BoneMatrix(body, bone)
 	if not M then return end
 	local ldir = WorldToLocal(dir, angle_zero, vector_origin, M:GetAngles())
 	src.pendingMarks = src.pendingMarks or {}
@@ -2531,7 +2531,7 @@ function W.Draw(src, pose, off)
 							if body.CopyBoneMatrix then
 								body:CopyBoneMatrix(mk.bone, boneMat)
 							else
-								local bm = body:GetBoneMatrix(mk.bone)
+								local bm = ABL.ZC.BoneMatrix(body, mk.bone)
 								if bm then boneMat = bm else ok = false end
 							end
 						end
@@ -2907,7 +2907,7 @@ concommand.Add("abl_wound_test", function(_, _, args)
 	local bone
 	if ent:IsRagdoll() then bone = ent:TranslatePhysBoneToBone(tr.PhysicsBone or 0)
 	elseif tr.HitBox then bone = ent:GetHitBoxBone(tr.HitBox, ent:GetHitboxSet() or 0) end
-	local bm = bone and ent:GetBoneMatrix(bone)
+	local bm = bone and ABL.ZC.BoneMatrix(ent, bone)
 	if not bm then ABL.Print("abl_wound_test: that place has no bone to put a wound on") return end
 	local ev = make(ABL.Net)
 	ev.body, ev.owner = ent, ent:IsPlayer() and ent or nil

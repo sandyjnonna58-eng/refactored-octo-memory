@@ -749,7 +749,7 @@ local function DrawBaked(ch, body, pose, softLive)
 				matSet(boneMat, e[1], e[2], e[3], e[4], e[5], e[6], e[7], e[8], e[9], e[10], e[11], e[12], 0, 0, 0, 1)
 				mat = boneMat
 			else
-				mat = body:GetBoneMatrix(run.bone)
+				mat = ABL.ZC.BoneMatrix(body, run.bone)
 			end
 			if mat then
 				cam.PushModelMatrix(mat)

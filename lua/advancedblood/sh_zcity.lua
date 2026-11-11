@@ -171,6 +171,16 @@ function Z.LimbMissing(ent, org, boneName)
 end
 
 if CLIENT then
+	-- Матрица кости или nil, если её позиция не число: разрез пополам (organism/sv_torsohalve.lua) прячет кости
+	-- другой половины позицией 0/0 (NaN) - такую кость считаем отсутствующей, иначе кровь рисуется в бесконечности.
+	function Z.BoneMatrix(ent, bone)
+		local m = ent:GetBoneMatrix(bone)
+		if not m then return nil end
+		local t = m:GetTranslation()
+		if t.x ~= t.x or t.y ~= t.y or t.z ~= t.z or t.x * 0 ~= 0 or t.y * 0 ~= 0 or t.z * 0 ~= 0 then return nil end
+		return m
+	end
+
 	-- Bones scaled to ~0 by any gore system are treated as missing.
 	function Z.BoneHidden(ent, bone)
 		local s = ent:GetManipulateBoneScale(bone)

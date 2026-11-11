@@ -1770,7 +1770,7 @@ function F.DrawSource(src, body, immediate)
 						body:CopyBoneMatrix(bone, boneMat)
 						ok = true
 					else
-						local bm = body:GetBoneMatrix(bone)
+						local bm = ABL.ZC.BoneMatrix(body, bone)
 						if bm then boneMat = bm ok = true end
 					end
 					if ok then
