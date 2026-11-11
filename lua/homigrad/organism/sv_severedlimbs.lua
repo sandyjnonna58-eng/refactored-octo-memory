@@ -139,6 +139,7 @@ local function SpawnLimb(src, ply, limb)
 		rp:AddAngleVelocity(VectorRand(-200, 200))
 	end
 
+	e.rem_limbBoneName = boneName
 	e:SetNW2Bool("rem_limb", true)
 	e:SetNW2Int("rem_limb_bone", root)
 	e:SetNW2Float("rem_limb_bleed", CurTime() + BLEED_TIME)
@@ -162,6 +163,23 @@ hook.Add("OnAmputateLimb", "rem_severed_limbs", function(org, ent, limb)
 	if IsValid(ply) and not ply:IsPlayer() then ply = hg.RagdollOwner and hg.RagdollOwner(ply) or ply:GetNWEntity("ply") end
 	-- кость на теле прячет сам Z-City; копию делаем, пока поза ещё целая
 	SpawnLimb(ent, IsValid(ply) and ply:IsPlayer() and ply or nil, limb)
+end)
+
+-- E на конечность - взять в руку (weapon_rem_flesh: можно съесть). Пока в руке уже кусок - не берёт
+hook.Add("PlayerUse", "rem_severed_limbs_take", function(ply, ent)
+	if not IsValid(ent) or not ent:GetNW2Bool("rem_limb", false) then return end
+	if not ply:Alive() or (ply.rem_limbTakeNext or 0) > CurTime() then return false end
+	ply.rem_limbTakeNext = CurTime() + 0.5
+	if ply:HasWeapon("weapon_rem_flesh") then return false end
+	local wep = ply:Give("weapon_rem_flesh")
+	if not IsValid(wep) then return false end
+	wep:SetNW2String("rem_limb_model", ent:GetModel())
+	wep:SetNW2String("rem_limb_bone", ent.rem_limbBoneName or "ValveBiped.Bip01_R_Forearm")
+	wep:SetNW2Int("rem_limb_skin", ent:GetSkin() or 0)
+	ply:SelectWeapon("weapon_rem_flesh")
+	ent:EmitSound("physics/flesh/flesh_squishy_impact_hard" .. math.random(4) .. ".wav", 60)
+	ent:Remove()
+	return false
 end)
 
 -- спрятанные кости - в начало конечности, чтобы сжатые вершины собрались у среза
