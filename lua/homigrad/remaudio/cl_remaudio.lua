@@ -17,16 +17,24 @@ local meta = FindMetaTable("IGModAudioChannel")
 meta.RemRawSetVolume = meta.RemRawSetVolume or meta.SetVolume
 local rawSetVolume = meta.RemRawSetVolume
 
--- музыка ли это (а не звук вроде остановки сердца): .wav и звуки тела общий множитель и эхо не трогают
-local notMusic = {"heartstop", "heartbeat"}
+-- Музыка ли это: на неё действует уход сознания (cl_remaudio_fading.lua - эхо, "издалека", тишина в отключке).
+-- Только явный список: раньше "музыкой" считалось всё, кроме .wav, и эхо удваивало звуки - инсульт (rem_lobotomy),
+-- звон в ушах, судороги, хрипы, двигатели машин; а фоновая музыка режима (.wav-слои zcity_ost) как раз не попадала.
+-- Песни экрана смерти и последних моментов сюда не входят: они звучат, когда ты уже без сознания.
+RA.MusicPatterns = {
+	"sound/zcity_ost/", "sound/zc_dyna_music/",        -- фоновая музыка режима (dynamic_music_v2, dynmusic)
+	"rem_letitgo", "rem_rage/", "rem_panic/",           -- критическое состояние, ярость, паника
+	"rem_excruciatingpain", "rem_despair", "rem_pain.mp3", "rem_aftermath", -- боль, отчаяние, суицид
+	"rem_laststand", "rem_lastbattle", "zbattle/pharmacia", -- последний бой, берсерк
+}
 local musicCache = setmetatable({}, {__mode = "k"})
 function RA.IsMusic(chan)
 	local v = musicCache[chan]
 	if v ~= nil then return v end
 	local name = string.lower(chan:GetFileName() or "")
-	v = name ~= "" and not string.EndsWith(name, ".wav")
-	for _, s in ipairs(notMusic) do
-		if string.find(name, s, 1, true) then v = false break end
+	v = false
+	for _, s in ipairs(RA.MusicPatterns) do
+		if string.find(name, s, 1, true) then v = true break end
 	end
 	musicCache[chan] = v
 	return v
