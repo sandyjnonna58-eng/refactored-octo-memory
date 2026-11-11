@@ -88,7 +88,7 @@
   падает рэгдоллом (LG.DropLimb: сервер - prop_ragdoll без отрисовки, клиент - bonemerge-копия с одеждой-сабматериалами,
   net rem_lgore_limb), от взрыва вместо целой - куски goremod_CustomGibs; кровь - хук noob_gore_make_limb_blood.
   Обрубки - Lambda (LG.Stump, bonemerge на плечо/бедро, клиент вешает на того, кем нарисован игрок, и на трупы,
-  timer rem_lambdagore_stumps; FitStump - крупнее вокруг места отрыва и наружу: rem_lambdagore_stump_scale / _push);
+  timer rem_lambdagore_stumps; FitStump - наружный срез обрубка (STUMP_END, посчитан по вершинам моделей) в место отрыва, одинаково слева и справа: rem_lambdagore_stump_scale / _push);
   свой обрубок Z-City (cl_main.lua GoreCalc) при работающем Lambda не рисуется. Физика оторванной части у рэгдоллов
   (LG.HideLimbPhysics: CONTENTS_EMPTY, без столкновений, держится у места отрыва) - на отрыве и в Ragdoll_Create.
   BloodMark: оторванная конечность (организм) и кости с NaN-позицией (разрез пополам) - Z.BoneHidden / Z.BoneMatrix

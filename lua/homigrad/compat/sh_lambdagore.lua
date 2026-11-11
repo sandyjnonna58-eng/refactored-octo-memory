@@ -280,10 +280,18 @@ if CLIENT then
 		while #limbs > max_limbs do RemoveLimb(1) end
 	end)
 
-	-- обрубки Lambda сделаны под пропорции L4D и прячутся в рукаве / штанине: увеличиваем вокруг места отрыва
-	-- и выдвигаем наружу вдоль плеча / бедра
-	local cvScale = CreateClientConVar("rem_lambdagore_stump_scale", 1.35, true, false, "Lambda gore stump size", 0.5, 3)
-	local cvPush = CreateClientConVar("rem_lambdagore_stump_push", 1.5, true, false, "Lambda gore stump shift out of the sleeve", -10, 10)
+	-- Обрубки Lambda нарисованы на разном расстоянии от кости (левый обрубок ноги на ~2.5 юнита дальше правого)
+	-- и под пропорции L4D - через bonemerge они прятались в рукаве / штанине и выглядели по-разному слева и справа.
+	-- Ставим каждый одинаково: наружный срез обрубка (STUMP_END - точка в пространстве его кости, посчитана по
+	-- вершинам моделей) - ровно в место отрыва плюс rem_lambdagore_stump_push наружу, и увеличиваем вокруг этой точки.
+	local cvScale = CreateClientConVar("rem_lambdagore_stump_scale", 1.2, true, false, "Lambda gore stump size", 0.5, 3)
+	local cvPush = CreateClientConVar("rem_lambdagore_stump_push", 0.4, true, false, "Lambda gore stump shift out of the sleeve", -10, 10)
+	local STUMP_END = {
+		["models/noob_dev2323/gib/l_arm67.mdl"] = Vector(11.6, -0.08, -0.68),
+		["models/noob_dev2323/gib/r_arm67.mdl"] = Vector(11.4, -0.06, 0.83),
+		["models/noob_dev2323/gib/l_leg_gap.mdl"] = Vector(18.0, -0.18, -0.41),
+		["models/noob_dev2323/gib/r_leg_gap.mdl"] = Vector(15.6, -0.03, 0.24),
+	}
 	local STUMP_CUT = { -- кость обрубка -> кость, с которой начинается оторванная часть (место отрыва)
 		["ValveBiped.Bip01_L_UpperArm"] = "ValveBiped.Bip01_L_Forearm",
 		["ValveBiped.Bip01_R_UpperArm"] = "ValveBiped.Bip01_R_Forearm",
@@ -292,7 +300,8 @@ if CLIENT then
 	}
 	local function FitStump(self, count)
 		local parent = self:GetParent()
-		if not IsValid(parent) then return end
+		local endLocal = STUMP_END[self:GetModel()]
+		if not IsValid(parent) or not endLocal then return end
 		local k, push = cvScale:GetFloat(), cvPush:GetFloat()
 		for i = 0, count - 1 do
 			local cutName = STUMP_CUT[self:GetBoneName(i)]
@@ -300,11 +309,11 @@ if CLIENT then
 			local m = self:GetBoneMatrix(i)
 			local cm = cut and parent:GetBoneMatrix(cut)
 			if m and cm then
-				local p = cm:GetTranslation()
+				local target = cm:GetTranslation() + m:GetForward() * push
 				local fit = Matrix()
-				fit:Translate(p + m:GetForward() * push)
+				fit:Translate(target)
 				fit:Scale(Vector(k, k, k))
-				fit:Translate(-p)
+				fit:Translate(-(m * endLocal))
 				self:SetBoneMatrix(i, fit * m)
 			end
 		end
