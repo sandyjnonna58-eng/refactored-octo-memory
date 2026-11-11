@@ -437,6 +437,7 @@ ExplodeTheItem = function(self,ent)
 				util.Effect("eff_jack_genericboom", effectdata)
 			end
 			hg.ExplosionEffect(EntPos, BlastDis / 0.2, 80)
+			if hg.ExplosionCrater then hg.ExplosionCrater(EntPos, math.Clamp(BlastDis / 20, 0.5, 1.2)) end -- пробоина (sh_craters.lua)
 
 			if mat == MAT_METAL then
 				local Poof=EffectData()

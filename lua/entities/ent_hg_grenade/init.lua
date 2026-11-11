@@ -293,6 +293,7 @@ function ENT:Explode()
 	end
 
 	util.BlastDamage(self, IsValid(self.owner) and self.owner or self, selfPos, self.BlastDis / 0.01905 * GRENADE_BLAST_RADIUS_MULT, GRENADE_BLAST_DAMAGE)
+	if hg.ExplosionCrater then hg.ExplosionCrater(selfPos, math.Clamp((self.BlastDis or 5) / 12, 0.35, 0.8)) end -- пробоина (sh_craters.lua)
 
 	--;; Расскажу вам тайну но у нас трассировка делалась просто ужасно
 	local dis = self.BlastDis / 0.01905 * GRENADE_BLAST_RADIUS_MULT

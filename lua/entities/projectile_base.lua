@@ -200,6 +200,7 @@ if SERVER then
 		hgBlastDoors(self, SelfPos, self.BlastDamage / 100, self.BlastDis/6, false)
 		
 		hg.ExplosionEffect(SelfPos, self.BlastDis / 0.2, 80)
+		if hg.ExplosionCrater then hg.ExplosionCrater(SelfPos, math.Clamp(self.BlastDamage / 200, 0.4, 1.2)) end -- пробоина (sh_craters.lua)
 
 		timer.Simple(.01, function()
 			if not IsValid(self) then return end

@@ -120,6 +120,7 @@ function ENT:ActivateExplosive()
 		--hg.ExplosionEffect(selfPos, blastdist, 80)
 	end)
 	hg.ExplosionEffect(selfPos, self.BlastDis, 5)
+	if hg.ExplosionCrater then hg.ExplosionCrater(selfPos, 0.35) end -- пробоина (sh_craters.lua)
 
 	timer.Simple(0, function()
 		if not IsValid(self) then return end

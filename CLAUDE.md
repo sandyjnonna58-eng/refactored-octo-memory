@@ -107,6 +107,12 @@
   "издалека" (RA.Global - общий множитель громкости в cl_remaudio.lua, playback rate 0.94, эхо гуще); otrub - трек гаснет
   за 1.2 с, хвост эха за 3 с; очнулся - возврат за 2.5 с.
 - BloodMark (кровь AdvancedBlood) пробовали несколько раз - убран по просьбе; кровь своя у Z-City.
+- Пробоины и воронки от взрывов (картинка - столкновения карты не меняются): `lua/homigrad/explosives/sh_craters.lua`,
+  `hg.ExplosionCrater(pos, power)` (сервер -> net rem_crater -> клиент: трассы в 14 сторон, до 3 ближайших поверхностей
+  карты, util.DecalEx; стена - рваная пробоина, мягкая земля - воронка, металл - копоть; обломки HL2 клиентскими пропами).
+  Зовут: projectile_base (РПГ, power = BlastDamage/200), ent_hg_grenade (BlastDis/12), СВУ, SLAM, ExpTypes в sv_explosives.
+  Текстуры - `tools/craters/make.py` (свой VTF-писатель BGRA8888) -> `materials/rem_crater`. Выкл.: rem_craters 0;
+  обломки у игрока - rem_craters_debris 0..2.
 - Сердце (`modules/sv_pulse.lua`, звуки - `cl_main.lua` RemCardiacSounds): аритмия от «нагрузки» (повреждение, ишемия,
   давление, шок, боль), от крови ниже 4.0 л (не меньше 0.3) до сильной к 3.5 л (0.65), попадание в сердце - 90% сразу
   (sv_organs.lua input_list.heart); при аритмии от 0.25 сознание медленно уходит (cap 1 - arr*0.9 за 45 с) + мысль.

@@ -476,6 +476,7 @@ local ExpTypes = {
 		hg.PlayExtraExplosionSound(selfPos, ent:EntIndex(), 1)
 		hgBlastDoors(ent, selfPos, scaledForce / 50, scaledForce / 15)
 		hg.ExplosionEffect(selfPos, scaledForce / 0.2, 80)
+		if hg.ExplosionCrater then hg.ExplosionCrater(selfPos, 0.7) end -- пробоина (sh_craters.lua)
 		SendExplosionNet(selfPos, GetExplosionNetType(ent, "Fire"), distance)
 
 		if IsValid(ent) then
@@ -521,6 +522,7 @@ local ExpTypes = {
 		hg.PlayExtraExplosionSound(selfPos, ent:EntIndex(), 1)
 		hgBlastDoors(ent, selfPos, force / 50)
 		hg.ExplosionEffect(selfPos, force / 0.2, 80)
+		if hg.ExplosionCrater then hg.ExplosionCrater(selfPos, 0.7) end -- пробоина (sh_craters.lua)
 		SendExplosionNet(selfPos, "Sharpnel", distance)
 		ApplyBlastBurst({
 			Ent = ent,
@@ -550,6 +552,7 @@ local ExpTypes = {
 		hg.PlayExtraExplosionSound(selfPos, ent:EntIndex(), 1)
 		hgBlastDoors(ent, selfPos, force / 50)
 		hg.ExplosionEffect(selfPos, force / 0.2, 80)
+		if hg.ExplosionCrater then hg.ExplosionCrater(selfPos, 0.7) end -- пробоина (sh_craters.lua)
 		SendExplosionNet(selfPos, "Normal", distance)
 		ApplyBlastBurst({
 			Ent = ent,
@@ -584,6 +587,7 @@ local ExpTypes = {
 		hg.PlayExtraExplosionSound(selfPos, ent:EntIndex(), 1.2)
 		hgBlastDoors(ent, selfPos, scaledForce / 35, scaledForce / 10)
 		hg.ExplosionEffect(selfPos, scaledForce / 0.18, 85)
+		if hg.ExplosionCrater then hg.ExplosionCrater(selfPos, 0.7) end -- пробоина (sh_craters.lua)
 		SendExplosionNet(selfPos, GetExplosionNetType(ent, "CustomBarrel"), distance)
 
 		for i = 1, 8 do
