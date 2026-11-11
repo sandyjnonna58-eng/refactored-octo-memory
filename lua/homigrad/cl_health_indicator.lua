@@ -756,6 +756,12 @@ hook.Add("HUDPaint", "rem_health_indicator", function()
 		render.SuppressEngineLighting(false)
 	cam.End3D()
 
+	-- ЭКГ-монитор над силуэтом (cl_ecg.lua): та же ширина, едет вместе с панелью
+	if hg.ECG and hg.ECG.Draw and hg.ECG.cv:GetBool() then
+		local monW, monH = w * 0.92, math.floor(w * 0.36)
+		hg.ECG.Draw(backdropX, backdropY - monH - ScreenScaleFixed(3), monW, monH, org, 1)
+	end
+
 	-- в отключке всё это еле видно: поверх - темнота, медленно сгущается и отступает. Сверху вниз она нарастает
 	-- плавно (полосами по 1/48 высоты) - без резкого края: прямоугольник давал линию поперёк экрана
 	if otrubView then
