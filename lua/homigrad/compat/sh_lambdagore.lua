@@ -77,7 +77,6 @@ if SERVER then
 	function LG.DropLimb(src, bone, force)
 		local boneId = src:LookupBone(bone)
 		if not boneId then return end
-		src:SetupBones()
 
 		local gib = ents.Create("prop_ragdoll")
 		if not IsValid(gib) then return end

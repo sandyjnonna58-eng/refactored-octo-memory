@@ -739,8 +739,14 @@ end
 D.SRGB = SRGB
 -- Cell (x, y) of the grid (from 0): the values the texture is to hold there (r, g, b, a: 0..255,
 -- whole numbers).
+-- (значения иногда приходят дробными или за 0..255 - после смешивания краёв; без округления SRGB[v] = nil,
+-- SetCol падал посреди записи, и рендер-таргет оставался не закрыт: ошибки каждый кадр и мусор на телах)
+local function Byte(v)
+	v = floor((tonumber(v) or 0) + 0.5)
+	return v < 0 and 0 or v > 255 and 255 or v
+end
 function D.Cell(x, y, r, g, b, a)
-	SetCol(SRGB[r], SRGB[g], SRGB[b], a)
+	SetCol(SRGB[Byte(r)], SRGB[Byte(g)], SRGB[Byte(b)], Byte(a))
 	Rect(x + G, y + G, 1, 1)
 end
 
