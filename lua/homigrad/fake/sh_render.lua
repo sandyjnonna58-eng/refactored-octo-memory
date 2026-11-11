@@ -97,6 +97,9 @@ local IsValid, math_Clamp = IsValid, math.Clamp
 			if wep.DrawWorldModel2 then wep:DrawWorldModel2() end
 		end
 
+		-- пальцы своей длины у моделей с нестандартной кистью (cl_bones.lua); после оружия - оно тоже ставит пальцы
+		if hg.KeepFingerLengths then hg.KeepFingerLengths(ent) end
+
 		local armors = ply:GetNetVar("Armor") or ent.PredictedArmor
 		local hideArmorRender = ply:GetNetVar("HideArmorRender", false) or ent.PredictedHideArmorRender
 		if armors and next(armors) and not hideArmorRender then

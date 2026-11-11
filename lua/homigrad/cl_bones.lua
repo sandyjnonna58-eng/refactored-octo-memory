@@ -695,46 +695,58 @@
 			},
 		}
 
-		function hg.set_hold(ent, hold, copyent)
-			local lhmat = ent:GetBoneMatrix(ent:LookupBone("ValveBiped.Bip01_L_Hand"))
-			ent.hold = hold
-			for bone, invmat in pairs(hand_poses[hold]) do
-				local name = bone
-				bone = isstring(bone) and ent:LookupBone(bone) or bone
-				if not bone or isstring(bone) or bone == -1 then continue end
-				if not ent:GetBoneMatrix(bone) then continue end
-				if IsValid(copyent) and copyent:LookupBone(name) then
-					local mat = copyent:GetBoneMatrix(copyent:LookupBone(name))
-					if mat then
-						ent:SetBoneMatrix(bone, mat)
-					else
-						ent:SetBoneMatrix(bone,lhmat * invmat)
-					end
-				else
-					ent:SetBoneMatrix(bone,lhmat * invmat)
+		-- поза кисти: матрицы пальцев сняты с обычной модели вместе с положением суставов. У моделей с другой кистью
+		-- и пальцами (длина, точка сустава) это рвало пальцы, поэтому поворот берём из позы, а положение сустава -
+		-- из своего скелета модели (смещение от родителя). У обычных моделей результат тот же.
+		local poseItems = {}
+		local function apply_pose(ent, handmat, pose, copyent)
+			local n = 0
+			for name, invmat in pairs(pose) do
+				local bone = ent:LookupBone(name)
+				local cur = bone and bone ~= -1 and ent:GetBoneMatrix(bone)
+				if cur then
+					n = n + 1
+					local it = poseItems[n] or {}
+					poseItems[n] = it
+					it.bone, it.name, it.inv, it.cur = bone, name, invmat, cur
 				end
+			end
+			for i = #poseItems, n + 1, -1 do poseItems[i] = nil end
+			table.sort(poseItems, function(x, y) return x.bone < y.bone end) -- родитель раньше ребёнка
+			local old, new = {}, {}
+			for i = 1, n do old[poseItems[i].bone] = poseItems[i].cur end
+			for i = 1, n do
+				local it = poseItems[i]
+				local target
+				local src = IsValid(copyent) and copyent:LookupBone(it.name)
+				local srcmat = src and copyent:GetBoneMatrix(src)
+				if srcmat then
+					target = srcmat
+				else
+					target = handmat * it.inv
+					local parent = ent:GetBoneParent(it.bone)
+					local pold = parent and parent >= 0 and (old[parent] or ent:GetBoneMatrix(parent))
+					local pnew = pold and (new[parent] or pold)
+					local inv = pold and pold:GetInverse()
+					if inv then target:SetTranslation(pnew * (inv * it.cur:GetTranslation())) end
+				end
+				new[it.bone] = target
+				ent:SetBoneMatrix(it.bone, target)
 			end
 		end
 
+		function hg.set_hold(ent, hold, copyent)
+			local lhmat = ent:GetBoneMatrix(ent:LookupBone("ValveBiped.Bip01_L_Hand"))
+			ent.hold = hold
+			if not lhmat or not hand_poses[hold] then return end
+			apply_pose(ent, lhmat, hand_poses[hold], copyent)
+		end
+
 		function hg.set_holdrh(ent, hold, copyent)
-			local lhmat = ent:GetBoneMatrix(ent:LookupBone("ValveBiped.Bip01_R_Hand"))
+			local rhmat = ent:GetBoneMatrix(ent:LookupBone("ValveBiped.Bip01_R_Hand"))
 			ent.holdrh = hold
-			for bone,invmat in pairs(hand_posesrh[hold]) do
-				local name = bone
-				bone = isstring(bone) and ent:LookupBone(bone) or bone
-				if not bone or isstring(bone) or bone == -1 then continue end
-				if not ent:GetBoneMatrix(bone) then continue end
-				if IsValid(copyent) and copyent:LookupBone(name) then
-					local mat = copyent:GetBoneMatrix(copyent:LookupBone(name))
-					if mat then
-						ent:SetBoneMatrix(bone, mat)
-					else
-						ent:SetBoneMatrix(bone,lhmat * invmat)
-					end
-				else
-					ent:SetBoneMatrix(bone,lhmat * invmat)
-				end
-			end
+			if not rhmat or not hand_posesrh[hold] then return end
+			apply_pose(ent, rhmat, hand_posesrh[hold], copyent)
 		end
 
 		function hg.copy_hold(ply)
@@ -781,6 +793,80 @@
 
 			ply.cachedval = true
 			return true
+		end
+
+		-- Пальцы своей длины. Кулаки и оружие с TPIK ставят кости пальцев копией с модели рук - вместе с координатами
+		-- суставов, снятыми с обычной модели. У моделей с другой кистью (длиннее пальцы, сустав в другом месте) пальцы
+		-- от этого рвутся. Здесь положение каждого сустава пальца пересчитывается от родителя по скелету самой модели
+		-- (эталонная поза), поворот остаётся. Только для моделей, у которых пальцы заметно отличаются от обычной.
+		local fingerBones = {}
+		for _, side in ipairs({"L", "R"}) do
+			for f = 0, 4 do
+				for _, k in ipairs({"", "1", "2"}) do
+					fingerBones[#fingerBones + 1] = "ValveBiped.Bip01_" .. side .. "_Finger" .. f .. k
+				end
+			end
+		end
+		local finger_ref_model = "models/player/group01/male_07.mdl"
+		local finger_tolerance = 0.35 -- юнитов: меньше - модель считаем обычной и не трогаем
+		local fingerData = {}
+
+		-- смещения суставов пальцев от родителя в эталонной позе модели: {[имя] = {parent = имя, offset = Vector}}
+		local function finger_offsets(mdl)
+			local cs = ClientsideModel(mdl, RENDERGROUP_OTHER)
+			if not IsValid(cs) then return end
+			cs:SetNoDraw(true)
+			local seq = cs:LookupSequence("reference")
+			cs:ResetSequence(seq and seq > 0 and seq or 0)
+			cs:SetCycle(0)
+			cs:SetupBones()
+			local res = {}
+			for _, name in ipairs(fingerBones) do
+				local bone = cs:LookupBone(name)
+				local parent = bone and cs:GetBoneParent(bone)
+				local m = bone and cs:GetBoneMatrix(bone)
+				local pm = parent and parent >= 0 and cs:GetBoneMatrix(parent)
+				local inv = pm and pm:GetInverse()
+				if m and inv then res[name] = {parent = cs:GetBoneName(parent), offset = inv * m:GetTranslation()} end
+			end
+			cs:Remove()
+			return res
+		end
+
+		local function finger_data(mdl)
+			local data = fingerData[mdl]
+			if data ~= nil then return data end
+			fingerData[mdl] = false
+			local ref = finger_offsets(finger_ref_model)
+			local own = finger_offsets(mdl)
+			if not ref or not own then return false end
+			local differs = false
+			for name, d in pairs(own) do
+				local r = ref[name]
+				if not r or r.offset:Distance(d.offset) > finger_tolerance then differs = true break end
+			end
+			if not differs then return false end
+			data = {}
+			for _, name in ipairs(fingerBones) do
+				if own[name] then data[#data + 1] = {name = name, parent = own[name].parent, offset = own[name].offset} end
+			end
+			fingerData[mdl] = data
+			return data
+		end
+
+		function hg.KeepFingerLengths(ent)
+			local data = finger_data(ent:GetModel())
+			if not data then return end
+			for i = 1, #data do -- в порядке fingerBones: основание пальца раньше следующих фаланг
+				local d = data[i]
+				local bone, parent = ent:LookupBone(d.name), ent:LookupBone(d.parent)
+				local m = bone and ent:GetBoneMatrix(bone)
+				local pm = parent and ent:GetBoneMatrix(parent)
+				if m and pm then
+					m:SetTranslation(pm * d.offset)
+					ent:SetBoneMatrix(bone, m)
+				end
+			end
 		end
 
 		--copy hold делаешь когда нужно скопировать пальчики левой руки
