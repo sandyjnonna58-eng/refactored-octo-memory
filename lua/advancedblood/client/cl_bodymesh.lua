@@ -479,11 +479,13 @@ function Pose:Bone(b)
 	-- Разрез пополам (organism/sv_torsohalve.lua) прячет кости другой половины позицией 0/0 (NaN): вершины на них
 	-- улетали в бесконечность - через весь экран тянулись полосы крови. Такую кость сжимаем в точку у ближайшего
 	-- родителя с нормальной позицией: часть тела, которой нет, и не видна.
-	if a14 ~= a14 or a24 ~= a24 or a34 ~= a34 or a14 * 0 ~= 0 or a24 * 0 ~= 0 or a34 * 0 ~= 0 then
+	-- Так же сжимается оторванная конечность (Z.BoneHidden: организм говорит, что её нет) - Z-City прячет её только
+	-- при отрисовке, а здесь она читалась целой, и кровь текла по невидимой руке до земли.
+	if a14 ~= a14 or a24 ~= a24 or a34 ~= a34 or a14 * 0 ~= 0 or a24 * 0 ~= 0 or a34 * 0 ~= 0 or Z.BoneHidden(ent, b) then
 		local px, py, pz
 		local p = ent:GetBoneParent(b)
 		while p and p >= 0 do
-			local PM = ent:GetBoneMatrix(p)
+			local PM = not Z.BoneHidden(ent, p) and ent:GetBoneMatrix(p)
 			local t = PM and PM:GetTranslation()
 			if t and t.x == t.x and t.y == t.y and t.z == t.z and t.x * 0 == 0 and t.y * 0 == 0 and t.z * 0 == 0 then
 				px, py, pz = t.x, t.y, t.z

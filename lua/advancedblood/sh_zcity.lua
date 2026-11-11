@@ -182,8 +182,13 @@ if CLIENT then
 	end
 
 	-- Bones scaled to ~0 by any gore system are treated as missing.
+	-- Оторванную руку / ногу Z-City прячет только в момент отрисовки (GoreCalc пишет почти нулевой масштаб прямо
+	-- в матрицу), ManipulateBoneScale у неё обычный - поэтому смотрим ещё и на организм, иначе кровь текла по
+	-- невидимой конечности.
 	function Z.BoneHidden(ent, bone)
 		local s = ent:GetManipulateBoneScale(bone)
-		return s and (s.x * s.x + s.y * s.y + s.z * s.z) < 0.03
+		if s and (s.x * s.x + s.y * s.y + s.z * s.z) < 0.03 then return true end
+		local org = Z.GetOrganism(ent, Z.GetOwner and Z.GetOwner(ent))
+		return org ~= nil and Z.LimbMissing(ent, org, ent:GetBoneName(bone)) and Z.BoneLimb(ent:GetBoneName(bone) or "") ~= "head"
 	end
 end
