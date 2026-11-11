@@ -17,10 +17,12 @@
 - Чужой защищённый контент (видео, фото товаров, выдранные модели) - не в публичный репозиторий, а в приватные паки,
   они в `.gitignore` (`materials/rem_wd_private`, `sound/rem_wd_private`, `materials/rem_drinks_private`),
   раздаются через FastDL-циклы в `lua/homigrad/skills/sv_skills.lua`.
-- Новые звуки/текстуры - `resource.AddSingleFile` на сервере, иначе у игроков их не будет. Общая раздача при входе -
-  `lua/autorun/server/rem_downloads.lua`: файлы аддона по списку `lua/rem_downloads/list.lua` (после добавления контента
-  вне папок rem_* - перегенерировать `python3 tools/downloads/make.py`) + все аддоны Мастерской сервера (engine.GetAddons)
-  + `rem_workshop_extra`. Lua игрокам отдаёт загрузчик (AddCSLuaFile).
+- Раздача при входе: игрок качает только текущую карту, аддоны Мастерской сервера (engine.GetAddons; аддоны-карты - только
+  тот, где текущая карта) + `rem_workshop_extra`, и Lua (AddCSLuaFile - всегда целиком): `lua/autorun/server/rem_downloads.lua`.
+  Отдельные файлы (resource.AddFile/AddSingleFile у всех аддонов) по умолчанию глушит `lua/autorun/!!rem_download_gate.lua`;
+  `rem_download_loose 1` возвращает их и список файлов аддона `lua/rem_downloads/list.lua` (после добавления контента вне
+  папок rem_* - перегенерировать `python3 tools/downloads/make.py`). Новые звуки/текстуры всё равно регистрировать
+  `resource.AddSingleFile` - на случай включённой раздачи.
 - Генераторы текстур - в `tools/` (Python + PIL), запуск из корня репозитория.
 
 ## Устройство
