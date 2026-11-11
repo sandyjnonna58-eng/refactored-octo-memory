@@ -167,13 +167,19 @@ local boneLimb = {
 
 function SWEP:PrimaryAttackAdd(ent, trace)
 	if CLIENT or not IsValid(ent) or not trace then return end
-	if self.DamageType ~= DMG_SLASH or math.Rand(0, 1) >= (self.SeverChance or 0) then return end
+	if self.DamageType ~= DMG_SLASH then return end
 	if not hg.organism or not hg.organism.AmputateLimb then return end
 
 	local victim = ent
 	if ent:IsRagdoll() then victim = hg.RagdollOwner and hg.RagdollOwner(ent) or ent end
 	local org = (IsValid(victim) and victim.organism) or ent.organism
 	if not org then return end
+	-- катана бьёт каждый тик, пока клинок идёт по телу (MultiDmg1): шанс - один раз за взмах
+	self.__remSeverNext = self.__remSeverNext or setmetatable({}, {__mode = "k"})
+	local key = IsValid(victim) and victim or ent
+	if (self.__remSeverNext[key] or 0) > CurTime() then return end
+	self.__remSeverNext[key] = CurTime() + 0.6
+	if math.Rand(0, 1) >= (self.SeverChance or 0) then return end
 
 	local limb = hitgroupLimb[trace.HitGroup or 0]
 	if not limb then

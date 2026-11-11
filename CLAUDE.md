@@ -148,6 +148,12 @@
   плоскости (CapOnPlane); плоскость - NW2 rem_cut_* в осях кости. Клиент `organism/cl_torsocut.lua` оборачивает
   hg.renderOverride: проход 1 - всё по свою сторону плоскости, проход 2 - тело без туловища (кости туловища в NaN) по
   другую сторону, чтобы не срезать руки/ноги за плоскостью. Тест: `rem_halve_test` (админ, на кого смотришь).
+- Отрубленные конечности (`organism/sv_severedlimbs.lua` + `cl_severedlimbs.lua`): на хук Z-City OnAmputateLimb (любое
+  отрубание: катана, сильный режущий удар, взрыв, придавило) - копия регдолла, видны только голень+стопа / предплечье+кисть
+  (LIMB_BONE и потомки), остальные кости ManipulateBoneScale 0, их физ. кости без столкновений и каждый тик едут в начало
+  конечности (срез закрыт). COLLISION_GROUP_WEAPON - берётся руками/E, не мешает ходить. Кровь: NW2 rem_limb_bleed (45 с),
+  клиент - hg.addBloodPart из среза (rem_limb_bone), удары о пол - util.Decal. Шапки/броня не копируются (Accessories none).
+  rem_severed_limbs 0 - выкл., _life (300 с), _max (16). Катана: 5% отрубить конечность - раз за взмах (MultiDmg1 бьёт каждый тик).
 - Осколки (гранаты ent_hg_grenade, взрывы hg.PropExplosion / StartShrapnel в explosives/sv_explosives.lua, СВУ weapon_traitor_ied):
   попадание в стену / проп -> `hg.ShrapnelImpact` - короткая пуля Z-City (FireLuaBullets, урон 1) у места попадания: след и
   пробоина, её видят аддоны пробоин через EntityFireBullets / PostEntityFireBullets / callback. Лимит на взрыв `rem_frag_impacts`.
