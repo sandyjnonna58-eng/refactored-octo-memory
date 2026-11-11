@@ -1361,9 +1361,6 @@ function hg.GoreCalc(ent, ply)
 			hg.bone_apply_matrix(ply, bon, mat)
 		end
 
-		-- свой обрубок не рисуем, когда стоит Lambda gore mod: у конечности его обрубок (compat/sh_lambdagore.lua)
-		if hg.LambdaGore and hg.LambdaGore.Enabled and hg.LambdaGore.Enabled() then continue end
-
 		local fem = ThatPlyIsFemale(ent) and 1 or 0
 		
 		if !modelPlacements[fem][nam] then continue end

@@ -81,22 +81,7 @@
   метка remUKGun). Поля навешиваются на таблицы оружия (PreRegisterSWEP + уже созданные).
   `hg.CameraYield(ply)` (там же, её зовёт `cl_camera.lua`) теперь только для Снейка. Монетки (ultrakill_toss_coin) кода не
   требуют: их урон - обычный TakeDamageInfo с позицией попадания.
-- Совместимость с отдельным аддоном «Lambda gore mod» (в репозиторий не кладём - модели/звуки чужие, частью из L4D):
-  `lua/homigrad/compat/sh_lambdagore.lua` (выкл. - `rem_lambdagore 0`). Своя логика Lambda (порча трупов по костям, разрез
-  пополам, взрыв тела, живая расчленёнка NPC, кэш урона) под Z-City выключена (hook.Remove списка OFF) - разрыв пополам и
-  взрыв тела у Z-City свои. От Lambda только картинка на OnAmputateLimb (руки - Forearm, ноги - Calf): оторванная часть
-  падает рэгдоллом (LG.DropLimb: сервер - prop_ragdoll без отрисовки, клиент - bonemerge-копия с одеждой-сабматериалами,
-  net rem_lgore_limb), от взрыва вместо целой - куски goremod_CustomGibs; кровь - хук noob_gore_make_limb_blood.
-  Обрубки - Lambda (LG.Stump; клиент держит их на том, кем нарисован игрок, и на трупах - timer rem_lambdagore_stumps).
-  НЕ bonemerge (кости такой модели не правятся): DrawStumps рисует сам после тела (PostDrawAppearance, трупы -
-  PostDrawOpaqueRenderables); STUMP - кость, место отрыва, p2b из .mdl и endLocal (наружный срез, по вершинам):
-  срез ставится в место отрыва + rem_lambdagore_stump_push вдоль кости, размер rem_lambdagore_stump_scale;
-  свой обрубок Z-City (cl_main.lua GoreCalc) при работающем Lambda не рисуется. Физика оторванной части у рэгдоллов
-  (LG.HideLimbPhysics: CONTENTS_EMPTY, без столкновений, масса 0.1, связь с суставом НЕ рвать - иначе обрубок дёргается;
-  физган её не берёт - PhysgunPickup) - на отрыве и в Ragdoll_Create.
-  BloodMark: оторванная конечность (организм) и кости с NaN-позицией (разрез пополам) - Z.BoneHidden / Z.BoneMatrix
-  (sh_zcity.lua) и сжатие в Pose:Bone (cl_bodymesh.lua: оторванная - в точку отрыва, NaN - к родителю), иначе кровь
-  течёт по невидимой руке / тянется лентой или в бесконечность.
+- Lambda gore mod (связка `compat/sh_lambdagore.lua`) пробовали - убран по просьбе; расчленёнка только своя у Z-City.
 - Ярость (3 стадии, растёт ТОЛЬКО от: удара игрока, жеста «фак», «фак»/fuck в чате; удар - рывок и x2, без удара не выше 2-й):
   `modules/sv_rage.lua` и `cl_rage.lua` (музыка по стадиям `sound/rem_rage/anger.mp3`, права у пользователя,
   куски 0-59 / 58-117 / 117-конец), плитка «anger» с описанием в `cl_health_indicator.lua`.
@@ -121,14 +106,7 @@
   добавлять - эхо их удвоит) сначала с эхом (копии файла с задержкой, RA.Taps), потом
   "издалека" (RA.Global - общий множитель громкости в cl_remaudio.lua, playback rate 0.94, эхо гуще); otrub - трек гаснет
   за 1.2 с, хвост эха за 3 с; очнулся - возврат за 2.5 с.
-- BloodMark - только кровь (AdvancedBlood из чужого аддона «[ZCITY] BloodMark»; модули травм головы/мозга, лёгких и скелета
-  убраны по просьбе): `lua/autorun/advancedblood.lua` (ABL - кровь, раны, лужи, следы), код `lua/advancedblood/`, контент
-  `materials/advancedblood`. Тестовые сценарии разработчика (*test*, selftest, hostile) из сборки убраны. Настройки по умолчанию
-  снижены ради FPS (sh_config.lua: abl_quality 2 - без отражений в лужах, abl_budget_ms 1.5, abl_sim_hz 100, меньше лимитов;
-  у игроков со старыми настройками применяются один раз, метка data/abl_perf_v1.txt). К homigrad цепляется после загрузки
-  (InitPostEntity / HomigradRun) и ОБОРАЧИВАЕТ (не заменяет) наши хуки: "organism-think-client-blood" (cl_main.lua),
-  "ResponsiveHits_..." (sv_util.lua, брызги крови - вместо них своя кровь). Хук с таким же именем у нас - сначала смотреть,
-  не обёрнут ли он BloodMark. Файлы раздаются через rem_downloads. `tools/vtf/halve.py` - уменьшение VTF вдвое без перекодирования.
+- BloodMark (кровь AdvancedBlood) пробовали несколько раз - убран по просьбе; кровь своя у Z-City.
 - Совместимость с InfMap (бесконечные карты): `lua/autorun/!zcity_infmap.lua` + `lua/zcity_infmap/`, описание в `INFMAP.md`.
   Работает только на картах InfMap, выключается `zc_infmap 0`. Новое net-сообщение с позицией - дописать в списки
   `lua/zcity_infmap/sh_net.lua`.
