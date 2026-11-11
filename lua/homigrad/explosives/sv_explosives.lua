@@ -208,6 +208,40 @@ end
 
 local ShrapnelHitForceMul = 12
 
+-- Осколок попал в стену / проп: раньше это был просто луч - ни следа, ни пробоины, и аддоны пробоин (например,
+-- GHM Ballistic Damage) его не видели. Теперь в месте попадания - короткая пуля Z-City (FireLuaBullets: те же
+-- хуки EntityFireBullets / PostEntityFireBullets и callback, что у выстрелов): след, пробоина. На одно
+-- взрывное - не больше rem_frag_impacts (0 - выкл.).
+local cvFragImpacts = CreateConVar("rem_frag_impacts", 16, FCVAR_ARCHIVE, "Shrapnel hits on walls/props per explosion that act as bullet impacts (holes, marks); 0 - off", 0, 64)
+function hg.ShrapnelImpact(ent, origin, tr)
+	if not tr or not tr.Hit or tr.HitSky or not IsValid(ent) or not ent.FireLuaBullets then return end
+	local hit = tr.Entity
+	if IsValid(hit) and (hit:IsPlayer() or hit:IsNPC() or hit:IsNextBot() or hit:IsRagdoll()) then return end
+	local limit = cvFragImpacts:GetInt()
+	ent.remFragImpacts = (ent.remFragImpacts or 0) + 1
+	if ent.remFragImpacts > limit then return end
+	local dir = tr.HitPos - origin
+	if dir:LengthSqr() < 1 then return end
+	dir:Normalize()
+	ent:FireLuaBullets({
+		Attacker = ent, -- не игрок: осколок не считается его выстрелом (итоги раунда)
+		Inflictor = ent,
+		Damage = 1,
+		Force = 1,
+		Num = 1,
+		Tracer = 0,
+		TracerName = "nil",
+		Dir = dir,
+		Spread = vector_origin,
+		Src = tr.HitPos - dir * 4,
+		Distance = 12,
+		Filter = {ent},
+		DisableLagComp = true,
+		DontUsePhysBullets = true,
+		Penetration = 0,
+	})
+end
+
 function hg.ShrapnelDamage(attacker, inflictor, origin, tr, damage)
 	local target = tr.Entity
 	if not IsValid(target) or target:IsWorld() then return end
@@ -399,6 +433,7 @@ local function StartShrapnel(ent, selfPos, owner, force, mass, countMul)
 			if ShrapnelTraceHit(Tr) then
 				hg.ShrapnelDamage(owner, ent, selfPos, Tr, force)
 			end
+			hg.ShrapnelImpact(ent, selfPos, Tr)
 
 			lastShrapnel = SysTime() - lastShrapnel
 			if lastShrapnel > 0.001 then

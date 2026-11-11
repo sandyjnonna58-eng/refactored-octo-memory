@@ -415,6 +415,7 @@ function ENT:Explode()
 					if ShrapnelTraceHit(Tr) then
 						hg.ShrapnelDamage(self.owner, self, selfPos, Tr, GRENADE_BLAST_DAMAGE)
 					end
+					if hg.ShrapnelImpact then hg.ShrapnelImpact(self, selfPos, Tr) end -- след / пробоина в стене
 
 					LastShrapnel = SysTime() - LastShrapnel
 

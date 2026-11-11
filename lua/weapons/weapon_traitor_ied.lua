@@ -532,6 +532,7 @@ ExplodeTheItem = function(self,ent)
 							if Tr.Hit and ShrapnelTraceHit(Tr) then
 								hg.ShrapnelDamage(self:GetOwner(), ent, EntPos, Tr, BlastDamage)
 							end
+							if hg.ShrapnelImpact then hg.ShrapnelImpact(ent, EntPos, Tr) end -- след / пробоина в стене
 
 							LastShrapnel = SysTime() - LastShrapnel
 
