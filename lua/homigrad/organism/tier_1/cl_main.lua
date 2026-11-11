@@ -215,9 +215,39 @@ local function StopRemFibrillationSound()
  end)
 end
 
--- сердце в критическом состоянии: каждый удар слышен (у остановки и фибрилляции свои звуки)
-local remBadHeartbeatSound = "rem_heartbeatbad.mp3"
+-- сердце в критическом состоянии: каждый удар слышен (у остановки и фибрилляции свои звуки).
+-- Звук из Fading Vitality лежит в приватной папке sound/rem_heart_private (не в репозитории); нет его - старый.
+local remBadHeartbeatSound = file.Exists("sound/rem_heart_private/heartbeat_bad.mp3", "GAME") and "rem_heart_private/heartbeat_bad.mp3" or "rem_heartbeatbad.mp3"
 local remNextBadHeartbeat = 0
+
+-- аритмия: свой фон (sound/rem_heart_private/arrhythmia.mp3, по кругу), громче с силой аритмии; затихает за 2 с
+local remArrhythmiaPath = "sound/rem_heart_private/arrhythmia.mp3"
+local remArrhythmiaFrom = 0.3
+local remArrhythmiaStation, remArrhythmiaLoading
+local remArrhythmiaVol = 0
+local function ThinkArrhythmiaSound(org)
+ local arr = org and not org.heartstop and not org.fibrillation and not org.otrub and (org.arrhythmia or 0) or 0
+ local want = arr >= remArrhythmiaFrom and math.Clamp(0.35 + (arr - remArrhythmiaFrom) / (1 - remArrhythmiaFrom) * 0.65, 0, 1) or 0
+ if want > 0 and not IsValid(remArrhythmiaStation) and not remArrhythmiaLoading then
+  if not file.Exists(remArrhythmiaPath, "GAME") then return end
+  remArrhythmiaLoading = true
+  sound.PlayFile(remArrhythmiaPath, "noplay noblock", function(station)
+   remArrhythmiaLoading = nil
+   if not IsValid(station) then return end
+   remArrhythmiaStation = station
+   station:EnableLooping(true)
+   station:SetVolume(0)
+   station:Play()
+  end)
+ end
+ if not IsValid(remArrhythmiaStation) then return end
+ remArrhythmiaVol = math.Approach(remArrhythmiaVol, want, FrameTime() * (want > remArrhythmiaVol and 0.5 or 0.5))
+ remArrhythmiaStation:SetVolume(remArrhythmiaVol)
+ if want <= 0 and remArrhythmiaVol <= 0 then
+  remArrhythmiaStation:Stop()
+  remArrhythmiaStation = nil
+ end
+end
 
 local function IsHeartCritical(org)
  local pulse = org.pulse or 70
@@ -253,6 +283,7 @@ hook.Add("Think", "RemCardiacSounds", function()
  end
 
  if org and not heartstop and not fibrillation and IsHeartCritical(org) then ThinkBadHeartbeat(org) end
+ ThinkArrhythmiaSound(org)
 end)
 
 hook.Add("Think", "RemDeathStateSoundStop", function()

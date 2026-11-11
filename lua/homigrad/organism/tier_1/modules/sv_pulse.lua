@@ -15,6 +15,24 @@ local function getHeartEfficiency(org)
 	return Clamp(heart - ischemia * 0.35 - strain * 0.25, 0, 1)
 end
 
+-- звуки сердца из Fading Vitality (приватная папка, не в репозитории; cl_main.lua) - раздать, если лежат на сервере
+for _, f in ipairs({"sound/rem_heart_private/heartbeat_bad.mp3", "sound/rem_heart_private/arrhythmia.mp3"}) do
+	if file.Exists(f, "GAME") then resource.AddSingleFile(f) end
+end
+
+-- Аритмия:
+--   * от потери крови: с 4.0 л начинается (не ниже arr_blood_min), к 3.5 л - сильная (arr_blood_max);
+--   * от попадания в сердце - почти всегда (sv_organs.lua, hg.organism.AddCardiacStress);
+--   * сознание при ней уходит медленно: держится не выше 1 - аритмия * arr_consc_mul, спуск за arr_consc_time с.
+local arr_blood_start, arr_blood_full = 4000, 3500
+local arr_blood_min, arr_blood_max = 0.3, 0.65
+local arr_consc_from = 0.25
+local arr_consc_mul = 0.9
+local arr_consc_time = 45
+-- давление и фибрилляция тоже гасят сознание не сразу, а за столько секунд (раньше - мгновенно)
+local hypotension_consc_time = 15
+local fibrillation_consc_time = 6
+
 local function addArrhythmia(org, amount)
 	org.arrhythmia = Clamp((org.arrhythmia or 0) + amount, 0, 1)
 	org.nextArrhythmiaRoll = math.min(org.nextArrhythmiaRoll or CurTime(), CurTime() + 4)
@@ -154,7 +172,23 @@ module[2] = function(owner, org, timeValue)
 	
 	local ischemia = Clamp(1 - (org.myocardialOxygen or 1), 0, 1)
 	local stress = Clamp((org.heart or 0) * 0.9 + ischemia * 0.8 + (org.hypertension or 0) * 0.35 + (org.hypotension or 0) * 0.3 + Clamp(org.shock, 0, 80) / 180 + max(org.pain - 60, 0) / 220 + max(org.heartbeat - 165, 0) / 190, 0, 2)
-	org.arrhythmia = Approach(org.arrhythmia or 0, Clamp(stress * 0.42, 0, 1), stress > (org.arrhythmia or 0) and timeValue / 25 or timeValue / 90)
+	local arrTarget = Clamp(stress * 0.42, 0, 1)
+	if org.alive and (org.blood or 5000) < arr_blood_start then
+		arrTarget = math.max(arrTarget, Clamp(Remap(org.blood, arr_blood_start, arr_blood_full, arr_blood_min, arr_blood_max), arr_blood_min, arr_blood_max))
+	end
+	org.arrhythmia = Approach(org.arrhythmia or 0, arrTarget, arrTarget > (org.arrhythmia or 0) and timeValue / 25 or timeValue / 90)
+
+	-- сердце сбилось - сначала мысль, потом сознание медленно уходит
+	local arr = org.arrhythmia or 0
+	if arr >= arr_consc_from and not org.fibrillation and not org.heartstop then
+		local cap = Clamp(1 - arr * arr_consc_mul, 0, 1)
+		if org.consciousness > cap then org.consciousness = Approach(org.consciousness, cap, timeValue / arr_consc_time) end
+		if org.isPly and not org.otrub and CurTime() >= (org.remArrhythmiaSaid or 0) then
+			org.remArrhythmiaSaid = CurTime() + math.Rand(50, 80)
+			local lines = {"My heart... it's skipping beats.", "Something's wrong with my heart.", "My chest... it's fluttering.", "Why is my heart beating like that?"}
+			if org.owner.Notify then org.owner:Notify(lines[math.random(#lines)], true, "arrhythmia", 0, nil, Color(255, 170, 170)) end
+		end
+	end
 	if stress > 0.65 and CurTime() >= (org.nextArrhythmiaRoll or 0) then
 		org.nextArrhythmiaRoll = CurTime() + Clamp(Remap(stress, 0.65, 1.6, 14, 3), 3, 14)
 		if math.Rand(0, 1) < Clamp((stress - 0.65) * 0.12, 0.01, 0.18) then hg.organism.StartFibrillation(org) end
@@ -165,7 +199,8 @@ module[2] = function(owner, org, timeValue)
 	end
 
 	if org.fibrillation then
-		org.consciousness = math.min(org.consciousness, Clamp(org.bloodPressure / 55, 0, 1))
+		local cap = Clamp(org.bloodPressure / 55, 0, 1)
+		if org.consciousness > cap then org.consciousness = Approach(org.consciousness, cap, timeValue / fibrillation_consc_time) end
 		org.o2[1] = max(org.o2[1] - timeValue * 1.8, 0)
 		if (org.fibrillationStart or CurTime()) + 24 < CurTime() or org.bloodPressure < 8 then org.heartstop = true end
 	end
@@ -176,7 +211,10 @@ module[2] = function(owner, org, timeValue)
 		org.painadd = org.painadd + math.Rand(4, 9) * ischemia
 		org.shock = math.max(org.shock, 10 + ischemia * 22)
 	end
-	if org.hypotension > 0.2 then org.consciousness = math.min(org.consciousness, Clamp(Remap(org.bloodPressure, 20, 65, 0, 1), 0, 1)) end
+	if org.hypotension > 0.2 then
+		local cap = Clamp(Remap(org.bloodPressure, 20, 65, 0, 1), 0, 1)
+		if org.consciousness > cap then org.consciousness = Approach(org.consciousness, cap, timeValue / hypotension_consc_time) end
+	end
 
 	if org.heartstop then
 		org.heartbeat = 0

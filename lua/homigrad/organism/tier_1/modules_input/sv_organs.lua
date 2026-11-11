@@ -30,6 +30,10 @@ input_list.heart = function(org, bone, dmg, dmgInfo)
 	org.internalBleed = org.internalBleed + delta * 10
 	org.heartStrain = math.Clamp((org.heartStrain or 0) + delta * 1.4, 0, 1)
 	if hg.organism.AddCardiacStress then hg.organism.AddCardiacStress(org, delta * (dmgInfo:IsDamageType(DMG_BULLET + DMG_BUCKSHOT) and 2.4 or 1.2)) end
+	-- попадание в сердце почти всегда (90%) сбивает ритм сразу заметно (sv_pulse.lua: аритмия медленно гасит сознание)
+	if delta > 0 and math.Rand(0, 1) < 0.9 and hg.organism.AddCardiacStress then
+		hg.organism.AddCardiacStress(org, math.Clamp(0.35 + delta * 2, 0.35, 0.9))
+	end
 	if delta > 0.08 and dmgInfo:IsDamageType(DMG_BULLET + DMG_BUCKSHOT + DMG_SLASH) and math.Rand(0, 1) < math.Clamp(delta * 1.8, 0, 0.75) and hg.organism.StartFibrillation then hg.organism.StartFibrillation(org) end
 
 	return result
