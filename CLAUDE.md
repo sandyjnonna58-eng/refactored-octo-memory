@@ -81,6 +81,13 @@
   метка remUKGun). Поля навешиваются на таблицы оружия (PreRegisterSWEP + уже созданные).
   `hg.CameraYield(ply)` (там же, её зовёт `cl_camera.lua`) теперь только для Снейка. Монетки (ultrakill_toss_coin) кода не
   требуют: их урон - обычный TakeDamageInfo с позицией попадания.
+- Совместимость с отдельным аддоном «Lambda gore mod» (в репозиторий не кладём - модели/звуки чужие, частью из L4D):
+  `lua/homigrad/compat/sh_lambdagore.lua` (выкл. - `rem_lambdagore 0`). Своя логика Lambda (порча трупов по костям, разрез
+  пополам, взрыв тела, живая расчленёнка NPC, кэш урона) под Z-City выключена (hook.Remove списка OFF) - разрыв пополам и
+  взрыв тела у Z-City свои. От Lambda только картинка на OnAmputateLimb (руки - Forearm, ноги - Calf): оторванная часть
+  падает рэгдоллом (LG.DropLimb: сервер - prop_ragdoll без отрисовки, клиент - bonemerge-копия с одеждой-сабматериалами,
+  net rem_lgore_limb), от взрыва вместо целой - куски goremod_CustomGibs; обрубки (LG.Stump, bonemerge на плечо/бедро)
+  клиент вешает сам на того, кем нарисован игрок, и на трупы (timer rem_lambdagore_stumps); кровь - хук noob_gore_make_limb_blood.
 - Ярость (3 стадии, растёт ТОЛЬКО от: удара игрока, жеста «фак», «фак»/fuck в чате; удар - рывок и x2, без удара не выше 2-й):
   `modules/sv_rage.lua` и `cl_rage.lua` (музыка по стадиям `sound/rem_rage/anger.mp3`, права у пользователя,
   куски 0-59 / 58-117 / 117-конец), плитка «anger» с описанием в `cl_health_indicator.lua`.
