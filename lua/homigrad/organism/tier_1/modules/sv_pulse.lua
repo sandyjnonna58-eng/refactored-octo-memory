@@ -203,6 +203,7 @@ module[2] = function(owner, org, timeValue)
 	heartbeat = heartbeat + 100 * math.Clamp(math.Remap(org.temperature, 40, 42, 0, 1), 0, 1)
 	heartbeat = heartbeat - 160 * (1 - math.Clamp(math.Remap(org.temperature, 28, 36.7, 0, 1), 0, 1))
 	heartbeat = heartbeat + (org.hypotension or 0) * 55
+	heartbeat = heartbeat + (org.remHRAdd or 0) -- наркотики (sv_drugs.lua): мет гонит, героин замедляет
 	heartbeat = heartbeat - (org.myocardialOxygen and (1 - org.myocardialOxygen) or 0) * 35
 	-- фибрилляция гонит пульс (SCAV): +1 за процент, +4 выше 75, +30 выше 95; при аритмии он ещё и скачет
 	heartbeat = heartbeat + fib + max(fib - 75, 0) * 4 + max(fib - 95, 0) * 30

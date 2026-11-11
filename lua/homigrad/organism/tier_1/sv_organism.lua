@@ -652,6 +652,7 @@ hook.Add("Org Think", "Main", function(owner, org, timeValue)
 	if hg.organism.Alcohol then hg.organism.Alcohol(owner, org, timeValue) end
 	-- никотин и привыкание/ломка (modules/sv_nicotine.lua, sv_addiction.lua)
 	if hg.organism.Nicotine then hg.organism.Nicotine(owner, org, timeValue) end
+	if hg.organism.Drugs then hg.organism.Drugs(owner, org, timeValue) end -- героин / мет / кислота (sv_drugs.lua)
 	if hg.organism.Addiction then hg.organism.Addiction(owner, org, timeValue) end
 	if hg.organism.Vessels then hg.organism.Vessels(owner, org, timeValue) end
 	-- ярость (modules/sv_rage.lua): угрозы, удары; меньше страха и боли, больше адреналина

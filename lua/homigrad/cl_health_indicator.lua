@@ -377,8 +377,19 @@ local function CollectAfflictionIcons(ply, org)
 	-- никотин, привыкание и ломка (modules/sv_nicotine.lua, sv_addiction.lua)
 	local nic = ply:GetNW2Float("rem_nicotine", 0)
 	if nic > 0.2 then add("nicotine", nic / 2.5, "Nicotine") end
-	for _, kind in ipairs({"nicotine", "alcohol"}) do
-		local name = kind == "nicotine" and "Nicotine" or "Alcohol"
+	-- наркотики (modules/sv_drugs.lua): «Веселье» и передоз
+	local high = ply:GetNW2Float("rem_high", 0)
+	if high > 0.05 then
+		local h, m, l = ply:GetNW2Float("rem_heroin", 0), ply:GetNW2Float("rem_meth", 0), ply:GetNW2Float("rem_lsd", 0)
+		local od = h > 1.8 and "Heroin overdose - can't breathe" or m > 2.5 and "Meth overdose - heart racing" or l > 2 and "Bad trip" or nil
+		local what = {}
+		if h > 0.05 then what[#what + 1] = "heroin" end
+		if m > 0.05 then what[#what + 1] = "meth" end
+		if l > 0.05 then what[#what + 1] = "LSD" end
+		add("euphoria", od and 1 or high * 0.6, od or "High", not od, "Fun. On " .. table.concat(what, ", ") .. ".")
+	end
+	for _, kind in ipairs({"nicotine", "alcohol", "heroin", "meth"}) do
+		local name = ({nicotine = "Nicotine", alcohol = "Alcohol", heroin = "Heroin", meth = "Meth"})[kind]
 		local wd, dep = ply:GetNW2Float("rem_wd_" .. kind, 0), ply:GetNW2Float("rem_dep_" .. kind, 0)
 		if wd > 0.1 then
 			add(kind .. "_wd", wd, name .. " withdrawal")

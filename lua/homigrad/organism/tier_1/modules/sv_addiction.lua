@@ -64,9 +64,14 @@ local function Withdrawal(owner, org, kind, d, timeValue)
 		end
 	end
 
-	if org.isPly and not org.otrub and wd > 0.3 and (d.notify or 0) < CurTime() then
+	-- свои эффекты ломки у вида (наркотики - sv_drugs.lua)
+	local k = AD.Kinds[kind]
+	if k and k.effects then k.effects(owner, org, d, wd, timeValue) end
+
+	local phrases = craving[kind] or (k and k.craving)
+	if phrases and org.isPly and not org.otrub and wd > 0.3 and (d.notify or 0) < CurTime() then
 		d.notify = CurTime() + math.Rand(50, 90) * (1.3 - wd)
-		owner:Notify(table.Random(craving[kind]), true, "addiction_" .. kind, 0)
+		owner:Notify(table.Random(phrases), true, "addiction_" .. kind, 0)
 	end
 end
 
