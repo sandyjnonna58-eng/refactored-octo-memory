@@ -104,7 +104,14 @@
   за 1.2 с, хвост эха за 3 с; очнулся - возврат за 2.5 с.
 - Инсульт (`modules/sv_stroke.lua`, `cl_stroke.lua` - замершая картинка и `rem_lobotomy.ogg`): только когда мозг сам слабеет до
   порога 0.08, при кровоизлиянии или давлении. От ударов - НЕТ (по просьбе): 5 с после урона порог не срабатывает. Тест - `!stroke`.
-- BloodMark (кровь AdvancedBlood, травмы мозга, лёгкие, скелет) пробовали добавить - полностью убран по просьбе.
+- BloodMark - только кровь (AdvancedBlood из чужого аддона «[ZCITY] BloodMark»; модули травм головы/мозга, лёгких и скелета
+  убраны по просьбе): `lua/autorun/advancedblood.lua` (ABL - кровь, раны, лужи, следы), код `lua/advancedblood/`, контент
+  `materials/advancedblood`. Тестовые сценарии разработчика (*test*, selftest, hostile) из сборки убраны. Настройки по умолчанию
+  снижены ради FPS (sh_config.lua: abl_quality 2 - без отражений в лужах, abl_budget_ms 1.5, abl_sim_hz 100, меньше лимитов;
+  у игроков со старыми настройками применяются один раз, метка data/abl_perf_v1.txt). К homigrad цепляется после загрузки
+  (InitPostEntity / HomigradRun) и ОБОРАЧИВАЕТ (не заменяет) наши хуки: "organism-think-client-blood" (cl_main.lua),
+  "ResponsiveHits_..." (sv_util.lua, брызги крови - вместо них своя кровь). Хук с таким же именем у нас - сначала смотреть,
+  не обёрнут ли он BloodMark. Файлы раздаются через rem_downloads. `tools/vtf/halve.py` - уменьшение VTF вдвое без перекодирования.
 - Совместимость с InfMap (бесконечные карты): `lua/autorun/!zcity_infmap.lua` + `lua/zcity_infmap/`, описание в `INFMAP.md`.
   Работает только на картах InfMap, выключается `zc_infmap 0`. Новое net-сообщение с позицией - дописать в списки
   `lua/zcity_infmap/sh_net.lua`.

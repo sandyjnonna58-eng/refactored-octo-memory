@@ -1,0 +1,10 @@
+"LightmappedGeneric"
+{
+	"$basetexture" "advancedblood/decals/elong1"
+	"$decal" 1
+	"$decalscale" 0.001953125
+	"$translucent" 1
+	"$vertexcolor" 1
+	"$vertexalpha" 1
+	"$modelmaterial" "advancedblood/decals/elong1_model"
+}

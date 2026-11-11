@@ -1,0 +1,8 @@
+"UnlitGeneric"
+{
+	"$basetexture" "advancedblood/pools/cracks"
+	"$translucent" 1
+	"$vertexcolor" 1
+	"$vertexalpha" 1
+	"$nocull" 1
+}
