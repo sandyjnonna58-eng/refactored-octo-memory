@@ -1,0 +1,8 @@
+"VertexLitGeneric"
+{
+	"$basetexture" "advancedblood/decals/streak4"
+	"$decal" 1
+	"$decalscale" 0.00390625
+	"$translucent" 1
+	"$color2" "[0.62 0.58 0.58]"
+}
