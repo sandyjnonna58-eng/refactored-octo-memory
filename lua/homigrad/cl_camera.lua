@@ -758,10 +758,16 @@ local function CallOtherRenderScene(origin, angles, fov)
 	end
 end
 
+-- сквозные пробоины (explosives/sh_craters.lua): вид за стеной рисуется той же камерой, что и кадр
+local function RenderPortals(origin, angles, fov)
+	if hg.Craters and hg.Craters.RenderPortals then hg.Craters.RenderPortals(origin, angles, fov) end
+end
+
 local function renderscene(pos, angle, fov)
+	local enginePos, engineAng = pos, angle
 	lply = IsValid(lply) and lply or fLPly()
 	-- Снейк (compat/sh_mgsv.lua) или оружие ULTRAKILL (compat/sh_ultrakill.lua): кадр рисует движок с камерой аддона
-	if hg.CameraYield and hg.CameraYield(lply) then viewOverride = nil return end
+	if hg.CameraYield and hg.CameraYield(lply) then viewOverride = nil RenderPortals(enginePos, engineAng, fov) return end
 	
 	pos = eyepos(lply)
 	angle = eyeangles(lply)
@@ -771,7 +777,7 @@ local function renderscene(pos, angle, fov)
 	local invert = false
 	
 	RENDERSCENE = nil
-	if not view then return end
+	if not view then RenderPortals(enginePos, engineAng, fov) return end -- кадр рисует движок (физган и т.п.)
 	if invert then
 		local oldrt = render.GetRenderTarget()
 		render.SetRenderTarget( fliprt )
@@ -798,6 +804,7 @@ local function renderscene(pos, angle, fov)
 	--lply:DrawModel()
 
 	if CallOtherRenderScene(view.origin, view.angles, fov) then lply.norender = nil return true end
+	RenderPortals(view.origin, view.angles, fov)
 	render_RenderView(renderView)
 	lply.norender = nil
 	

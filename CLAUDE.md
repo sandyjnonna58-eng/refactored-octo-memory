@@ -112,7 +112,11 @@
   карты, util.DecalEx; стена - рваная пробоина, мягкая земля - воронка, металл - копоть; обломки HL2 клиентскими пропами).
   Зовут: projectile_base (РПГ, power = BlastDamage/200), ent_hg_grenade (BlastDis/12), СВУ, SLAM, ExpTypes в sv_explosives.
   Текстуры - `tools/craters/make.py` (свой VTF-писатель BGRA8888) -> `materials/rem_crater`. Выкл.: rem_craters 0;
-  обломки у игрока - rem_craters_debris 0..2.
+  обломки у игрока - rem_craters_debris 0..2. Сквозные (TryPortal: стена тоньше 40, выходная пробоина с другой стороны):
+  hg.Craters.RenderPortals(origin, angles, fov) рисует мир за стеной в RT (render.RenderView + PushCustomClipPlane по
+  дальней стороне), PostDrawOpaqueRenderables показывает его трафаретом в рваном отверстии. Зовёт камера Z-City
+  (cl_camera.lua renderscene, во всех ветках), без неё - свой хук RenderScene. rem_crater_portals (сколько сразу, 0 - выкл.),
+  rem_crater_portal_res (доля экрана).
 - Сердце (`modules/sv_pulse.lua`, звуки - `cl_main.lua` RemCardiacSounds): аритмия от «нагрузки» (повреждение, ишемия,
   давление, шок, боль), от крови ниже 4.0 л (не меньше 0.3) до сильной к 3.5 л (0.65), попадание в сердце - 90% сразу
   (sv_organs.lua input_list.heart); при аритмии от 0.25 сознание медленно уходит (cap 1 - arr*0.9 за 45 с) + мысль.
