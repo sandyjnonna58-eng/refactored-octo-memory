@@ -137,6 +137,10 @@ local NECK_CAP = "models/headpartial/headpartial5.mdl"
 -- Mod; модель привязана к кости Neck1, поэтому встаёт сама (bonemerge)
 local NECK_CAP_FNV = "models/mosi/fnv/props/character/headcap.mdl"
 local USE_FNV_NECK = false
+-- второй вариант среза на шее (разнообразие, выбор случайный) - обрубок L4D из Lambda Gore Mod; ставится по кости шеи
+-- как в моде (giblist.lua bone_name_togap): угол 180,110,90, сдвиг -0.812,-2.608,0 (женские -2.912,-2.608,0).
+-- Родная текстура была битой - своя перекраска materials/rem_gore/l4d_neck_wound.vtf (tools/gore/make_l4d_neck.py)
+local NECK_CAP_L4D = "models/noob_dev2323/gib/l4d/common_infected_w_neck.mdl"
 local HEAD_CAP = "models/gore/debris_goredebris02.mdl"
 -- второй вариант среза под головой - из Lambda Gore Mod (срез Fallout NV, перепривязанный к Head1, ставится сам -
 -- bonemerge). Его .vvd в присланном архиве был битый: вариант включается, только если файлы модели целые лежат в игре
@@ -164,6 +168,10 @@ for _, f in ipairs({
 	"models/gore/debris_goredebris02.dx80.vtx", "models/gore/debris_goredebris02.dx90.vtx",
 	"materials/models/gore/gorehumanhead.vmt", "materials/models/gore/gorehumanhead_d.vtf",
 	"materials/models/gore/gorehumanhead_n.vtf", "materials/models/gore/gorehumanhead_exp.vtf",
+	"models/noob_dev2323/gib/l4d/common_infected_w_neck.mdl", "models/noob_dev2323/gib/l4d/common_infected_w_neck.vvd",
+	"models/noob_dev2323/gib/l4d/common_infected_w_neck.dx80.vtx", "models/noob_dev2323/gib/l4d/common_infected_w_neck.dx90.vtx",
+	"materials/models/noob_dev2323/gibs/l4d/master_wound_cmapmaterial.vmt",
+	"materials/models/noob_dev2323/gibs/l4d/master_wound_normal.vtf", "materials/rem_gore/l4d_neck_wound.vtf",
 	"models/mosi/fnv/props/character/headcap.mdl", "models/mosi/fnv/props/character/headcap.vvd",
 	"models/mosi/fnv/props/character/headcap.phy", "models/mosi/fnv/props/character/headcap.dx80.vtx",
 	"models/mosi/fnv/props/character/headcap.dx90.vtx",
@@ -360,6 +368,19 @@ local function CutHead(rag, force)
 	local useFNV = USE_FNV_NECK and util.IsValidModel(NECK_CAP_FNV) and (math.random(2) == 1 or not util.IsValidModel(NECK_CAP))
 	if useFNV then
 		BonemergeProp(rag, NECK_CAP_FNV)
+	elseif util.IsValidModel(NECK_CAP_L4D) and (math.random(2) == 1 or not util.IsValidModel(NECK_CAP)) then
+		local gap = ents.Create("prop_dynamic")
+		if IsValid(gap) then
+			gap:SetModel(NECK_CAP_L4D)
+			gap:Spawn()
+			gap:SetNotSolid(true)
+			gap:DrawShadow(false)
+			gap:FollowBone(rag, neck)
+			gap:SetLocalAngles(Angle(180, 110, 90))
+			local fem = (ThatPlyIsFemale and ThatPlyIsFemale(rag)) or string.find(string.lower(rag:GetModel() or ""), "female", 1, true)
+			gap:SetLocalPos(fem and Vector(-2.912, -2.608, 0) or Vector(-0.812, -2.608, 0))
+			rag:DeleteOnRemove(gap)
+		end
 	elseif util.IsValidModel(NECK_CAP) then
 		local gap = ents.Create("prop_dynamic")
 		if IsValid(gap) then
