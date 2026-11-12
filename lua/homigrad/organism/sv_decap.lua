@@ -151,11 +151,15 @@ end
 local HEAD_LIFE = 300 -- голова лежит столько секунд
 local BLEED_TIME = 40
 -- срез шеи: угол и сдвиг по типу модели (у Zippy - по имени модели)
+-- NECK_DOWN: у Zippy срез стоит на месте головы (модель - остаток головы) и торчит над плечами; опускаем вдоль шеи
+-- (x кости шеи смотрит к голове), чтобы сидел в воротнике
+local NECK_DOWN = 3.5
 local function NeckCapPlace(rag)
 	local mdl = string.lower(rag:GetModel() or "")
-	if string.find(mdl, "alyx", 1, true) or string.find(mdl, "mossman", 1, true) then return Angle(0, -60, -90), Vector(1, -1, 0) end
-	if (ThatPlyIsFemale and ThatPlyIsFemale(rag)) or string.find(mdl, "female", 1, true) then return Angle(0, -60, -90), Vector(1, -2, 0) end
-	return Angle(0, -70, -90), Vector(2.2, -2, 0)
+	local down = Vector(-NECK_DOWN, 0, 0)
+	if string.find(mdl, "alyx", 1, true) or string.find(mdl, "mossman", 1, true) then return Angle(0, -60, -90), Vector(1, -1, 0) + down end
+	if (ThatPlyIsFemale and ThatPlyIsFemale(rag)) or string.find(mdl, "female", 1, true) then return Angle(0, -60, -90), Vector(1, -2, 0) + down end
+	return Angle(0, -70, -90), Vector(2.2, -2, 0) + down
 end
 for _, f in ipairs({
 	"models/headpartial/headpartial5.mdl", "models/headpartial/headpartial5.vvd",
