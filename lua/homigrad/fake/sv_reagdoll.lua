@@ -76,13 +76,18 @@ local function WoundBoneName(rag, w)
 	return b
 end
 
+-- позиция раны - по физике кости (матрицы костей регдолла на сервере бывают старые, у свежего тела смерти - вообще
+-- нулевые: рука тянулась к точке далеко от тела и растягивала регдолл). Кость без своей физики - от физ. родителя.
 local function WoundPos(rag, w)
 	local b = w[4]
 	if isstring(b) then b = rag:LookupBone(b) end
 	if not isnumber(b) or b < 0 then return nil end
-	local bp, ba = rag:GetBonePosition(b)
-	if not bp then return nil end
-	return (LocalToWorld(w[2] or vector_origin, w[3] or angle_zero, bp, ba))
+	local pb = rag:TranslateBoneToPhysBone(b)
+	local phys = pb and pb >= 0 and rag:GetPhysicsObjectNum(pb)
+	if not IsValid(phys) then return nil end
+	local local_ = w[2] or vector_origin
+	if rag:TranslatePhysBoneToBone(pb) ~= b then local_ = local_ * 0.5 end -- не та кость: смещение примерное, ближе к центру
+	return phys:LocalToWorld(local_)
 end
 
 -- руки, которыми сейчас управляет игрок (их не трогаем)
@@ -132,6 +137,7 @@ local function HoldStrength(st, now)
 end
 
 local function ApplyHolds(st, rag, now, busyL, busyR)
+	if not st.alive and now - (st.deathT or now) < 0.25 then return end -- тело смерти только создано - пусть встанет
 	local s = HoldStrength(st, now)
 	for side, h in pairs(st.holds) do
 		local busy = (side == "L" and busyL) or (side == "R" and busyR)
@@ -143,10 +149,12 @@ local function ApplyHolds(st, rag, now, busyL, busyR)
 			local hand, handN = Phys(rag, a.hand)
 			local fore = Phys(rag, a.fore)
 			local upper = Phys(rag, a.upper)
-			if pos and hand and fore and upper and not Floppy(rag, handN) then
+			-- рана дальше, чем достаёт рука (руки на месте раны ~25 от плеча) - не тянем: иначе растягивает
+			local reach = pos and upper and pos:DistToSqr(upper:GetPos()) < 34 * 34
+			if pos and hand and fore and upper and reach and not Floppy(rag, handN) then
 				-- как ручное зажатие Z-City: плечо, предплечье, кисть - каждое к своей точке перед раной
 				local fade = math.min((now - h.start) / 0.35, 1) -- рука тянется, а не прыгает
-				local k = s * fade
+				local k = s * fade * (st.alive and 1 or 0.6) -- мёртвое тело - мягче
 				local function To(phys, off) local d = pos - phys:GetPos() return d:LengthSqr() > 0.01 and pos - d:GetNormalized() * off or pos end
 				hg.ShadowControl(rag, a.upper, 0.06, nil, nil, nil, To(upper, 14), 18 * k, 12 * k)
 				hg.ShadowControl(rag, a.fore, 0.06, nil, nil, nil, To(fore, 8), 55 * k, 14 * k)
@@ -172,6 +180,12 @@ end
 
 local function ApplyStagger(st, rag, now, dt)
 	local sg = st.stagger
+	-- тело уже разлетелось (взрыв, отбросило) или лежит - не держим
+	local pelvis, spine = Phys(rag, 0), Phys(rag, 1)
+	if not pelvis or not spine or pelvis:GetVelocity():Length() > 400 or pelvis:GetPos():DistToSqr(spine:GetPos()) > 40 * 40 then
+		st.stagger = nil
+		return
+	end
 	local t = (now - sg.start) / sg.dur
 	if t >= 1 then st.stagger = nil return end
 	local k = (1 - t) ^ 1.5 -- держит вес всё слабее - колени подкашиваются
