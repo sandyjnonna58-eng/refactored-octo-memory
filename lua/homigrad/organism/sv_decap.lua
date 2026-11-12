@@ -110,7 +110,16 @@ end)
 -- модели и расстановка - из Zippy's Gore Mod Enhanced (dismemberment.lua): на шее тела чистый срез headpartial5,
 -- снизу у головы кусок мяса debris_goredebris02 (масштаб 3x3x2)
 local NECK_CAP = "models/headpartial/headpartial5.mdl"
+-- второй вариант обрубка на шее (разнообразие, выбор случайный): срез шеи из Fallout NV - тот же, что ставит Lambda Gore
+-- Mod; модель привязана к кости Neck1, поэтому встаёт сама (bonemerge)
+local NECK_CAP_FNV = "models/mosi/fnv/props/character/headcap.mdl"
 local HEAD_CAP = "models/gore/debris_goredebris02.mdl"
+-- второй вариант среза под головой - из Lambda Gore Mod (срез Fallout NV, перепривязанный к Head1, ставится сам -
+-- bonemerge). Его .vvd в присланном архиве был битый: вариант включается, только если файлы модели целые лежат в игре
+local HEAD_CAP_LAMBDA = "models/noob_dev2323/gib/l4d/headcap.mdl"
+local function LambdaHeadCapOk()
+	return file.Exists("models/noob_dev2323/gib/l4d/headcap.vvd", "GAME") and util.IsValidModel(HEAD_CAP_LAMBDA)
+end
 local HEAD_LIFE = 300 -- голова лежит столько секунд
 local BLEED_TIME = 40
 -- срез шеи: угол и сдвиг по типу модели (у Zippy - по имени модели)
@@ -131,6 +140,14 @@ for _, f in ipairs({
 	"models/gore/debris_goredebris02.dx80.vtx", "models/gore/debris_goredebris02.dx90.vtx",
 	"materials/models/gore/gorehumanhead.vmt", "materials/models/gore/gorehumanhead_d.vtf",
 	"materials/models/gore/gorehumanhead_n.vtf", "materials/models/gore/gorehumanhead_exp.vtf",
+	"models/mosi/fnv/props/character/headcap.mdl", "models/mosi/fnv/props/character/headcap.vvd",
+	"models/mosi/fnv/props/character/headcap.phy", "models/mosi/fnv/props/character/headcap.dx80.vtx",
+	"models/mosi/fnv/props/character/headcap.dx90.vtx",
+	"materials/models/mosi/fnv/props/character/meatcapgore01.vmt", "materials/models/mosi/fnv/props/character/meatcapinsect.vmt",
+	"materials/models/mosi/fnv/props/character/meatcapgore01grey.vmt", "materials/models/mosi/fnv/props/character/meatcapgore01grey.vtf",
+	"materials/models/mosi/fnv/props/character/meatcapgore01grey2.vmt", "materials/models/mosi/fnv/props/character/meatcapgore01grey2.vtf",
+	"materials/models/mosi/fnv/props/gore/meatcapgore01.vtf", "materials/models/mosi/fnv/props/gore/meatcapgore01_n.vtf",
+	"materials/models/mosi/fnv/props/gore/meatcapinsect.vtf", "materials/models/mosi/fnv/props/gore/meatcapinsect_n.vtf",
 }) do resource.AddSingleFile(f) end
 
 local headsAlive = {}
@@ -207,8 +224,20 @@ local function SpawnHead(rag, headBone, force)
 		rp:AddVelocity((force or vector_origin) * 0.6 + VectorRand(-40, 40) + Vector(0, 0, 80))
 		rp:AddAngleVelocity(VectorRand(-300, 300))
 	end
-	-- срез снизу головы (как у Zippy: кусок мяса на кости головы)
-	if util.IsValidModel(HEAD_CAP) then
+	-- срез снизу головы: случайно - кусок мяса Zippy на кости головы или срез Lambda (bonemerge, если есть)
+	if LambdaHeadCapOk() and math.random(2) == 1 then
+		local cap = ents.Create("prop_dynamic")
+		if IsValid(cap) then
+			cap:SetModel(HEAD_CAP_LAMBDA)
+			cap:SetPos(e:GetPos())
+			cap:SetParent(e)
+			cap:Spawn()
+			cap:SetSolid(SOLID_NONE)
+			cap:DrawShadow(false)
+			cap:AddEffects(EF_BONEMERGE)
+			e:DeleteOnRemove(cap)
+		end
+	elseif util.IsValidModel(HEAD_CAP) then
 		local cap = ents.Create("prop_dynamic")
 		if IsValid(cap) then
 			cap:SetModel(HEAD_CAP)
@@ -274,8 +303,21 @@ local function CutHead(rag, force)
 	if Gib_RemoveBone then Gib_RemoveBone(rag, head, rag:TranslateBoneToPhysBone(head)) end
 	if rag.SetNetVar then rag:SetNetVar("Accessories", "none") end -- шапки ушли с головой
 
-	-- обрубок на шее
-	if util.IsValidModel(NECK_CAP) then
+	-- обрубок на шее: случайно - срез Zippy (headpartial5, ставим по кости шеи) или срез Fallout NV (bonemerge)
+	local useFNV = util.IsValidModel(NECK_CAP_FNV) and (math.random(2) == 1 or not util.IsValidModel(NECK_CAP))
+	if useFNV then
+		local gap = ents.Create("prop_dynamic")
+		if IsValid(gap) then
+			gap:SetModel(NECK_CAP_FNV)
+			gap:SetPos(rag:GetPos())
+			gap:SetParent(rag)
+			gap:Spawn()
+			gap:SetSolid(SOLID_NONE)
+			gap:DrawShadow(false)
+			gap:AddEffects(EF_BONEMERGE)
+			rag:DeleteOnRemove(gap)
+		end
+	elseif util.IsValidModel(NECK_CAP) then
 		local gap = ents.Create("prop_dynamic")
 		if IsValid(gap) then
 			gap:SetModel(NECK_CAP)

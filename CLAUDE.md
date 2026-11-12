@@ -154,7 +154,11 @@
   клиент - колбэк BuildBonePositions сжимает всё в точку среза), снизу debris_goredebris02 (FollowBone Head1, масштаб
   3x3x2, сдвиг 2,-2,0); на теле Gib_RemoveBone(Head1), на шее headpartial5 (FollowBone Neck1, NeckCapPlace: угол/сдвиг по
   модели - мужская / женская / alyx, mossman), фонтан Z-City (addfountain), шапки/очки уходят с головой, шлем/маска
-  падают. Ассеты - models/headpartial, models/gore (+ materials). Модели Lambda (битый архив) убраны.
+  падают. Разнообразие (выбор случайный): на шее - headpartial5 Zippy или срез Fallout NV
+  models/mosi/fnv/props/character/headcap.mdl (тот же, что у Lambda; привязан к Neck1 - bonemerge); под головой - кусок
+  Zippy или headcap Lambda (models/noob_dev2323/gib/l4d/headcap.mdl, привязан к Head1 - bonemerge) - только если его
+  .vvd целый есть в игре (LambdaHeadCapOk; в присланном rar битый). Ассеты - models/headpartial, models/gore,
+  models/mosi (+ materials).
   Тест: rem_decap_test, меню Amputate Limb -> Cut Off Head (id 7). rem_decap 0 - выкл.
 - Отрубленные конечности отдельными кусками (подбирать, есть - weapon_rem_flesh) делали - убраны по просьбе.
   Катана: 5% отрубить конечность - раз за взмах (MultiDmg1 бьёт каждый тик).
