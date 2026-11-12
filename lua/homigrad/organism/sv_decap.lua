@@ -55,12 +55,28 @@ local function BonePos(ent, name)
 end
 
 -- удар по голове или шее?
+-- голова - отрезок от шеи до макушки вдоль кости головы (x кости смотрит к макушке); у регдолла - по физике
+-- (матрицы костей регдолла на сервере бывают старые), у стоящего игрока - по матрице кости
 local function HeadHit(body, pos)
 	if not IsValid(body) or not pos then return false end
-	local head, neck = BonePos(body, "ValveBiped.Bip01_Head1"), BonePos(body, "ValveBiped.Bip01_Neck1")
-	if head and pos:DistToSqr(head + (head - (neck or head)) * 0.5) < 10 * 10 then return true end
-	if neck and pos:DistToSqr(neck) < 7 * 7 then return true end
-	return false
+	local hb = body:LookupBone("ValveBiped.Bip01_Head1")
+	if not hb then return false end
+	local hpos, hang
+	if body:IsRagdoll() then
+		local phys = body:GetPhysicsObjectNum(body:TranslateBoneToPhysBone(hb))
+		if IsValid(phys) then hpos, hang = phys:GetPos(), phys:GetAngles() end
+	end
+	if not hpos then
+		body:SetupBones()
+		local m = body:GetBoneMatrix(hb)
+		if m then hpos, hang = m:GetTranslation(), m:GetAngles() end
+	end
+	if not hpos then return false end
+	local up = hang:Forward()
+	local a, b = hpos - up * 6, hpos + up * 9 -- шея .. макушка
+	local ab = b - a
+	local t = math.Clamp((pos - a):Dot(ab) / ab:LengthSqr(), 0, 1)
+	return pos:DistToSqr(a + ab * t) < 8 * 8
 end
 
 local function OnDamage(target, dmg)
@@ -87,7 +103,14 @@ local function OnDamage(target, dmg)
 
 	local hits = (holder.__remHeadHits or 0) + 1
 	holder.__remHeadHits = hits
-	if hits < MIN_HITS or math.random() >= KIND_CHANCE[kind] then return end
+	if hits < MIN_HITS then
+		print(("[rem_decap] head hit %d/%d (%s)"):format(hits, MIN_HITS, kind))
+		return
+	end
+	if math.random() >= KIND_CHANCE[kind] then
+		print(("[rem_decap] head hit %d, chance %d%% - not this time"):format(hits, KIND_CHANCE[kind] * 100))
+		return
+	end
 
 	local force = (IsValid(attacker) and attacker:GetAimVector() or dmg:GetDamageForce():GetNormalized()) * 300
 	local victim = (IsValid(ply) and ply:Alive() and (target == ply or target == ply.FakeRagdoll)) and ply or body
@@ -177,6 +200,27 @@ local function CopyLook(src, dst)
 	end
 end
 
+-- модель, прилипающая костями к телу (bonemerge). Как у Lambda (gore_mod_bonemerge_prop) и Z-City (кишки):
+-- родитель + точка крепления, иначе модель встаёт в корень тела (таз)
+local function BonemergeProp(parent, model)
+	local att
+	for _, a in pairs(parent:GetAttachments() or {}) do att = a.name end
+	if not att then return nil end
+	local p = ents.Create("prop_dynamic")
+	if not IsValid(p) then return nil end
+	p:SetModel(model)
+	p:SetPos(parent:GetPos())
+	p:SetParent(parent)
+	p:Fire("SetParentAttachment", att)
+	p:Spawn()
+	p:Activate()
+	p:SetSolid(SOLID_NONE)
+	p:DrawShadow(false)
+	p:AddEffects(EF_BONEMERGE)
+	parent:DeleteOnRemove(p)
+	return p
+end
+
 -- голова отдельно: копия регдолла, видны только Head1 и потомки; остальные кости сжаты в ноль (на клиенте -
 -- в одну точку у среза, cl_decap.lua) и каждый тик едут за головой
 local function SpawnHead(rag, headBone, force)
@@ -226,17 +270,7 @@ local function SpawnHead(rag, headBone, force)
 	end
 	-- срез снизу головы: случайно - кусок мяса Zippy на кости головы или срез Lambda (bonemerge, если есть)
 	if LambdaHeadCapOk() and math.random(2) == 1 then
-		local cap = ents.Create("prop_dynamic")
-		if IsValid(cap) then
-			cap:SetModel(HEAD_CAP_LAMBDA)
-			cap:SetPos(e:GetPos())
-			cap:SetParent(e)
-			cap:Spawn()
-			cap:SetSolid(SOLID_NONE)
-			cap:DrawShadow(false)
-			cap:AddEffects(EF_BONEMERGE)
-			e:DeleteOnRemove(cap)
-		end
+		BonemergeProp(e, HEAD_CAP_LAMBDA)
 	elseif util.IsValidModel(HEAD_CAP) then
 		local cap = ents.Create("prop_dynamic")
 		if IsValid(cap) then
@@ -307,17 +341,7 @@ local function CutHead(rag, force)
 	-- обрубок на шее: случайно - срез Zippy (headpartial5, ставим по кости шеи) или срез Fallout NV (bonemerge)
 	local useFNV = util.IsValidModel(NECK_CAP_FNV) and (math.random(2) == 1 or not util.IsValidModel(NECK_CAP))
 	if useFNV then
-		local gap = ents.Create("prop_dynamic")
-		if IsValid(gap) then
-			gap:SetModel(NECK_CAP_FNV)
-			gap:SetPos(rag:GetPos())
-			gap:SetParent(rag)
-			gap:Spawn()
-			gap:SetSolid(SOLID_NONE)
-			gap:DrawShadow(false)
-			gap:AddEffects(EF_BONEMERGE)
-			rag:DeleteOnRemove(gap)
-		end
+		BonemergeProp(rag, NECK_CAP_FNV)
 	elseif util.IsValidModel(NECK_CAP) then
 		local gap = ents.Create("prop_dynamic")
 		if IsValid(gap) then

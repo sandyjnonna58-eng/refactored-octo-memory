@@ -157,7 +157,10 @@
   падают. Разнообразие (выбор случайный): на шее - headpartial5 Zippy или срез Fallout NV
   models/mosi/fnv/props/character/headcap.mdl (тот же, что у Lambda; привязан к Neck1 - bonemerge); под головой - кусок
   Zippy или headcap Lambda (models/noob_dev2323/gib/l4d/headcap.mdl, привязан к Head1 - bonemerge) - только если его
-  .vvd целый есть в игре (LambdaHeadCapOk; в присланном rar битый). Ассеты - models/headpartial, models/gore,
+  .vvd целый есть в игре (LambdaHeadCapOk; в присланном rar битый). Bonemerge - BonemergeProp: SetParent + Fire
+  SetParentAttachment (как у Lambda / кишок Z-City), без точки крепления модель встаёт в таз. HeadHit - отрезок шея..макушка
+  вдоль кости Head1, у регдолла по физике (матрицы костей регдолла на сервере бывают старые). В консоль - [rem_decap]:
+  счёт ударов, промах шанса, отрезано / почему нет. Ассеты - models/headpartial, models/gore,
   models/mosi (+ materials).
   Тест: rem_decap_test, меню Amputate Limb -> Cut Off Head (id 7). rem_decap 0 - выкл.
 - Отрубленные конечности отдельными кусками (подбирать, есть - weapon_rem_flesh) делали - убраны по просьбе.
