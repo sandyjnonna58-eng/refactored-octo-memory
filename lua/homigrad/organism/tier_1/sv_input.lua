@@ -1141,11 +1141,13 @@ hook.Add("EntityTakeDamage", "homigrad-damage", function(ent, dmgInfo)
 	--print(damageStack, org.dmgstack[hitgroup][1], org.dmgstack[hitgroup][3])
 	local blast = dmgInfo:IsDamageType(DMG_BLAST)
 	local slash = dmgInfo:IsDamageType(DMG_SLASH)
+	-- remorse: решаем сразу - dmgInfo в таймере ниже уже недействителен
+	local remDecapBlock = hg.RemDecapBlocks and hg.RemDecapBlocks(dmgInfo)
 	if instant and blast and hitgroup == HITGROUP_HEAD and !ent.headexploded then
 		hg.ExplodeHead(ent, org.dmgstack[hitgroup][1], false, dirCool * len)
 	end
 	-- ножи, топоры, мечи, пила: голову с одного удара не сносим - это решает organism/sv_decap.lua (с 4-го удара, шанс)
-	if instant and !blast and hitgroup == HITGROUP_HEAD and !ent.headexploded and not (hg.RemDecapBlocks and hg.RemDecapBlocks(dmgInfo)) then
+	if instant and !blast and hitgroup == HITGROUP_HEAD and !ent.headexploded and not remDecapBlock then
 		hg.ExplodeHead(ent, org.dmgstack[hitgroup][1], slash, force)
 	end
 
@@ -1193,7 +1195,8 @@ hook.Add("EntityTakeDamage", "homigrad-damage", function(ent, dmgInfo)
 
 			should = org.dmgstack[hitgroup][1] > hitgroup_max
 			--print(rag, should, hitgroup == HITGROUP_HEAD, bonename, hitgroup, HITGROUP_HEAD)
-			if should and hitgroup == HITGROUP_HEAD then
+			-- remorse: и по мёртвому телу режущее оружие голову не взрывает (отрезает sv_decap.lua)
+			if should and hitgroup == HITGROUP_HEAD and not remDecapBlock then
 				hg.ExplodeHead(ent, org.dmgstack[hitgroup][1], slash, force)
 
 				org.dmgstack[hitgroup][1] = nil

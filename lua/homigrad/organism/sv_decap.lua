@@ -44,6 +44,7 @@ local function Owner(ent)
 	if not IsValid(ent) then return nil end
 	if ent:IsPlayer() then return ent end
 	local ply = hg.RagdollOwner and hg.RagdollOwner(ent) or ent:GetNWEntity("ply")
+	if not IsValid(ply) then ply = ent.ply end -- тело умершего: счёт ударов тот же, что был у живого
 	return IsValid(ply) and ply:IsPlayer() and ply or nil
 end
 
@@ -79,20 +80,29 @@ local function HeadHit(body, pos)
 	return pos:DistToSqr(a + ab * t) < 8 * 8
 end
 
+-- почему удар не засчитан - в консоль, но не чаще раза в SWING_GAP
+local nextWhy = 0
+local function Why(msg)
+	if CurTime() < nextWhy then return end
+	nextWhy = CurTime() + SWING_GAP
+	print("[rem_decap] " .. msg)
+end
+
 local function OnDamage(target, dmg)
 	if not cvOn:GetBool() or not IsValid(target) then return end
-	if not (target:IsPlayer() or target:IsRagdoll()) or target.headexploded or target.noHead then return end
+	if not (target:IsPlayer() or target:IsRagdoll()) then return end
 	local wep = dmg:GetInflictor()
 	local kind = Kind(wep)
 	if not kind then return end
+	if target.headexploded or target.noHead then Why("no head already: " .. tostring(target)) return end
 	local attacker = dmg:GetAttacker()
 	local ply = Owner(target)
 	if IsValid(ply) and ply == attacker then return end -- себе не рубим
 
 	local body = target
 	if target:IsPlayer() then body = hg.GetCurrentCharacter and hg.GetCurrentCharacter(target) or target end
-	if not IsValid(body) or body.headexploded or body.noHead then return end
-	if not HeadHit(body, dmg:GetDamagePosition()) then return end
+	if not IsValid(body) or body.headexploded or body.noHead then Why("no head already: " .. tostring(body)) return end
+	if not HeadHit(body, dmg:GetDamagePosition()) then return end -- не по голове (тут не пишем - удары по телу)
 
 	-- один "удар" - раз за взмах (у пилы - раз в SAW_STEP пиления)
 	local holder = IsValid(ply) and ply or target
