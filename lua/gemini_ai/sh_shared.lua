@@ -30,6 +30,11 @@ GeminiAI.Models = {
 local FLAGS = bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED)
 
 GeminiAI.CVars = {
+	provider     = CreateConVar("gemini_ai_provider", "gemini", FLAGS, "Провайдер ИИ: gemini / deepseek / custom"),
+	ds_model     = CreateConVar("gemini_ai_ds_model", "deepseek-chat", FLAGS, "Модель DeepSeek (deepseek-chat - быстрая, deepseek-reasoner - думает дольше)"),
+	custom_url   = CreateConVar("gemini_ai_custom_url", "", FLAGS, "Адрес OpenAI-совместимого сервера, например https://openrouter.ai/api/v1"),
+	custom_model = CreateConVar("gemini_ai_custom_model", "", FLAGS, "Модель на своём сервере"),
+
 	model       = CreateConVar("gemini_ai_model", "gemini-flash-latest", FLAGS, "Модель Gemini"),
 	execute     = CreateConVar("gemini_ai_execute", "1", FLAGS, "Разрешить ИИ выполнять Lua-код (1/0)", 0, 1),
 	confirm     = CreateConVar("gemini_ai_confirm", "0", FLAGS, "Спрашивать подтверждение перед выполнением кода (1/0)", 0, 1),
@@ -48,11 +53,25 @@ GeminiAI.CVars = {
 	char_debug  = CreateConVar("gemini_ai_char_debug", "0", FLAGS, "Показывать админам мысли и действия персонажей в чате", 0, 1),
 }
 
+-- Провайдеры ИИ (ключ у каждого свой)
+GeminiAI.ProviderList  = { "gemini", "deepseek", "custom" }
+GeminiAI.ProviderNames = { gemini = "Google Gemini", deepseek = "DeepSeek", custom = "Свой сервер (OpenAI-совместимый)" }
+GeminiAI.DeepSeekModels = { "deepseek-chat", "deepseek-reasoner" }
+
+-- Модель, которой сейчас пользуется мод (forChar - для ИИ-персонажей)
+function GeminiAI.ActiveModel(forChar)
+	local p = GetConVarString("gemini_ai_provider")
+	if p == "deepseek" then return GetConVarString("gemini_ai_ds_model") end
+	if p == "custom" then return GetConVarString("gemini_ai_custom_model") end
+	return GetConVarString(forChar and "gemini_ai_char_model" or "gemini_ai_model")
+end
+
 -- Параметры, которые админ может менять из игры (gemini_ai_set / меню)
 GeminiAI.Settable = {
-	model = "string", execute = "bool", confirm = "bool", public = "bool",
+	provider = "provider", ds_model = "model", custom_url = "url", custom_model = "model",
+	model = "model", execute = "bool", confirm = "bool", public = "bool",
 	broadcast = "bool", cooldown = "number", history = "number", temperature = "number",
-	char_model = "string", char_idle = "number", char_gap = "number", char_rpm = "number", char_hear = "number", char_debug = "bool",
+	char_model = "model", char_idle = "number", char_gap = "number", char_rpm = "number", char_hear = "number", char_debug = "bool",
 }
 
 ---------------------------------------------------------------------------

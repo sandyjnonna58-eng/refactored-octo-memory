@@ -446,7 +446,7 @@ function GeminiAI.CharThink(char)
 	end, {
 		system = SystemPrompt(char),
 		schema = SCHEMA,
-		model = cv.char_model:GetString(),
+		char = true, -- модель персонажей (у Gemini — gemini_ai_char_model)
 		temperature = 0.9,
 		maxTokens = 250,
 		fast = true,    -- без «размышлений» модели: ответ ~в 2-4 раза быстрее

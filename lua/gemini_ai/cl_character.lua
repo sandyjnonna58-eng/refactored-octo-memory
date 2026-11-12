@@ -148,7 +148,7 @@ function GeminiAI.OpenCharMenu(spawnPos)
 		draw.RoundedBox(10, 12, 10, 36, 36, c.accent)
 		draw.SimpleText("AI", "GeminiAI_Icon", 30, 28, color_white, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 		draw.SimpleText("ИИ-персонажи", "GeminiAI_Title", 58, 18, c.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-		draw.SimpleText("живые боты, которые отыгрывают роль • модель " .. GetConVarString("gemini_ai_char_model"), "GeminiAI_Small", 58, 38, c.dim)
+		draw.SimpleText("живые боты, которые отыгрывают роль • модель " .. GeminiAI.ActiveModel(true), "GeminiAI_Small", 58, 38, c.dim)
 	end
 	head.OnMousePressed = function() f.Dragging = { gui.MouseX() - f.x, gui.MouseY() - f.y } f:MouseCapture(true) end
 

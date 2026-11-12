@@ -87,20 +87,41 @@ AddCommand("gemini_ai_help", { "aihelp" }, nil, "Список команд Gemin
 ---------------------------------------------------------------------------
 -- Для админов
 ---------------------------------------------------------------------------
-AddCommand("gemini_ai_setkey", { "aikey" }, "Admin", "Задать API-ключ Gemini: gemini_ai_setkey <ключ>",
+AddCommand("gemini_ai_setkey", { "aikey" }, "Admin", "Задать API-ключ: gemini_ai_setkey [gemini|deepseek|custom] <ключ> (без провайдера — текущему)",
 	function(ply, args)
-		local key = args[1] or ""
-		if key ~= "" and not string.match(key, "^[%w%-_]+$") then
+		local provider, key = GeminiAI.Provider(), args[1] or ""
+		if table.HasValue(GeminiAI.ProviderList, args[1] or "") then provider, key = args[1], args[2] or "" end
+		if key ~= "" and not string.match(key, "^[%w%-_%.]+$") then
 			return Reply(ply, "Ключ выглядит неправильно.", true)
 		end
-		GeminiAI.SetKey(key)
-		Reply(ply, key == "" and "API-ключ удалён." or "API-ключ сохранён в data/gemini_ai/config.json. Проверка: gemini_ai_test")
+		GeminiAI.SetKey(key, provider)
+		local name = GeminiAI.ProviderNames[provider]
+		Reply(ply, key == "" and ("Ключ " .. name .. " удалён.") or ("Ключ " .. name .. " сохранён в data/gemini_ai/config.json. Проверка: gemini_ai_test"))
+		if provider ~= GeminiAI.Provider() then
+			Reply(ply, "Сейчас включён " .. GeminiAI.ProviderNames[GeminiAI.Provider()] .. ". Переключить: gemini_ai_provider " .. provider)
+		end
+	end)
+
+AddCommand("gemini_ai_provider", { "aiprovider" }, "Admin", "Выбрать провайдера ИИ: gemini_ai_provider <gemini|deepseek|custom>",
+	function(ply, args)
+		if not args[1] then
+			return Reply(ply, "Сейчас: " .. GeminiAI.ProviderNames[GeminiAI.Provider()] .. " (" .. GeminiAI.ActiveModel(false) .. "). Варианты: gemini, deepseek, custom")
+		end
+		local ok, msg = GeminiAI.SetSetting("provider", args[1])
+		if not ok then return Reply(ply, msg, true) end
+		Reply(ply, "Провайдер: " .. GeminiAI.ProviderNames[args[1]] .. ". Модель: " .. GeminiAI.ActiveModel(false)
+			.. (GeminiAI.HasKey(args[1]) and "" or (" — задайте ключ: gemini_ai_setkey " .. args[1] .. " <ключ>")))
 	end)
 
 AddCommand("gemini_ai_status", { "aistatus" }, "Admin", "Показать состояние и настройки мода",
 	function(ply)
 		local cv = GeminiAI.CVars
-		Reply(ply, "Версия " .. GeminiAI.Version .. " | ключ: " .. (GeminiAI.HasKey() and "задан" or "НЕ ЗАДАН") .. " | модель: " .. cv.model:GetString())
+		local keys = {}
+		for name, has in pairs(GeminiAI.KeyInfo()) do keys[#keys + 1] = name .. (has and ": есть" or ": нет") end
+		Reply(ply, "Версия " .. GeminiAI.Version .. " | провайдер: " .. GeminiAI.ProviderNames[GeminiAI.Provider()]
+			.. " | ключ: " .. (GeminiAI.HasKey() and "задан" or "НЕ ЗАДАН") .. " | модель: " .. GeminiAI.ActiveModel(false)
+			.. " | персонажи: " .. GeminiAI.ActiveModel(true))
+		Reply(ply, "Ключи: " .. table.concat(keys, ", ") .. (GeminiAI.Provider() == "custom" and (" | адрес: " .. cv.custom_url:GetString()) or ""))
 		Reply(ply, string.format("Выполнение кода: %s | подтверждение: %s | общий доступ: %s | трансляция в чат: %s",
 			cv.execute:GetBool() and "вкл" or "выкл", cv.confirm:GetBool() and "вкл" or "выкл",
 			cv.public:GetBool() and "вкл" or "выкл", cv.broadcast:GetBool() and "вкл" or "выкл"))
@@ -121,18 +142,19 @@ AddCommand("gemini_ai_set", { "aiset" }, "Admin", "Изменить настро
 AddCommand("gemini_ai_test", { "aitest" }, "Admin", "Проверить подключение к Gemini (gemini_ai_test char — запрос как у ИИ-персонажей)",
 	function(ply, args)
 		local char = args[1] == "char"
-		local model = char and GeminiAI.CVars.char_model:GetString() or GeminiAI.CVars.model:GetString()
-		Reply(ply, "Проверяю подключение к " .. model .. (char and " (быстрый режим персонажей)" or "") .. "…")
+		local model = GeminiAI.ActiveModel(char)
+		local provider = GeminiAI.Provider()
+		Reply(ply, "Проверяю " .. GeminiAI.ProviderNames[provider] .. ": " .. model .. (char and " (запрос персонажей)" or "") .. "…")
 		local start = SysTime()
 		GeminiAI.Request({ { role = "user", parts = { { text = "Ответь одним словом: работает" } } } }, function(res, err)
 			if res then
-				local lvl = GeminiAI.ModelLevel[model] or 0
+				local lvl = GeminiAI.ModelLevel[provider .. ":" .. model] or 0
 				Reply(ply, string.format("Подключение работает! (%.1f сек) Ответ: %s%s", SysTime() - start, res.say,
 					lvl > 0 and (" [модель упрощена до уровня " .. lvl .. "]") or ""))
 			else
 				Reply(ply, "Ошибка: " .. tostring(err), true)
 			end
-		end, char and { model = model, fast = true, maxTokens = 60 } or nil)
+		end, char and { char = true, fast = true, maxTokens = 60 } or nil)
 	end)
 
 AddCommand("gemini_ai_models", { "aimodels" }, "Admin", "Список доступных моделей Gemini для вашего ключа",

@@ -18,7 +18,8 @@ local function Header(pnl, text)
 	pnl:AddItem(l)
 end
 
-local function BuildSettings(pnl)
+local BuildSettings
+function BuildSettings(pnl)
 	pnl:ClearControls()
 
 	local C = GeminiAI.UIColors
@@ -38,19 +39,38 @@ local function BuildSettings(pnl)
 		return
 	end
 
-	Header(pnl, "API-ключ Gemini (бесплатно)")
-	pnl:Help("1. Откройте aistudio.google.com/apikey\n2. Нажмите «Create API key»\n3. Вставьте ключ ниже. Ключ хранится только на сервере.")
+	-- Провайдер ИИ: при смене перестраиваем панель (ключ и модели у каждого свои)
+	local prov = GetConVarString("gemini_ai_provider")
+	if not GeminiAI.ProviderNames[prov] then prov = "gemini" end
 
+	Header(pnl, "Провайдер ИИ")
+	local pcombo = vgui.Create("DComboBox", pnl)
+	pcombo:SetValue(GeminiAI.ProviderNames[prov])
+	for _, name in ipairs(GeminiAI.ProviderList) do pcombo:AddChoice(GeminiAI.ProviderNames[name], name) end
+	pcombo.OnSelect = function(_, _, _, data)
+		AdminSet("provider", data)
+		timer.Simple(0.6, function() if IsValid(pnl) then BuildSettings(pnl) end end)
+	end
+	pnl:AddItem(pcombo)
+
+	local HELP = {
+		gemini = "Бесплатно. Ключ: aistudio.google.com/apikey → Create API key. В России нужен VPN на компьютере сервера.",
+		deepseek = "Платно, но очень дёшево. Ключ: platform.deepseek.com → API keys (пополните баланс в Top up). Работает без VPN.",
+		custom = "Любой OpenAI-совместимый сервер. Примеры адресов:\n• OpenRouter: https://openrouter.ai/api/v1 (есть бесплатные модели с «:free»)\n• Ollama на этом ПК: http://localhost:11434/v1 (ключ не нужен; серверу нужен параметр запуска -allowlocalhttp)",
+	}
+	pnl:Help(HELP[prov])
+
+	Header(pnl, "Ключ " .. GeminiAI.ProviderNames[prov])
 	local state = vgui.Create("DLabel", pnl)
 	state:SetFont("GeminiAI_Small")
 	state.Think = function(s)
-		s:SetText(GeminiAI.KeySet and "Статус: ключ задан" or "Статус: ключ НЕ задан")
+		s:SetText(GeminiAI.KeySet and "Статус: готово к работе" or "Статус: ключ НЕ задан")
 		s:SetTextColor(GeminiAI.KeySet and C.good or C.bad)
 	end
 	pnl:AddItem(state)
 
 	local entry = vgui.Create("DTextEntry", pnl)
-	entry:SetPlaceholderText("AIza...")
+	entry:SetPlaceholderText(({ gemini = "AIza...", deepseek = "sk-...", custom = "ключ (если нужен)" })[prov])
 	pnl:AddItem(entry)
 
 	local save = pnl:Button("Сохранить ключ")
@@ -63,12 +83,38 @@ local function BuildSettings(pnl)
 	test.DoClick = function() RunConsoleCommand("gemini_ai_test") end
 
 	Header(pnl, "Модель")
-	local combo = vgui.Create("DComboBox", pnl)
-	combo:SetValue(GetConVarString("gemini_ai_model"))
-	for _, m in ipairs(GeminiAI.Models) do combo:AddChoice(m) end
-	combo.OnSelect = function(_, _, value) AdminSet("model", value) end
-	pnl:AddItem(combo)
-	pnl:Help("gemini-flash-latest — быстрая и бесплатная. Если «лимит исчерпан» — выберите flash-lite. Полный список: команда gemini_ai_models.")
+	if prov == "gemini" then
+		local combo = vgui.Create("DComboBox", pnl)
+		combo:SetValue(GetConVarString("gemini_ai_model"))
+		for _, m in ipairs(GeminiAI.Models) do combo:AddChoice(m) end
+		combo.OnSelect = function(_, _, value) AdminSet("model", value) end
+		pnl:AddItem(combo)
+		pnl:Help("gemini-flash-latest — быстрая и бесплатная. Если «лимит исчерпан» — выберите flash-lite. Полный список: команда gemini_ai_models.")
+	elseif prov == "deepseek" then
+		local combo = vgui.Create("DComboBox", pnl)
+		combo:SetValue(GetConVarString("gemini_ai_ds_model"))
+		for _, m in ipairs(GeminiAI.DeepSeekModels) do combo:AddChoice(m) end
+		combo.OnSelect = function(_, _, value) AdminSet("ds_model", value) end
+		pnl:AddItem(combo)
+		pnl:Help("deepseek-chat — быстрая, для чата и персонажей. deepseek-reasoner — умнее в коде, но отвечает заметно дольше.")
+	else
+		local url = vgui.Create("DTextEntry", pnl)
+		url:SetValue(GetConVarString("gemini_ai_custom_url"))
+		url:SetPlaceholderText("https://openrouter.ai/api/v1")
+		url.OnEnter = function(e) AdminSet("custom_url", string.Trim(e:GetValue())) end
+		pnl:AddItem(url)
+		local model = vgui.Create("DTextEntry", pnl)
+		model:SetValue(GetConVarString("gemini_ai_custom_model"))
+		model:SetPlaceholderText("deepseek/deepseek-chat")
+		model.OnEnter = function(e) AdminSet("custom_model", string.Trim(e:GetValue())) end
+		pnl:AddItem(model)
+		local apply = pnl:Button("Сохранить адрес и модель")
+		apply.DoClick = function()
+			AdminSet("custom_url", string.Trim(url:GetValue()))
+			AdminSet("custom_model", string.Trim(model:GetValue()))
+		end
+		pnl:Help("Список моделей сервера — команда gemini_ai_models.")
+	end
 
 	Header(pnl, "Поведение")
 	local function Check(label, key, help)
@@ -102,12 +148,16 @@ local function BuildSettings(pnl)
 	Slider("Креативность", "temperature", 0, 2, 2)
 
 	Header(pnl, "ИИ-персонажи")
-	local cm = vgui.Create("DComboBox", pnl)
-	cm:SetValue(GetConVarString("gemini_ai_char_model"))
-	for _, m in ipairs(GeminiAI.Models) do cm:AddChoice(m) end
-	cm.OnSelect = function(_, _, value) AdminSet("char_model", value) end
-	pnl:AddItem(cm)
-	pnl:ControlHelp("Модель персонажей. lite — больше бесплатных запросов в минуту.")
+	if prov == "gemini" then
+		local cm = vgui.Create("DComboBox", pnl)
+		cm:SetValue(GetConVarString("gemini_ai_char_model"))
+		for _, m in ipairs(GeminiAI.Models) do cm:AddChoice(m) end
+		cm.OnSelect = function(_, _, value) AdminSet("char_model", value) end
+		pnl:AddItem(cm)
+		pnl:ControlHelp("Модель персонажей. lite — больше бесплатных запросов в минуту.")
+	else
+		pnl:ControlHelp("Персонажи используют ту же модель: " .. GeminiAI.ActiveModel(true))
+	end
 	Slider("Думает раз в (сек)", "char_idle", 5, 120)
 	Slider("Запросов в минуту", "char_rpm", 1, 60)
 	Slider("Дальность слуха", "char_hear", 100, 3000)

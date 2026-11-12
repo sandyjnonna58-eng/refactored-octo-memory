@@ -16,6 +16,34 @@
 
 Ключ хранится только на сервере в `garrysmod/data/gemini_ai/config.json` и никогда не отправляется игрокам.
 
+## Провайдеры ИИ: Gemini, DeepSeek или свой сервер
+
+| Провайдер | Цена | Ключ | Примечание |
+|---|---|---|---|
+| `gemini` (по умолчанию) | бесплатно | aistudio.google.com/apikey | в России нужен VPN на компьютере сервера |
+| `deepseek` | платно, очень дёшево | platform.deepseek.com → API keys (+ пополнить баланс) | работает без VPN, отлично пишет код |
+| `custom` | зависит от сервера | если нужен | любой OpenAI-совместимый: OpenRouter, Ollama, LM Studio… |
+
+**Подключить DeepSeek:**
+```
+gemini_ai_setkey deepseek sk-ВАШ_КЛЮЧ
+gemini_ai_provider deepseek
+gemini_ai_test
+```
+Модель: `gemini_ai_set ds_model deepseek-chat` (быстрая, по умолчанию) или `deepseek-reasoner` (умнее, но медленнее).
+
+**Свой сервер** (пример — OpenRouter или Ollama на этом же ПК):
+```
+gemini_ai_provider custom
+gemini_ai_set custom_url https://openrouter.ai/api/v1
+gemini_ai_set custom_model deepseek/deepseek-chat
+gemini_ai_setkey custom sk-or-...
+```
+Для Ollama: `custom_url http://localhost:11434/v1`, ключ не нужен, серверу GMod — параметр запуска `-allowlocalhttp`.
+
+То же самое — в **Q → Утилиты → Gemini AI**: выпадающий список «Провайдер ИИ». Ключи хранятся отдельно для каждого
+провайдера, переключаться можно в любой момент.
+
 ## Как открыть чат
 
 | Способ | Что сделать |
@@ -40,7 +68,8 @@
 ### Для админов
 | Консоль | Чат | Что делает |
 |---|---|---|
-| `gemini_ai_setkey <ключ>` | `!aikey <ключ>` | Задать API-ключ (команда скрыта из чата) |
+| `gemini_ai_setkey [провайдер] <ключ>` | `!aikey <ключ>` | Задать API-ключ (команда скрыта из чата) |
+| `gemini_ai_provider <gemini/deepseek/custom>` | `!aiprovider` | Выбрать провайдера ИИ |
 | `gemini_ai_status` | `!aistatus` | Состояние и настройки |
 | `gemini_ai_test` | `!aitest` | Проверить подключение |
 | `gemini_ai_models` | `!aimodels` | Какие модели доступны вашему ключу |
@@ -55,6 +84,10 @@
 ### Параметры `gemini_ai_set`
 | Параметр | По умолчанию | Описание |
 |---|---|---|
+| `provider` | `gemini` | Провайдер: gemini / deepseek / custom |
+| `ds_model` | `deepseek-chat` | Модель DeepSeek |
+| `custom_url` | — | Адрес своего сервера (…/v1) |
+| `custom_model` | — | Модель своего сервера |
 | `model` | `gemini-flash-latest` | Модель Gemini |
 | `execute` | `1` | ИИ может выполнять код |
 | `confirm` | `0` | Выполнять код только по кнопке «Выполнить» |

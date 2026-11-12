@@ -202,3 +202,8 @@
   responseSchema (JSON по инструкции); ответ Google пишется в консоль сервера. Проверка пути персонажей: gemini_ai_test char. Wake(char, delay): обращение (имя / смотрит на бота / ближе 350)
   - мысль сразу; занят - char.pending, после ответа думает снова. Облачка над головой и «...» - NW2 GeminiSay/GeminiSayTime/
   GeminiThinking/GeminiChar, рисует HUDPaint "GeminiAI_CharBubbles" в cl_character.lua.
+  Провайдеры (gemini_ai_provider): gemini / deepseek / custom (OpenAI-совместимый: OpenRouter, Ollama...). GeminiAI.Request
+  выбирает RequestGemini или RequestOpenAI (sv_core.lua); у OpenAI-формата схема ответа уходит текстом (SchemaHint) +
+  response_format json_object (на 400 - повтор без него), <think> и ``` вырезаются в ParseJSONText. Ключи - API_KEYS[провайдер]
+  в config.json (keys), старый key переносится в gemini. Модель - GeminiAI.ActiveModel(forChar) (sh_shared): у Gemini
+  model/char_model, у DeepSeek ds_model, у custom custom_model; в запросах персонажей opts.char = true, не модель.

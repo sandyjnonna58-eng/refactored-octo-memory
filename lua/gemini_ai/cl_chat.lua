@@ -273,7 +273,8 @@ function CHAT:Init()
 		elseif GeminiAI.Thinking then
 			status, col = "думает" .. string.rep(".", math.floor(CurTime() * 3) % 4), C.accent2
 		else
-			status, col = "онлайн • " .. GetConVarString("gemini_ai_model"), C.good
+			local prov = GetConVarString("gemini_ai_provider")
+			status, col = "онлайн • " .. (prov ~= "gemini" and ((GeminiAI.ProviderNames[prov] or prov) .. " • ") or "") .. GeminiAI.ActiveModel(false), C.good
 		end
 		draw.RoundedBox(4, 58, 33, 8, 8, col)
 		draw.SimpleText(status, "GeminiAI_Small", 72, 37, C.dim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)

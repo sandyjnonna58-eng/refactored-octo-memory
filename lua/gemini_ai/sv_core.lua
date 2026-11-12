@@ -16,9 +16,9 @@ util.AddNetworkString("GeminiAI_KeyState")  -- сервер -> клиент: з�
 local API_URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent"
 local CFG_DIR, CFG_FILE = "gemini_ai", "gemini_ai/config.json"
 
--- Ключ хранится в локальной переменной, а не в глобальной таблице,
--- чтобы сгенерированный ИИ код не мог его случайно прочитать.
-local API_KEY = ""
+-- Ключи хранятся в локальной таблице, а не в глобальной,
+-- чтобы сгенерированный ИИ код не мог их случайно прочитать. Свой ключ у каждого провайдера.
+local API_KEYS = { gemini = "", deepseek = "", custom = "" }
 
 GeminiAI.Config  = GeminiAI.Config or { blocked = {} }
 GeminiAI.History = GeminiAI.History or {}  -- [sid] = { {role, text}, ... }
@@ -42,22 +42,46 @@ local cv = GeminiAI.CVars
 function GeminiAI.LoadConfig()
 	local raw = file.Read(CFG_FILE, "DATA")
 	local data = raw and util.JSONToTable(raw) or {}
-	API_KEY = isstring(data.key) and data.key or ""
+	local keys = istable(data.keys) and data.keys or {}
+	for name in pairs(API_KEYS) do API_KEYS[name] = isstring(keys[name]) and keys[name] or "" end
+	if isstring(data.key) and API_KEYS.gemini == "" then API_KEYS.gemini = data.key end -- старый формат конфига
 	GeminiAI.Config.blocked = istable(data.blocked) and data.blocked or {}
 end
 
 function GeminiAI.SaveConfig()
 	file.CreateDir(CFG_DIR)
-	file.Write(CFG_FILE, util.TableToJSON({ key = API_KEY, blocked = GeminiAI.Config.blocked }, true))
+	file.Write(CFG_FILE, util.TableToJSON({ keys = API_KEYS, blocked = GeminiAI.Config.blocked }, true))
 end
 
-function GeminiAI.SetKey(key)
-	API_KEY = string.Trim(key or "")
+-- Текущий провайдер: gemini / deepseek / custom (любой OpenAI-совместимый: OpenRouter, Ollama, LM Studio...)
+function GeminiAI.Provider()
+	local p = cv.provider:GetString()
+	return API_KEYS[p] and p or "gemini"
+end
+
+function GeminiAI.SetKey(key, provider)
+	provider = provider or GeminiAI.Provider()
+	if not API_KEYS[provider] then return end
+	API_KEYS[provider] = string.Trim(key or "")
 	GeminiAI.SaveConfig()
 	GeminiAI.SendKeyState()
 end
 
-function GeminiAI.HasKey() return API_KEY ~= "" end
+function GeminiAI.HasKey(provider)
+	provider = provider or GeminiAI.Provider()
+	-- своему серверу (Ollama и т.п.) ключ может быть не нужен — достаточно адреса
+	if provider == "custom" then return cv.custom_url:GetString() ~= "" end
+	return (API_KEYS[provider] or "") ~= ""
+end
+
+function GeminiAI.KeyInfo()
+	local out = {}
+	for _, name in ipairs(GeminiAI.ProviderList) do out[name] = API_KEYS[name] ~= "" end
+	return out
+end
+
+cvars.AddChangeCallback("gemini_ai_provider", function() timer.Simple(0, function() GeminiAI.SendKeyState() end) end, "GeminiAI")
+cvars.AddChangeCallback("gemini_ai_custom_url", function() timer.Simple(0, function() GeminiAI.SendKeyState() end) end, "GeminiAI")
 
 function GeminiAI.SendKeyState(ply)
 	net.Start("GeminiAI_KeyState")
@@ -73,7 +97,9 @@ end)
 -- Убираем ключ из любого текста, который уходит игрокам
 local function Sanitize(text)
 	text = tostring(text or "")
-	if API_KEY ~= "" then text = string.Replace(text, API_KEY, "***") end
+	for _, key in pairs(API_KEYS) do
+		if key ~= "" then text = string.Replace(text, key, "***") end
+	end
 	return text
 end
 
@@ -223,9 +249,54 @@ local function BuildContext(ply, canExec)
 end
 
 ---------------------------------------------------------------------------
--- Запрос к Gemini
+-- Ответ модели -> { say, lua, raw, data } (общий для всех провайдеров)
 ---------------------------------------------------------------------------
-local function ParseResponse(code, body)
+local function ParseJSONText(text)
+	-- Убираем возможную обёртку ```json ... ``` и мусор вокруг объекта
+	local clean = string.Trim(text):gsub("^```%w*%s*", ""):gsub("%s*```$", "")
+	local obj = util.JSONToTable(clean)
+	if not istable(obj) then
+		local inner = string.match(clean, "%b{}")
+		obj = inner and util.JSONToTable(inner)
+		if istable(obj) then clean = inner end
+	end
+	if istable(obj) then
+		return { say = tostring(obj.say or ""), lua = tostring(obj.lua or ""), raw = clean, data = obj }
+	end
+	return { say = text, lua = "", raw = util.TableToJSON({ say = text, lua = "" }), data = { say = text } }
+end
+
+local function ShortBody(resp) return string.sub(string.gsub(resp or "", "%s+", " "), 1, 400) end
+
+-- Схема ответа словами — для провайдеров без responseSchema (DeepSeek и др.)
+local function SchemaHint(schema)
+	local fields = {}
+	for _, name in ipairs(schema.required or table.GetKeys(schema.properties or {})) do
+		local prop = schema.properties[name] or {}
+		local line = "\"" .. name .. "\": строка — " .. (prop.description or "")
+		if istable(prop.enum) then line = line .. " (одно из: " .. table.concat(prop.enum, ", ") .. ")" end
+		fields[#fields + 1] = "  " .. line
+	end
+	return "\n\nФОРМАТ ОТВЕТА: строго один JSON-объект, без пояснений и без ``` вокруг. Поля:\n" .. table.concat(fields, "\n")
+end
+
+local DEFAULT_SCHEMA = {
+	type = "OBJECT",
+	properties = {
+		say = { type = "STRING", description = "Ответ игроку" },
+		lua = { type = "STRING", description = "Серверный GLua код или пустая строка" },
+	},
+	required = { "say", "lua" },
+}
+
+-- Что модель умеет (узнаём на ошибках 400 и запоминаем до перезапуска карты):
+-- 0 - всё (быстрый режим + схема ответа), 1 - без быстрого режима, 2 - ещё и без схемы (JSON только по инструкции)
+GeminiAI.ModelLevel = GeminiAI.ModelLevel or {}
+
+---------------------------------------------------------------------------
+-- Google Gemini
+---------------------------------------------------------------------------
+local function ParseGemini(code, body, model)
 	local data = util.JSONToTable(body or "")
 
 	if code ~= 200 then
@@ -237,7 +308,7 @@ local function ParseResponse(code, body)
 		elseif code == 403 then
 			msg = "Доступ запрещён (403). Проверьте ключ и что Gemini API доступен в вашем регионе. " .. msg
 		elseif code == 404 then
-			msg = "Модель «" .. cv.model:GetString() .. "» не найдена. Список моделей: gemini_ai_models"
+			msg = "Модель «" .. model .. "» не найдена. Список моделей: gemini_ai_models"
 		end
 		return nil, msg
 	end
@@ -255,34 +326,12 @@ local function ParseResponse(code, body)
 		if isstring(part.text) and not part.thought then text[#text + 1] = part.text end
 	end
 	text = table.concat(text)
+	if text == "" then return nil, "Пустой ответ (" .. tostring(cand.finishReason or "?") .. ")" end
 
-	if text == "" then
-		return nil, "Пустой ответ (" .. tostring(cand.finishReason or "?") .. ")"
-	end
-
-	-- Убираем возможную обёртку ```json ... ```
-	local clean = string.Trim(text):gsub("^```%w*%s*", ""):gsub("%s*```$", "")
-	local obj = util.JSONToTable(clean)
-
-	if istable(obj) then
-		return { say = tostring(obj.say or ""), lua = tostring(obj.lua or ""), raw = clean, data = obj }
-	end
-	return { say = text, lua = "", raw = util.TableToJSON({ say = text, lua = "" }), data = { say = text } }
+	return ParseJSONText(text)
 end
 
--- Что модель умеет (узнаём на ошибках 400 и запоминаем до перезапуска карты):
--- 0 - всё (быстрый режим + схема ответа), 1 - без быстрого режима, 2 - ещё и без схемы (JSON только по инструкции)
-GeminiAI.ModelLevel = GeminiAI.ModelLevel or {}
-
--- opts (необязательно): system - своя инструкция, schema - своя схема ответа, fast - без размышлений,
--- model - своя модель, temperature, maxTokens (так работают ИИ-персонажи)
-function GeminiAI.Request(contents, onDone, opts)
-	opts = opts or {}
-	if not GeminiAI.HasKey() then
-		onDone(nil, "API-ключ не задан. Админ: gemini_ai_setkey <ключ> (бесплатно на aistudio.google.com)")
-		return
-	end
-
+local function RequestGemini(contents, onDone, opts, model)
 	local body = {
 		systemInstruction = { parts = { { text = opts.system or GetSystemPrompt() } } },
 		contents = contents,
@@ -290,57 +339,156 @@ function GeminiAI.Request(contents, onDone, opts)
 			temperature = opts.temperature or cv.temperature:GetFloat(),
 			maxOutputTokens = opts.maxTokens or 4096,
 			responseMimeType = "application/json",
-			responseSchema = opts.schema or {
-				type = "OBJECT",
-				properties = {
-					say = { type = "STRING", description = "Ответ игроку" },
-					lua = { type = "STRING", description = "Серверный GLua код или пустая строка" },
-				},
-				required = { "say", "lua" },
-			},
+			responseSchema = opts.schema or DEFAULT_SCHEMA,
 		},
 	}
 
-	-- Быстрый режим: без «размышлений» модели ответ приходит в разы быстрее.
-	-- Не все модели это понимают — тогда один раз повторяем запрос без настройки и запоминаем.
-	local model = opts.model or cv.model:GetString()
-	local level = GeminiAI.ModelLevel[model] or 0
-	if opts.fast and level < 1 then
-		body.generationConfig.thinkingConfig = { thinkingBudget = 0 }
-	end
-	if level >= 2 then
-		body.generationConfig.responseSchema = nil
-	end
+	-- Быстрый режим: без «размышлений» модели ответ приходит в разы быстрее
+	local lvlKey = "gemini:" .. model
+	local level = GeminiAI.ModelLevel[lvlKey] or 0
+	if opts.fast and level < 1 then body.generationConfig.thinkingConfig = { thinkingBudget = 0 } end
+	if level >= 2 then body.generationConfig.responseSchema = nil end
 
-	local ok = HTTP({
+	return HTTP({
 		url = string.format(API_URL, model),
 		method = "POST",
 		type = "application/json",
 		body = util.TableToJSON(body),
-		headers = { ["x-goog-api-key"] = API_KEY },
+		headers = { ["x-goog-api-key"] = API_KEYS.gemini },
 		timeout = opts.timeout or 60,
 		success = function(code, resp)
-			-- 400 «invalid argument»: модель не понимает какую-то настройку. Упрощаем запрос и повторяем
+			-- 400 «invalid argument»: модель не понимает какую-то настройку — упрощаем и повторяем
 			-- (ошибки ключа и региона так не лечатся — их не трогаем)
 			local low = string.lower(resp or "")
 			if code == 400 and level < 2 and not string.find(low, "api key", 1, true) and not string.find(low, "location", 1, true) then
 				local nextLevel = (opts.fast and level == 0) and 1 or 2
-				GeminiAI.ModelLevel[model] = nextLevel
-				MsgC(GeminiAI.Colors.Accent, "[Gemini AI] ", color_white, model .. ": ответ 400, упрощаю запрос (уровень " .. nextLevel .. "). Ответ Google: "
-					.. string.sub(string.gsub(resp or "", "%s+", " "), 1, 400) .. "\n")
+				GeminiAI.ModelLevel[lvlKey] = nextLevel
+				MsgC(GeminiAI.Colors.Accent, "[Gemini AI] ", color_white, model .. ": ответ 400, упрощаю запрос (уровень " .. nextLevel .. "). Ответ Google: " .. ShortBody(resp) .. "\n")
 				return GeminiAI.Request(contents, onDone, opts)
 			end
 			if code ~= 200 then
-				MsgC(GeminiAI.Colors.Bad, "[Gemini AI] ", color_white, model .. ": HTTP " .. code .. " " .. string.sub(string.gsub(resp or "", "%s+", " "), 1, 400) .. "\n")
+				MsgC(GeminiAI.Colors.Bad, "[Gemini AI] ", color_white, model .. ": HTTP " .. code .. " " .. ShortBody(resp) .. "\n")
 			end
-			local res, err = ParseResponse(code, resp)
-			onDone(res, err)
+			onDone(ParseGemini(code, resp, model))
 		end,
-		failed = function(reason)
-			onDone(nil, "Не удалось подключиться к Gemini: " .. tostring(reason))
-		end,
+		failed = function(reason) onDone(nil, "Не удалось подключиться к Gemini: " .. tostring(reason)) end,
 	})
+end
 
+---------------------------------------------------------------------------
+-- OpenAI-совместимые: DeepSeek, OpenRouter, Ollama, LM Studio и т.п.
+---------------------------------------------------------------------------
+local function OpenAIBase(provider)
+	if provider == "deepseek" then return "https://api.deepseek.com" end
+	return (string.gsub(cv.custom_url:GetString(), "/+$", ""))
+end
+
+local function ParseOpenAI(code, body, model, provider)
+	local data = util.JSONToTable(body or "")
+	local name = GeminiAI.ProviderNames[provider] or provider
+
+	if code ~= 200 then
+		local err = istable(data) and data.error
+		local msg = istable(err) and err.message or (isstring(err) and err) or ("HTTP " .. tostring(code))
+		if code == 401 then
+			msg = "Неверный API-ключ " .. name .. ". " .. (provider == "deepseek" and "Ключ берётся на platform.deepseek.com → API keys. " or "") .. "Задать: gemini_ai_setkey <ключ>"
+		elseif code == 402 then
+			msg = "На балансе " .. name .. " закончились деньги — пополните счёт (DeepSeek: platform.deepseek.com → Top up)."
+		elseif code == 429 then
+			msg = "Слишком много запросов к " .. name .. " — подождите немного."
+		elseif code == 404 then
+			msg = "Модель «" .. model .. "» не найдена у " .. name .. ". Список: gemini_ai_models. " .. msg
+		elseif code == 503 or code == 500 then
+			msg = name .. " перегружен (" .. code .. "), попробуйте позже."
+		end
+		return nil, msg
+	end
+
+	if not istable(data) then return nil, name .. " вернул некорректный ответ" end
+	local choice = istable(data.choices) and data.choices[1]
+	local text = choice and choice.message and choice.message.content
+	if not isstring(text) or text == "" then
+		return nil, "Пустой ответ от " .. name .. " (" .. tostring(choice and choice.finish_reason or "?") .. ")"
+	end
+	-- некоторые модели (DeepSeek R1 и т.п.) пишут рассуждения в <think>...</think> прямо в ответе
+	text = string.gsub(text, "<think>.-</think>", "")
+	return ParseJSONText(text)
+end
+
+local function RequestOpenAI(contents, onDone, opts, model, provider)
+	local base = OpenAIBase(provider)
+	if base == "" then
+		onDone(nil, "Не задан адрес сервера: gemini_ai_set custom_url https://.../v1")
+		return true
+	end
+
+	local system = (opts.system or GetSystemPrompt()) .. SchemaHint(opts.schema or DEFAULT_SCHEMA)
+	local messages = { { role = "system", content = system } }
+	for _, c in ipairs(contents) do
+		local parts = {}
+		for _, part in ipairs(c.parts or {}) do parts[#parts + 1] = part.text or "" end
+		messages[#messages + 1] = { role = c.role == "model" and "assistant" or "user", content = table.concat(parts) }
+	end
+
+	local lvlKey = provider .. ":" .. model
+	local level = GeminiAI.ModelLevel[lvlKey] or 0
+	local body = {
+		model = model,
+		messages = messages,
+		temperature = opts.temperature or cv.temperature:GetFloat(),
+		max_tokens = opts.maxTokens or 4096,
+		stream = false,
+	}
+	if level < 2 then body.response_format = { type = "json_object" } end
+
+	local headers = {}
+	local key = API_KEYS[provider] or ""
+	if key ~= "" then headers["Authorization"] = "Bearer " .. key end
+
+	return HTTP({
+		url = base .. "/chat/completions",
+		method = "POST",
+		type = "application/json",
+		body = util.TableToJSON(body),
+		headers = headers,
+		timeout = math.max(opts.timeout or 60, 30), -- DeepSeek в часы пик отвечает дольше
+		success = function(code, resp)
+			-- сервер не понимает response_format — повторяем без него (JSON всё равно просим в инструкции)
+			if code == 400 and level < 2 then
+				GeminiAI.ModelLevel[lvlKey] = 2
+				MsgC(GeminiAI.Colors.Accent, "[Gemini AI] ", color_white, model .. ": ответ 400, повторяю без response_format. Ответ: " .. ShortBody(resp) .. "\n")
+				return GeminiAI.Request(contents, onDone, opts)
+			end
+			if code ~= 200 then
+				MsgC(GeminiAI.Colors.Bad, "[Gemini AI] ", color_white, provider .. " " .. model .. ": HTTP " .. code .. " " .. ShortBody(resp) .. "\n")
+			end
+			onDone(ParseOpenAI(code, resp, model, provider))
+		end,
+		failed = function(reason) onDone(nil, "Не удалось подключиться к " .. (GeminiAI.ProviderNames[provider] or provider) .. ": " .. tostring(reason)) end,
+	})
+end
+
+---------------------------------------------------------------------------
+-- Общий вход
+-- opts (необязательно): system - своя инструкция, schema - своя схема ответа, fast - без размышлений,
+-- char - запрос ИИ-персонажа (своя модель), model - явная модель, temperature, maxTokens, timeout
+---------------------------------------------------------------------------
+function GeminiAI.Request(contents, onDone, opts)
+	opts = opts or {}
+	local provider = GeminiAI.Provider()
+	if not GeminiAI.HasKey(provider) then
+		onDone(nil, provider == "gemini" and "API-ключ не задан. Админ: gemini_ai_setkey <ключ> (бесплатно на aistudio.google.com)"
+			or ("Не задан ключ " .. GeminiAI.ProviderNames[provider] .. ": gemini_ai_setkey " .. provider .. " <ключ>"))
+		return
+	end
+
+	local model = (provider == "gemini" and opts.model) or GeminiAI.ActiveModel(opts.char)
+	local ok
+	if provider == "gemini" then
+		ok = RequestGemini(contents, onDone, opts, model)
+	else
+		ok = RequestOpenAI(contents, onDone, opts, model, provider)
+	end
 	if ok == false then onDone(nil, "HTTP-запрос отклонён движком (сервер ещё загружается?)") end
 end
 
@@ -704,8 +852,14 @@ function GeminiAI.SetSetting(key, value)
 	if not kind then
 		return false, "Неизвестный параметр. Доступны: " .. table.concat(table.GetKeys(GeminiAI.Settable), ", ")
 	end
-	if kind == "string" and not string.match(value, "^[%w%.%-_]+$") then
-		return false, "Недопустимое значение."
+	if kind == "model" and not string.match(value, "^[%w%.%-_/:]*$") then
+		return false, "Недопустимое имя модели."
+	end
+	if kind == "url" and value ~= "" and not string.match(value, "^https?://[%w%.%-_:/]+$") then
+		return false, "Адрес должен быть вида https://сервер/v1"
+	end
+	if kind == "provider" and not table.HasValue(GeminiAI.ProviderList, value) then
+		return false, "Провайдер: " .. table.concat(GeminiAI.ProviderList, " / ")
 	end
 	if kind == "bool" then value = (value == "1" or value == "true" or value == "on") and "1" or "0" end
 	if kind == "number" and not tonumber(value) then return false, "Нужно число." end
@@ -717,11 +871,32 @@ end
 -- Получить список моделей (команда gemini_ai_models)
 ---------------------------------------------------------------------------
 function GeminiAI.ListModels(cb)
-	if not GeminiAI.HasKey() then return cb(nil, "API-ключ не задан") end
+	local provider = GeminiAI.Provider()
+	if not GeminiAI.HasKey(provider) then return cb(nil, "ключ не задан") end
+
+	if provider ~= "gemini" then
+		local headers = {}
+		if API_KEYS[provider] ~= "" then headers["Authorization"] = "Bearer " .. API_KEYS[provider] end
+		HTTP({
+			url = OpenAIBase(provider) .. "/models",
+			method = "GET",
+			headers = headers,
+			success = function(code, body)
+				local data = util.JSONToTable(body or "")
+				if code ~= 200 or not istable(data) then return cb(nil, "HTTP " .. code) end
+				local list = {}
+				for _, m in ipairs(data.data or data.models or {}) do list[#list + 1] = m.id or m.name end
+				cb(list)
+			end,
+			failed = function(reason) cb(nil, tostring(reason)) end,
+		})
+		return
+	end
+
 	HTTP({
 		url = "https://generativelanguage.googleapis.com/v1beta/models?pageSize=200",
 		method = "GET",
-		headers = { ["x-goog-api-key"] = API_KEY },
+		headers = { ["x-goog-api-key"] = API_KEYS.gemini },
 		success = function(code, body)
 			local data = util.JSONToTable(body or "")
 			if code ~= 200 or not istable(data) then return cb(nil, "HTTP " .. code) end
