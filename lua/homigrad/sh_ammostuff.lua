@@ -3358,18 +3358,19 @@ local function addAmmoTypes()
 		
 		if(!tbl.noentity)then
 			if CLIENT then language.Add(tbl.name .. "_ammo", tbl.name) end
+			local ae = ammoents[name] or {} -- патрон без коробки в ammoents (добавлен другим аддоном/оружием) - значения по умолчанию
 			local ammoent = {}
 			ammoent.Base = "ammo_base"
 			ammoent.PrintName = tbl.name
 			ammoent.Category = "ZCity Ammo"
 			ammoent.Spawnable = (tbl.Spawnable and tbl.Spawnable ~= nil) and tbl.Spawnable or true
-			ammoent.AmmoCount = ammoents[name].Count or 30
+			ammoent.AmmoCount = ae.Count or 30
 			ammoent.AmmoType = tbl.name
-			ammoent.Model = ammoents[name].Model or "models/props_lab/box01a.mdl"
-			ammoent.ModelMaterial = ammoents[name].Material or ""
-			ammoent.ModelScale = ammoents[name].Scale or 1
-			ammoent.Color = ammoents[name].Color or Color(255, 255, 255)
-			ammoent.IconOverride = ammoents[name].Icon or "vgui/hud/bullets/high_caliber.png"
+			ammoent.Model = ae.Model or "models/props_lab/box01a.mdl"
+			ammoent.ModelMaterial = ae.Material or ""
+			ammoent.ModelScale = ae.Scale or 1
+			ammoent.Color = ae.Color or Color(255, 255, 255)
+			ammoent.IconOverride = ae.Icon or "vgui/hud/bullets/high_caliber.png"
 			scripted_ents.Register(ammoent, "ent_ammo_" .. name)
 		end
 	end
