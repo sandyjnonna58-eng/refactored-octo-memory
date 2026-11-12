@@ -182,3 +182,11 @@
 - Совместимость с InfMap (бесконечные карты): `lua/autorun/!zcity_infmap.lua` + `lua/zcity_infmap/`, описание в `INFMAP.md`.
   Работает только на картах InfMap, выключается `zc_infmap 0`. Новое net-сообщение с позицией - дописать в списки
   `lua/zcity_infmap/sh_net.lua`.
+- ИИ-помощник Gemini AI (бесплатный API Google Gemini, ИИ пишет и выполняет серверный GLua): `lua/autorun/gemini_ai_init.lua`,
+  `lua/gemini_ai/` (sv_core - запросы и выполнение кода, sv_commands - команды gemini_ai_* и !ai, cl_chat - окно и вкладка Q,
+  cl_settings - Q -> Утилиты -> Gemini AI), энтити `gemini_ai_terminal` (Q -> Энтити -> Gemini AI, E - открыть чат).
+  Ключ - только на сервере, `data/gemini_ai/config.json` (gemini_ai_setkey), лог кода - `data/gemini_ai/log.txt`.
+  Связка с рекосом - `lua/gemini_ai/sv_compat_remorse.lua`: организм в контексте ИИ, помощники AI.Heal (hg.organism.Clear),
+  AI.Ragdoll/GetUp (hg.Fake/FakeUp), AI.Stun, AI.Vomit, AI.Org, AI.Give. Чат: команды ловятся в HG_PlayerSay (ZChat) и
+  глушатся в PlayerSay (ply.GeminiAI_Suppress), иначе !aikey с ключом ушёл бы в общий чат. Права: GeminiAI.Chat/Execute/Admin
+  (CAMI, без него - superadmin). Описание и все команды - `GEMINI_AI.md`.
