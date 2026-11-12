@@ -291,10 +291,11 @@ end)
 
 -- отрезать голову у регдолла
 local function CutHead(rag, force)
-	if not IsValid(rag) or not rag:IsRagdoll() or rag.noHead or rag.headexploded then return end
+	if not IsValid(rag) or not rag:IsRagdoll() then print("[rem_decap] not a ragdoll: " .. tostring(rag)) return end
+	if rag.noHead or rag.headexploded then print("[rem_decap] ragdoll already headless: " .. tostring(rag)) return end
 	local head = rag:LookupBone("ValveBiped.Bip01_Head1")
 	local neck = rag:LookupBone("ValveBiped.Bip01_Neck1")
-	if not head or not neck then return end
+	if not head or not neck then print("[rem_decap] no head/neck bone on " .. tostring(rag:GetModel())) return end
 	rag.noHead, rag.headexploded = true, true
 
 	SpawnHead(rag, head, force)
@@ -360,6 +361,7 @@ local function CutHead(rag, force)
 		SetNetVar("fountains", hg.fountains)
 	end
 
+	print("[rem_decap] head cut off: " .. tostring(rag))
 	local org = rag.organism
 	if org then
 		org.headamputated = true
@@ -370,16 +372,41 @@ local function CutHead(rag, force)
 	end
 end
 
--- отрезать голову: живого - убить и резать регдолл смерти (чуть позже - пусть встанет в позу, иначе обрубок съедет)
+local function Log(msg) print("[rem_decap] " .. msg) end
+
+-- регдолл смерти игрока: так же ищет Z-City (sv_torsohalve.lua FindDeathRagdoll) + запасной поиск рядом
+local function DeathRagdoll(ply)
+	if IsValid(ply.RagdollDeath) then return ply.RagdollDeath end
+	local nw = ply:GetNWEntity("RagdollDeath")
+	if IsValid(nw) then return nw end
+	if IsValid(ply.FakeRagdoll) then return ply.FakeRagdoll end
+	for _, e in ipairs(ents.FindInSphere(ply:GetPos(), 200)) do
+		if e:IsRagdoll() and (e:GetNWEntity("ply") == ply or (hg.RagdollOwner and hg.RagdollOwner(e) == ply)) then return e end
+	end
+	return nil
+end
+
+-- отрезать голову: живого - убить, найти регдолл смерти (ждём до 2 с) и резать чуть позже - пусть встанет в позу,
+-- иначе обрубок съедет
 function hg.Decapitate(victim, force)
-	if not IsValid(victim) or victim.noHead or victim.headexploded then return end
+	if not IsValid(victim) then return end
+	if victim.noHead or victim.headexploded then Log("already headless: " .. tostring(victim)) return end
 	if victim:IsPlayer() then
 		if victim:Alive() then victim:Kill() end
-		timer.Simple(0.15, function()
-			if not IsValid(victim) then return end
-			local rag = victim:GetNWEntity("RagdollDeath")
-			if not IsValid(rag) then rag = victim.FakeRagdoll end
-			CutHead(rag, force)
+		local tries = 0
+		local name = "rem_decap_" .. victim:EntIndex()
+		timer.Create(name, 0.1, 20, function()
+			tries = tries + 1
+			if not IsValid(victim) then timer.Remove(name) return end
+			local rag = DeathRagdoll(victim)
+			if not IsValid(rag) then
+				if tries >= 20 then Log("no death ragdoll for " .. victim:Nick()) end
+				return
+			end
+			timer.Remove(name)
+			timer.Simple(0.15, function()
+				if IsValid(rag) then CutHead(rag, force) end
+			end)
 		end)
 		return
 	end
