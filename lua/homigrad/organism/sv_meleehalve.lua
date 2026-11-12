@@ -43,10 +43,16 @@ local function Owner(ent)
 	return nil
 end
 
--- позиция кости: у регдолла - по физике, у стоящего игрока - по матрице костей
+-- позиция кости: у регдолла - по физике (матрицы костей регдолла на сервере бывают старые - из-за этого удар
+-- по туловищу не узнавался), у стоящего игрока - по матрице костей после SetupBones
 local function BonePos(ent, name)
 	local b = ent:LookupBone(name)
 	if not b then return nil end
+	if ent:IsRagdoll() then
+		local pb = ent:TranslateBoneToPhysBone(b)
+		local phys = pb and pb >= 0 and ent:GetPhysicsObjectNum(pb)
+		if IsValid(phys) and ent:TranslatePhysBoneToBone(pb) == b then return phys:GetPos() end
+	end
 	local m = ent:GetBoneMatrix(b)
 	return m and m:GetTranslation() or ent:GetBonePosition(b)
 end
@@ -54,6 +60,7 @@ end
 -- удар пришёлся по туловищу? (между поясом и плечами, не по руке сбоку)
 local function CutFromHit(body, hitPos)
 	if not IsValid(body) or not hitPos then return nil end
+	if not body:IsRagdoll() then body:SetupBones() end
 	local P = BonePos(body, "ValveBiped.Bip01_Pelvis")
 	local top = BonePos(body, "ValveBiped.Bip01_Spine4") or BonePos(body, "ValveBiped.Bip01_Spine2")
 	local L, Rr = BonePos(body, "ValveBiped.Bip01_L_UpperArm"), BonePos(body, "ValveBiped.Bip01_R_UpperArm")
@@ -84,7 +91,7 @@ local function DoCut(target, attacker, cut, dmg)
 	local force = dir * 300
 	timer.Simple(0, function()
 		if not IsValid(target) or not hg.CutTorso then return end
-		hg.CutTorso(target, force)
+		if not hg.CutTorso(target, force) then print("[rem_halve] CutTorso refused (already cut / no body)") end
 	end)
 end
 
@@ -112,37 +119,58 @@ local function OnDamage(target, dmg)
 	if target:IsPlayer() then body = hg.GetCurrentCharacter and hg.GetCurrentCharacter(target) or target end
 	local cut = CutFromHit(body, dmg:GetDamagePosition())
 
+	local holder = IsValid(ply) and ply or target -- человек, а не тело: упал в регдолл - всё тот же
 	-- бензопила: только заведённая и с зажатой ЛКМ, разрез через SAW_TIME с непрерывного пиления
 	if saw then
 		if not wep.ChainsawOn or not wep.ChainsawAttacking then return end
 		local now = CurTime()
 		local st = wep.__remSaw
-		if not st or st.target ~= target or now - st.last > SAW_GAP then
-			st = {target = target, start = now, last = now}
+		if not st or st.holder ~= holder or now - st.last > SAW_GAP then
+			st = {holder = holder, start = now, last = now, said = 0}
 			wep.__remSaw = st
 		end
 		st.last = now
 		st.cut = st.cut or cut -- пила хоть раз прошла по туловищу
-		if now - st.start >= SAW_TIME and st.cut then
+		local t = now - st.start
+		if math.floor(t) > st.said then
+			st.said = math.floor(t)
+			print(("[rem_halve] saw %d/%d s%s"):format(st.said, SAW_TIME, st.cut and "" or " (not the torso yet)"))
+		end
+		if t >= SAW_TIME and st.cut then
 			wep.__remSaw = nil
+			print("[rem_halve] saw: cut in half")
 			DoCut(target, attacker, st.cut, dmg)
 		end
 		return
 	end
 
-	if not cut then return end -- не по туловищу
-	local holder = IsValid(ply) and ply or target
+	if not cut then -- не по туловищу (пишем раз за взмах)
+		if (wep.__remHalveMiss or 0) <= CurTime() then
+			wep.__remHalveMiss = CurTime() + SWING_GAP
+			print("[rem_halve] hit not on the torso (between belt and shoulders)")
+		end
+		return
+	end
 	local now = CurTime()
 	wep.__remHalveNext = wep.__remHalveNext or setmetatable({}, {__mode = "k"})
 	if (wep.__remHalveNext[holder] or 0) > now then return end
 	wep.__remHalveNext[holder] = now + SWING_GAP
 	local hits = holder.__remCutHits or 0
 	holder.__remCutHits = hits + 1
-	if KNIFE[class] and hits < KNIFE_HITS then return end
+	if KNIFE[class] and hits < KNIFE_HITS then
+		print(("[rem_halve] torso hit %d/%d (knife)"):format(hits + 1, KNIFE_HITS + 1))
+		return
+	end
 	local chance = CHANCE[class] * cvMul:GetFloat() * math.min(1 + hits * 0.2, 3)
-	if math.random() < chance then DoCut(target, attacker, cut, dmg) end
+	if math.random() < chance then
+		print(("[rem_halve] torso hit %d, chance %.0f%% - cut in half"):format(hits + 1, chance * 100))
+		DoCut(target, attacker, cut, dmg)
+	else
+		print(("[rem_halve] torso hit %d, chance %.0f%% - not this time"):format(hits + 1, chance * 100))
+	end
 end
 
+hook.Add("PlayerSpawn", "rem_meleehalve_reset", function(ply) ply.__remCutHits = nil end)
 hook.Add("EntityTakeDamage", "rem_meleehalve", function(target, dmg) OnDamage(target, dmg) end)
 hook.Add("PostEntityTakeDamage", "rem_meleehalve", function(target, dmg) OnDamage(target, dmg) end)
 

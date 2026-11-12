@@ -539,9 +539,9 @@ local function EnsureFakeAndSplit(ply, force, fromExplosion)
 		ply.__hgTorsoPending = nil
 		if not IsValid(ply) or not ply:Alive() or ply:GetNWBool("hgTorsoSevered", false) then return false end
 		local rag = IsValid(ply.FakeRagdoll) and ply.FakeRagdoll or (hg.GetCurrentCharacter and hg.GetCurrentCharacter(ply) or nil)
-		if not IsValid(rag) or not rag:IsRagdoll() then return false end
+		if not IsValid(rag) or not rag:IsRagdoll() then print("[rem_halve] no ragdoll to split") return false end
 		local state = BuildSplitRagdolls(ply, rag, force or vector_origin)
-		if not state then return false end
+		if not state then print("[rem_halve] split failed (model without the needed bones?)") return false end
 		AddTorsoTrauma(ply, rag, fromExplosion)
 		return true
 	end
@@ -551,7 +551,7 @@ local function EnsureFakeAndSplit(ply, force, fromExplosion)
 			ply.__hgTorsoPending = nil
 			return false
 		end
-		hg.Fake(ply)
+		hg.Fake(ply, nil, nil, true) -- force: разрубленного валим всегда (не ждём hg_no_fake_until) (remorse)
 		-- только что упал: регдолл ещё не встал в позу и кости на сервере не обновились - обрубок прицепился бы
 		-- со сдвигом (к плечу и т.п.). Режем чуть позже (remorse)
 		timer.Simple(0.15, Split)
