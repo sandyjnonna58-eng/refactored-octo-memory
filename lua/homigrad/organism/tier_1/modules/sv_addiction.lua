@@ -113,3 +113,9 @@ local function ResetAddiction(ply)
 end
 hook.Add("PlayerDeath", "rem_addiction_death", ResetAddiction)
 hook.Add("PlayerSpawn", "rem_addiction_spawn", ResetAddiction)
+
+-- "Reset organism" в контекстном меню (hg.organism.Clear -> хук "Org Clear") - тоже с нуля
+hook.Add("Org Clear", "rem_addiction_reset", function(org)
+	local ply = istable(org) and org.owner
+	if IsValid(ply) and ply:IsPlayer() then ResetAddiction(ply) end
+end)

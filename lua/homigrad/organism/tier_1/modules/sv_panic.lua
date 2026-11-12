@@ -280,3 +280,9 @@ local function Reset(ply)
 end
 hook.Add("PlayerSpawn", "rem_panic_reset", Reset)
 hook.Add("PlayerDeath", "rem_panic_reset", Reset)
+
+-- "Reset organism" в контекстном меню (hg.organism.Clear -> хук "Org Clear") - тоже с нуля
+hook.Add("Org Clear", "rem_panic_reset", function(org)
+	local ply = istable(org) and org.owner
+	if IsValid(ply) and ply:IsPlayer() then Reset(ply) end
+end)

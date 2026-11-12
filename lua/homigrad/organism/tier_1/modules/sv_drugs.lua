@@ -184,3 +184,9 @@ hook.Add("PlayerSpawn", "rem_drugs_reset", function(ply)
 	timer.Simple(0, function() ResetDrugs(ply) end) -- после того как Z-City соберёт организм заново
 end)
 hook.Add("Player Spawn", "rem_drugs_reset", ResetDrugs)
+
+-- "Reset organism" в контекстном меню (hg.organism.Clear -> хук "Org Clear") - тоже с нуля
+hook.Add("Org Clear", "rem_drugs_reset", function(org)
+	local ply = istable(org) and org.owner
+	if IsValid(ply) and ply:IsPlayer() then ResetDrugs(ply) end
+end)
