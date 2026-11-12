@@ -1,6 +1,6 @@
--- Отрезание головы режущим оружием (ножи, мачете, топоры, мечи, бензопила) - по Lambda Gore Mod (модели мода,
--- права на копию у пользователя): голова отваливается целиком - копия тела, где видна только голова, снизу срез
--- headcap (bonemerge), на шее тела обрубок common_infected_w_neck, из шеи фонтан крови (как у Z-City).
+-- Отрезание головы режущим оружием (ножи, мачете, топоры, мечи, бензопила) - модели Zippy's Gore Mod Enhanced:
+-- голова отваливается целиком - копия тела, где видна только голова, снизу кусок мяса debris_goredebris02,
+-- на шее тела чистый срез headpartial5, из шеи фонтан крови (как у Z-City).
 -- Голова на земле - cl_decap.lua (остальные кости сжаты в точку среза, кровь из шеи).
 -- Обычно Z-City сносит голову с одного сильного удара; для этого оружия так нельзя (sv_input.lua спрашивает
 -- hg.RemDecapBlocks): голова отлетает не раньше MIN_HITS-го удара по голове/шее, дальше - по шансу (CHANCE по виду).
@@ -107,24 +107,30 @@ hook.Add("Org Clear", "rem_decap_reset", function(org)
 end)
 
 -- ================= само отрезание =================
-local NECK_CAP = "models/noob_dev2323/gib/l4d/common_infected_w_neck.mdl"
-local HEAD_CAP = "models/noob_dev2323/gib/l4d/headcap.mdl"
-local NECK_ANG = Angle(180, 110, 90)                               -- из мода (giblist.lua, bone_name_togap)
-local NECK_POS, NECK_POS_F = Vector(-0.812, -2.608, 0), Vector(-2.912, -2.608, 0)
-local HEAD_LIFE = 300
+-- модели и расстановка - из Zippy's Gore Mod Enhanced (dismemberment.lua): на шее тела чистый срез headpartial5,
+-- снизу у головы кусок мяса debris_goredebris02 (масштаб 3x3x2)
+local NECK_CAP = "models/headpartial/headpartial5.mdl"
+local HEAD_CAP = "models/gore/debris_goredebris02.mdl"
+local HEAD_LIFE = 300 -- голова лежит столько секунд
 local BLEED_TIME = 40
+-- срез шеи: угол и сдвиг по типу модели (у Zippy - по имени модели)
+local function NeckCapPlace(rag)
+	local mdl = string.lower(rag:GetModel() or "")
+	if string.find(mdl, "alyx", 1, true) or string.find(mdl, "mossman", 1, true) then return Angle(0, -60, -90), Vector(1, -1, 0) end
+	if (ThatPlyIsFemale and ThatPlyIsFemale(rag)) or string.find(mdl, "female", 1, true) then return Angle(0, -60, -90), Vector(1, -2, 0) end
+	return Angle(0, -70, -90), Vector(2.2, -2, 0)
+end
 for _, f in ipairs({
-	"models/noob_dev2323/gib/l4d/common_infected_w_neck.mdl", "models/noob_dev2323/gib/l4d/common_infected_w_neck.vvd",
-	"models/noob_dev2323/gib/l4d/common_infected_w_neck.dx80.vtx", "models/noob_dev2323/gib/l4d/common_infected_w_neck.dx90.vtx",
-	"models/noob_dev2323/gib/l4d/headcap.mdl", "models/noob_dev2323/gib/l4d/headcap.vvd", "models/noob_dev2323/gib/l4d/headcap.phy",
-	"models/noob_dev2323/gib/l4d/headcap.dx80.vtx", "models/noob_dev2323/gib/l4d/headcap.dx90.vtx",
-	"materials/models/noob_dev2323/gibs/l4d/master_wound_cmapmaterial.vmt", "materials/models/noob_dev2323/gibs/l4d/master_wound_cmap.vtf",
-	"materials/models/noob_dev2323/gibs/l4d/master_wound_normal.vtf",
-	"materials/models/mosi/fnv/props/character/meatcapgore01.vmt", "materials/models/mosi/fnv/props/character/meatcapinsect.vmt",
-	"materials/models/mosi/fnv/props/character/meatcapgore01grey.vmt", "materials/models/mosi/fnv/props/character/meatcapgore01grey.vtf",
-	"materials/models/mosi/fnv/props/character/meatcapgore01grey2.vmt", "materials/models/mosi/fnv/props/character/meatcapgore01grey2.vtf",
-	"materials/models/mosi/fnv/props/gore/meatcapgore01.vtf", "materials/models/mosi/fnv/props/gore/meatcapgore01_n.vtf",
-	"materials/models/mosi/fnv/props/gore/meatcapinsect.vtf", "materials/models/mosi/fnv/props/gore/meatcapinsect_n.vtf",
+	"models/headpartial/headpartial5.mdl", "models/headpartial/headpartial5.vvd",
+	"models/headpartial/headpartial5.dx80.vtx", "models/headpartial/headpartial5.dx90.vtx",
+	"materials/models/headpartial/headvar1.vmt", "materials/models/headpartial/headvar1_basecolor.vtf",
+	"materials/models/headpartial/headvar1_bump.vtf", "materials/models/headpartial/headvar1_phongexp.vtf",
+	"materials/models/headpartial/headvar5.vmt", "materials/models/headpartial/headvar5_basecolor.vtf",
+	"materials/models/headpartial/headvar5_bump.vtf", "materials/models/headpartial/headvar5_phongexp.vtf",
+	"models/gore/debris_goredebris02.mdl", "models/gore/debris_goredebris02.vvd", "models/gore/debris_goredebris02.phy",
+	"models/gore/debris_goredebris02.dx80.vtx", "models/gore/debris_goredebris02.dx90.vtx",
+	"materials/models/gore/gorehumanhead.vmt", "materials/models/gore/gorehumanhead_d.vtf",
+	"materials/models/gore/gorehumanhead_n.vtf", "materials/models/gore/gorehumanhead_exp.vtf",
 }) do resource.AddSingleFile(f) end
 
 local headsAlive = {}
@@ -201,16 +207,19 @@ local function SpawnHead(rag, headBone, force)
 		rp:AddVelocity((force or vector_origin) * 0.6 + VectorRand(-40, 40) + Vector(0, 0, 80))
 		rp:AddAngleVelocity(VectorRand(-300, 300))
 	end
-	-- срез снизу головы (bonemerge к голове)
+	-- срез снизу головы (как у Zippy: кусок мяса на кости головы)
 	if util.IsValidModel(HEAD_CAP) then
 		local cap = ents.Create("prop_dynamic")
 		if IsValid(cap) then
 			cap:SetModel(HEAD_CAP)
-			cap:SetPos(e:GetPos())
-			cap:SetParent(e)
+			cap:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
+			cap:SetNotSolid(true)
+			cap:DrawShadow(false)
 			cap:Spawn()
-			cap:SetSolid(SOLID_NONE)
-			cap:AddEffects(EF_BONEMERGE)
+			cap:ManipulateBoneScale(0, Vector(3, 3, 2))
+			cap:FollowBone(e, root)
+			cap:SetLocalPos(Vector(2, -2, 0))
+			cap:SetLocalAngles(Angle(0, 0, 0))
 			e:DeleteOnRemove(cap)
 		end
 	end
@@ -274,8 +283,9 @@ local function CutHead(rag, force)
 			gap:SetNotSolid(true)
 			gap:DrawShadow(false)
 			gap:FollowBone(rag, neck)
-			gap:SetLocalAngles(NECK_ANG)
-			gap:SetLocalPos((ThatPlyIsFemale and ThatPlyIsFemale(rag)) and NECK_POS_F or NECK_POS)
+			local ang, pos = NeckCapPlace(rag)
+			gap:SetLocalAngles(ang)
+			gap:SetLocalPos(pos)
 			rag:DeleteOnRemove(gap)
 		end
 	end
