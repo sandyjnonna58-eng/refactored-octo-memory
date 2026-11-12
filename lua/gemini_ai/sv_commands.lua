@@ -118,17 +118,21 @@ AddCommand("gemini_ai_set", { "aiset" }, "Admin", "Изменить настро
 		Reply(ply, msg, not ok)
 	end)
 
-AddCommand("gemini_ai_test", { "aitest" }, "Admin", "Проверить подключение к Gemini",
-	function(ply)
-		Reply(ply, "Проверяю подключение к " .. GeminiAI.CVars.model:GetString() .. "…")
+AddCommand("gemini_ai_test", { "aitest" }, "Admin", "Проверить подключение к Gemini (gemini_ai_test char — запрос как у ИИ-персонажей)",
+	function(ply, args)
+		local char = args[1] == "char"
+		local model = char and GeminiAI.CVars.char_model:GetString() or GeminiAI.CVars.model:GetString()
+		Reply(ply, "Проверяю подключение к " .. model .. (char and " (быстрый режим персонажей)" or "") .. "…")
 		local start = SysTime()
 		GeminiAI.Request({ { role = "user", parts = { { text = "Ответь одним словом: работает" } } } }, function(res, err)
 			if res then
-				Reply(ply, string.format("Подключение работает! (%.1f сек) Ответ: %s", SysTime() - start, res.say))
+				local lvl = GeminiAI.ModelLevel[model] or 0
+				Reply(ply, string.format("Подключение работает! (%.1f сек) Ответ: %s%s", SysTime() - start, res.say,
+					lvl > 0 and (" [модель упрощена до уровня " .. lvl .. "]") or ""))
 			else
 				Reply(ply, "Ошибка: " .. tostring(err), true)
 			end
-		end)
+		end, char and { model = model, fast = true, maxTokens = 60 } or nil)
 	end)
 
 AddCommand("gemini_ai_models", { "aimodels" }, "Admin", "Список доступных моделей Gemini для вашего ключа",

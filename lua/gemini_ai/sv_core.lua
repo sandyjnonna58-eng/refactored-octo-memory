@@ -270,7 +270,9 @@ local function ParseResponse(code, body)
 	return { say = text, lua = "", raw = util.TableToJSON({ say = text, lua = "" }), data = { say = text } }
 end
 
-GeminiAI.NoFastMode = GeminiAI.NoFastMode or {} -- модели, которые не умеют отключать размышления
+-- Что модель умеет (узнаём на ошибках 400 и запоминаем до перезапуска карты):
+-- 0 - всё (быстрый режим + схема ответа), 1 - без быстрого режима, 2 - ещё и без схемы (JSON только по инструкции)
+GeminiAI.ModelLevel = GeminiAI.ModelLevel or {}
 
 -- opts (необязательно): system - своя инструкция, schema - своя схема ответа, fast - без размышлений,
 -- model - своя модель, temperature, maxTokens (так работают ИИ-персонажи)
@@ -302,10 +304,12 @@ function GeminiAI.Request(contents, onDone, opts)
 	-- Быстрый режим: без «размышлений» модели ответ приходит в разы быстрее.
 	-- Не все модели это понимают — тогда один раз повторяем запрос без настройки и запоминаем.
 	local model = opts.model or cv.model:GetString()
-	local fastTried = false
-	if opts.fast and not GeminiAI.NoFastMode[model] then
+	local level = GeminiAI.ModelLevel[model] or 0
+	if opts.fast and level < 1 then
 		body.generationConfig.thinkingConfig = { thinkingBudget = 0 }
-		fastTried = true
+	end
+	if level >= 2 then
+		body.generationConfig.responseSchema = nil
 	end
 
 	local ok = HTTP({
@@ -316,9 +320,18 @@ function GeminiAI.Request(contents, onDone, opts)
 		headers = { ["x-goog-api-key"] = API_KEY },
 		timeout = opts.timeout or 60,
 		success = function(code, resp)
-			if fastTried and code == 400 and string.find(string.lower(resp or ""), "think", 1, true) then
-				GeminiAI.NoFastMode[model] = true
+			-- 400 «invalid argument»: модель не понимает какую-то настройку. Упрощаем запрос и повторяем
+			-- (ошибки ключа и региона так не лечатся — их не трогаем)
+			local low = string.lower(resp or "")
+			if code == 400 and level < 2 and not string.find(low, "api key", 1, true) and not string.find(low, "location", 1, true) then
+				local nextLevel = (opts.fast and level == 0) and 1 or 2
+				GeminiAI.ModelLevel[model] = nextLevel
+				MsgC(GeminiAI.Colors.Accent, "[Gemini AI] ", color_white, model .. ": ответ 400, упрощаю запрос (уровень " .. nextLevel .. "). Ответ Google: "
+					.. string.sub(string.gsub(resp or "", "%s+", " "), 1, 400) .. "\n")
 				return GeminiAI.Request(contents, onDone, opts)
+			end
+			if code ~= 200 then
+				MsgC(GeminiAI.Colors.Bad, "[Gemini AI] ", color_white, model .. ": HTTP " .. code .. " " .. string.sub(string.gsub(resp or "", "%s+", " "), 1, 400) .. "\n")
 			end
 			local res, err = ParseResponse(code, resp)
 			onDone(res, err)
