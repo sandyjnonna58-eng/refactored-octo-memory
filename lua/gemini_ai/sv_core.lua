@@ -265,25 +265,28 @@ local function ParseResponse(code, body)
 	local obj = util.JSONToTable(clean)
 
 	if istable(obj) then
-		return { say = tostring(obj.say or ""), lua = tostring(obj.lua or ""), raw = clean }
+		return { say = tostring(obj.say or ""), lua = tostring(obj.lua or ""), raw = clean, data = obj }
 	end
-	return { say = text, lua = "", raw = util.TableToJSON({ say = text, lua = "" }) }
+	return { say = text, lua = "", raw = util.TableToJSON({ say = text, lua = "" }), data = { say = text } }
 end
 
-function GeminiAI.Request(contents, onDone)
+-- opts (необязательно): system - своя инструкция, schema - своя схема ответа,
+-- model - своя модель, temperature, maxTokens (так работают ИИ-персонажи)
+function GeminiAI.Request(contents, onDone, opts)
+	opts = opts or {}
 	if not GeminiAI.HasKey() then
 		onDone(nil, "API-ключ не задан. Админ: gemini_ai_setkey <ключ> (бесплатно на aistudio.google.com)")
 		return
 	end
 
 	local body = {
-		systemInstruction = { parts = { { text = GetSystemPrompt() } } },
+		systemInstruction = { parts = { { text = opts.system or GetSystemPrompt() } } },
 		contents = contents,
 		generationConfig = {
-			temperature = cv.temperature:GetFloat(),
-			maxOutputTokens = 4096,
+			temperature = opts.temperature or cv.temperature:GetFloat(),
+			maxOutputTokens = opts.maxTokens or 4096,
 			responseMimeType = "application/json",
-			responseSchema = {
+			responseSchema = opts.schema or {
 				type = "OBJECT",
 				properties = {
 					say = { type = "STRING", description = "Ответ игроку" },
@@ -295,7 +298,7 @@ function GeminiAI.Request(contents, onDone)
 	}
 
 	local ok = HTTP({
-		url = string.format(API_URL, cv.model:GetString()),
+		url = string.format(API_URL, opts.model or cv.model:GetString()),
 		method = "POST",
 		type = "application/json",
 		body = util.TableToJSON(body),

@@ -38,12 +38,21 @@ GeminiAI.CVars = {
 	cooldown    = CreateConVar("gemini_ai_cooldown", "4", FLAGS, "Задержка между запросами игрока (сек)", 0, 120),
 	history     = CreateConVar("gemini_ai_history", "12", FLAGS, "Сколько сообщений помнит ИИ", 0, 60),
 	temperature = CreateConVar("gemini_ai_temperature", "0.7", FLAGS, "Креативность ответов (0.0 - 2.0)", 0, 2),
+
+	-- ИИ-персонажи (боты, которых ведёт Gemini)
+	char_model  = CreateConVar("gemini_ai_char_model", "gemini-flash-lite-latest", FLAGS, "Модель для ИИ-персонажей (lite - больше бесплатных запросов)"),
+	char_idle   = CreateConVar("gemini_ai_char_idle", "20", FLAGS, "Как часто персонаж думает, когда ничего не происходит (сек)", 5, 600),
+	char_gap    = CreateConVar("gemini_ai_char_gap", "4", FLAGS, "Минимальная пауза между мыслями одного персонажа (сек)", 1, 60),
+	char_rpm    = CreateConVar("gemini_ai_char_rpm", "12", FLAGS, "Максимум запросов в минуту на всех персонажей (лимит бесплатного ключа)", 1, 300),
+	char_hear   = CreateConVar("gemini_ai_char_hear", "900", FLAGS, "Дальность слуха персонажа (юниты)", 100, 5000),
+	char_debug  = CreateConVar("gemini_ai_char_debug", "0", FLAGS, "Показывать админам мысли и действия персонажей в чате", 0, 1),
 }
 
 -- Параметры, которые админ может менять из игры (gemini_ai_set / меню)
 GeminiAI.Settable = {
 	model = "string", execute = "bool", confirm = "bool", public = "bool",
 	broadcast = "bool", cooldown = "number", history = "number", temperature = "number",
+	char_model = "string", char_idle = "number", char_gap = "number", char_rpm = "number", char_hear = "number", char_debug = "bool",
 }
 
 ---------------------------------------------------------------------------
@@ -54,6 +63,7 @@ GeminiAI.Privileges = {
 	Chat    = { Name = "GeminiAI.Chat",    MinAccess = "user",       Description = "Gemini AI: общаться с ИИ" },
 	Execute = { Name = "GeminiAI.Execute", MinAccess = "superadmin", Description = "Gemini AI: ИИ выполняет Lua-код по вашим просьбам" },
 	Admin   = { Name = "GeminiAI.Admin",   MinAccess = "superadmin", Description = "Gemini AI: настройка мода, ключ API, бан игроков" },
+	Characters = { Name = "GeminiAI.Characters", MinAccess = "admin", Description = "Gemini AI: создавать ИИ-персонажей и давать им приказы" },
 }
 
 local function RegisterPrivileges()

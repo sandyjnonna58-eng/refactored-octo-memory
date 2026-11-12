@@ -180,10 +180,85 @@ AddCommand("gemini_ai_run", nil, "Execute", "Выполнить Lua через �
 	end)
 
 ---------------------------------------------------------------------------
+-- ИИ-персонажи (sv_character.lua)
+---------------------------------------------------------------------------
+local function RestAfterFirst(text)
+	return string.Trim(string.match(text or "", "^%s*%S+%s*(.*)$") or "")
+end
+
+AddCommand("gemini_ai_char", { "aichar" }, "Characters", "Создать ИИ-персонажа: gemini_ai_char [имя] [роль...] (без аргументов — меню)",
+	function(ply, args, text)
+		if not args[1] then
+			if IsValid(ply) then net.Start("GeminiAI_CharMenu") net.WriteBool(false) net.Send(ply) end
+			return
+		end
+		local pos = IsValid(ply) and (ply:GetEyeTrace().HitPos + Vector(0, 0, 4)) or nil
+		local ang = IsValid(ply) and Angle(0, ply:EyeAngles().y + 180, 0) or nil
+		local char, err = GeminiAI.CreateCharacter(ply, args[1], RestAfterFirst(text), pos, ang)
+		Reply(ply, char and ("Персонаж «" .. char.name .. "» создан.") or err, not char)
+	end)
+
+AddCommand("gemini_ai_char_list", { "aichars" }, "Characters", "Список ИИ-персонажей",
+	function(ply)
+		local n = 0
+		for bot, char in pairs(GeminiAI.Chars) do
+			if IsValid(bot) then
+				n = n + 1
+				Reply(ply, string.format("%s — %s%s | %s", char.name, char.action,
+					char.targetName ~= "" and (" -> " .. char.targetName) or "", string.sub(char.role, 1, 80)))
+			end
+		end
+		if n == 0 then Reply(ply, "Персонажей нет. Создать: !aichar Имя роль") end
+	end)
+
+AddCommand("gemini_ai_char_order", { "aiorder" }, "Characters", "Тайный приказ персонажу: gemini_ai_char_order <имя> <что сделать>",
+	function(ply, args, text)
+		local char = GeminiAI.FindChar(args[1])
+		local order = RestAfterFirst(text)
+		if not char or order == "" then return Reply(ply, "Использование: !aiorder <имя> <приказ>", true) end
+		char.orders[#char.orders + 1] = order
+		char.nextThink = CurTime()
+		Reply(ply, "Приказ передан «" .. char.name .. "».")
+	end)
+
+AddCommand("gemini_ai_char_role", { "airole" }, "Characters", "Сменить роль персонажа: gemini_ai_char_role <имя> <новая роль>",
+	function(ply, args, text)
+		local char = GeminiAI.FindChar(args[1])
+		local role = RestAfterFirst(text)
+		if not char or role == "" then return Reply(ply, "Использование: !airole <имя> <роль>", true) end
+		char.role, char.history = role, {}
+		char.nextThink = CurTime()
+		Reply(ply, "Роль «" .. char.name .. "» изменена.")
+	end)
+
+AddCommand("gemini_ai_char_tp", { "aitp" }, "Characters", "Телепортировать персонажа туда, куда смотрите: gemini_ai_char_tp <имя>",
+	function(ply, args)
+		local char = GeminiAI.FindChar(args[1])
+		if not char or not IsValid(ply) then return Reply(ply, "Персонаж не найден.", true) end
+		char.bot:SetPos(ply:GetEyeTrace().HitPos + Vector(0, 0, 4))
+		Reply(ply, "«" .. char.name .. "» перемещён.")
+	end)
+
+AddCommand("gemini_ai_char_remove", { "aikick" }, "Characters", "Удалить персонажа: gemini_ai_char_remove <имя|all>",
+	function(ply, args)
+		if args[1] == "all" then
+			local list = {}
+			for _, char in pairs(GeminiAI.Chars) do list[#list + 1] = char end
+			for _, char in ipairs(list) do GeminiAI.RemoveChar(char) end
+			return Reply(ply, "Удалено персонажей: " .. #list)
+		end
+		local char = GeminiAI.FindChar(args[1])
+		if not char then return Reply(ply, "Персонаж не найден.", true) end
+		GeminiAI.RemoveChar(char)
+		Reply(ply, "Персонаж «" .. char.name .. "» удалён.")
+	end)
+
+---------------------------------------------------------------------------
 -- Чат-команды: !ai, /ai, .ai
 ---------------------------------------------------------------------------
 -- Возвращает true, если сообщение было нашей командой
 function GeminiAI.HandleChat(ply, text)
+	if IsValid(ply) and ply.GeminiChar then return false end -- ИИ-персонажи команды не запускают
 	local prefix, cmd, rest = string.match(text or "", "^([!/%.])(%S+)%s*(.*)$")
 	if not prefix then return false end
 

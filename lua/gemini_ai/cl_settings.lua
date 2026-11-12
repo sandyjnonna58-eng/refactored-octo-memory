@@ -27,6 +27,12 @@ local function BuildSettings(pnl)
 
 	pnl:Help("Также: вкладка «Gemini AI» в меню Q, энтити «ИИ Терминал» в разделе Энтити → Gemini AI, или команда !ai в чате.")
 
+	if GeminiAI.HasAccess(LocalPlayer(), "Characters") then
+		local chars = pnl:Button("ИИ-персонажи (боты с ролью)")
+		chars.DoClick = function() GeminiAI.OpenCharMenu() end
+		pnl:ControlHelp("Живые боты под управлением ИИ: ходят, говорят, дерутся и отыгрывают роль. Нужен мультиплеер.")
+	end
+
 	if not GeminiAI.HasAccess(LocalPlayer(), "Admin") then
 		pnl:Help("Настройки доступны только администраторам (право GeminiAI.Admin).")
 		return
@@ -94,6 +100,18 @@ local function BuildSettings(pnl)
 	Slider("Задержка (сек)", "cooldown", 0, 60)
 	Slider("Память (сообщ.)", "history", 0, 40)
 	Slider("Креативность", "temperature", 0, 2, 2)
+
+	Header(pnl, "ИИ-персонажи")
+	local cm = vgui.Create("DComboBox", pnl)
+	cm:SetValue(GetConVarString("gemini_ai_char_model"))
+	for _, m in ipairs(GeminiAI.Models) do cm:AddChoice(m) end
+	cm.OnSelect = function(_, _, value) AdminSet("char_model", value) end
+	pnl:AddItem(cm)
+	pnl:ControlHelp("Модель персонажей. lite — больше бесплатных запросов в минуту.")
+	Slider("Думает раз в (сек)", "char_idle", 5, 120)
+	Slider("Запросов в минуту", "char_rpm", 1, 60)
+	Slider("Дальность слуха", "char_hear", 100, 3000)
+	Check("Показывать мысли персонажей админам", "char_debug")
 
 	Header(pnl, "Управление")
 	local stop = pnl:Button("Остановить таймеры/хуки ИИ")

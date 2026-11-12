@@ -14,6 +14,7 @@ return {
 	"materials/entities/ent_lifesupport_battery.png",
 	"materials/entities/ent_loud_radio.png",
 	"materials/entities/ent_mutation_station.png",
+	"materials/entities/gemini_ai_character.png",
 	"materials/entities/gemini_ai_terminal.png",
 	"materials/entities/rem_bomb_2000.png",
 	"materials/entities/rem_bomb_500.png",

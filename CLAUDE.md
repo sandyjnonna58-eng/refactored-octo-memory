@@ -190,3 +190,10 @@
   AI.Ragdoll/GetUp (hg.Fake/FakeUp), AI.Stun, AI.Vomit, AI.Org, AI.Give. Чат: команды ловятся в HG_PlayerSay (ZChat) и
   глушатся в PlayerSay (ply.GeminiAI_Suppress), иначе !aikey с ключом ушёл бы в общий чат. Права: GeminiAI.Chat/Execute/Admin
   (CAMI, без него - superadmin). Описание и все команды - `GEMINI_AI.md`.
+  ИИ-персонажи (`lua/gemini_ai/sv_character.lua`, окно `cl_character.lua`, энтити-спавнер `gemini_ai_character`):
+  бот player.CreateNextBot + bot.GeminiChar. Мозг - таймер GeminiAI_CharBrain: восприятие (Perception: своё состояние
+  по организму, кто рядом и виден, оружие на земле, услышанное, события, [РЕЖИССЁР]-приказы) -> Gemini (своя схема
+  {say, action, target, thought}, модель gemini_ai_char_model, общий лимит char_rpm) -> ApplyDecision. Тело - StartCommand:
+  A* по навмешу (без навмеша - по прямой), атака держит IN_ATTACK2 (оружие homigrad без прицеливания не стреляет),
+  из регдолла встаёт hg.FakeUp. Речь - hook.Run("PlayerSay", bot) (ZChat подписывает именем) или bot:Say; ведущие !/. срезаются.
+  Слух - HG_PlayerSay + PlayerSay (дубли отсекаются), ИИ-соседи будят друг друга только по имени (иначе бесконечная болтовня).
