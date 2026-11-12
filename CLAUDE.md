@@ -151,8 +151,8 @@
   с 4-го удара шанс по виду (KIND_CHANCE: нож 20%, мачете 35%, топор 45%, меч 50%, пила 60%) -> hg.Decapitate (живого -
   Kill и через 0.15 с регдолл смерти). Модели и расстановка - Zippy's Gore Mod Enhanced (dismemberment.lua; модели
   пользователь прислал сам): голова - копия регдолла, видна только Head1 (сервер - scale 0 и физ. кости едут за головой,
-  клиент - колбэк BuildBonePositions сжимает всё в точку среза), снизу debris_goredebris02 (FollowBone Head1, масштаб
-  3x3x2, сдвиг 2,-2,0); на теле Gib_RemoveBone(Head1), на шее headpartial5 (FollowBone Neck1, NeckCapPlace: угол/сдвиг по
+  клиент - колбэк BuildBonePositions сжимает всё в точку среза), снизу рваный обрубок models/limbspartial/unistump (Zippy; FollowBone
+  Head1, масштаб 3, угол 90,0,0 - ось вдоль кости, сдвиг -1.2,0,0 - HEAD_CAP_*); на теле Gib_RemoveBone(Head1), на шее headpartial5 (FollowBone Neck1, NeckCapPlace: угол/сдвиг по
   модели - мужская / женская / alyx, mossman; плюс NECK_DOWN 3.5 вниз по шее - у Zippy он торчал на месте головы), фонтан Z-City (addfountain), шапки/очки уходят с головой, шлем/маска
   падают. Голова: лишние кости без физики ещё и ManipulateBonePosition(-местное смещение) - к началу родителя, а
   физические каждый тик в начале головы: всё тело в одной точке у среза даже без клиентского колбэка (он у регдоллов,
@@ -160,9 +160,8 @@
   (models/mosi/fnv/props/character/headcap.mdl) встал боком на плечо - отключён (USE_FNV_NECK = false); на шее всегда
   обрубок L4D из Lambda (headpartial5 Zippy - только запасной: торчал над плечами) (models/noob_dev2323/gib/l4d/common_infected_w_neck.mdl, FollowBone Neck1,
   угол/сдвиг из giblist.lua мода; родная текстура битая - своя перекраска жёлтой materials/rem_gore/l4d_neck_wound.vtf,
-  tools/gore/make_l4d_neck.py, vmt master_wound_cmapmaterial переписан на неё); под головой - кусок
-  Zippy или headcap Lambda (models/noob_dev2323/gib/l4d/headcap.mdl, привязан к Head1 - bonemerge) - только если его
-  .vvd целый есть в игре (LambdaHeadCapOk; в присланном rar битый). Bonemerge - BonemergeProp: SetParent + Fire
+  tools/gore/make_l4d_neck.py, vmt master_wound_cmapmaterial переписан на неё); под головой - всегда
+  unistump (выбран пользователем из 12 вариантов Zippy; headcap Lambda убран - в присланном rar битый). Bonemerge - BonemergeProp: SetParent + Fire
   SetParentAttachment (как у Lambda / кишок Z-City), без точки крепления модель встаёт в таз. HeadHit - отрезок шея..макушка
   вдоль кости Head1, у регдолла по физике (матрицы костей регдолла на сервере бывают старые). В консоль - [rem_decap]:
   счёт ударов, промах шанса, отрезано / почему нет. У головы клиент ставит SetRenderClipPlane на 2 ниже начала кости

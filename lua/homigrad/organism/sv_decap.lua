@@ -1,5 +1,5 @@
 -- Отрезание головы режущим оружием (ножи, мачете, топоры, мечи, бензопила) - модели Zippy's Gore Mod Enhanced:
--- голова отваливается целиком - копия тела, где видна только голова, снизу кусок мяса debris_goredebris02,
+-- голова отваливается целиком - копия тела, где видна только голова, снизу рваный обрубок unistump,
 -- на шее тела чистый срез headpartial5, из шеи фонтан крови (как у Z-City).
 -- Голова на земле - cl_decap.lua (остальные кости сжаты в точку среза, кровь из шеи).
 -- Обычно Z-City сносит голову с одного сильного удара; для этого оружия так нельзя (sv_input.lua спрашивает
@@ -131,7 +131,7 @@ end)
 
 -- ================= само отрезание =================
 -- модели и расстановка - из Zippy's Gore Mod Enhanced (dismemberment.lua): на шее тела чистый срез headpartial5,
--- снизу у головы кусок мяса debris_goredebris02 (масштаб 3x3x2)
+-- снизу у головы - рваный обрубок unistump (у Zippy - на отрубленной руке; масштаб 3)
 local NECK_CAP = "models/headpartial/headpartial5.mdl"
 -- второй вариант обрубка на шее (разнообразие, выбор случайный): срез шеи из Fallout NV - тот же, что ставит Lambda Gore
 -- Mod; модель привязана к кости Neck1, поэтому встаёт сама (bonemerge)
@@ -141,13 +141,11 @@ local USE_FNV_NECK = false
 -- как в моде (giblist.lua bone_name_togap): угол 180,110,90, сдвиг -0.812,-2.608,0 (женские -2.912,-2.608,0).
 -- Родная текстура была битой - своя перекраска materials/rem_gore/l4d_neck_wound.vtf (tools/gore/make_l4d_neck.py)
 local NECK_CAP_L4D = "models/noob_dev2323/gib/l4d/common_infected_w_neck.mdl"
-local HEAD_CAP = "models/gore/debris_goredebris02.mdl"
--- второй вариант среза под головой - из Lambda Gore Mod (срез Fallout NV, перепривязанный к Head1, ставится сам -
--- bonemerge). Его .vvd в присланном архиве был битый: вариант включается, только если файлы модели целые лежат в игре
-local HEAD_CAP_LAMBDA = "models/noob_dev2323/gib/l4d/headcap.mdl"
-local function LambdaHeadCapOk()
-	return file.Exists("models/noob_dev2323/gib/l4d/headcap.vvd", "GAME") and util.IsValidModel(HEAD_CAP_LAMBDA)
-end
+-- обрубок - цилиндр (ось z, основание z = 0, радиус ~0.8, высота ~1.56): разворот 90,0,0 кладёт ось вдоль кости
+-- Head1 (x - к макушке), основание - у среза, чуть ниже начала кости (голова клиентом срезана на CLIP_BELOW 2 ниже)
+local HEAD_CAP = "models/limbspartial/unistump.mdl"
+local HEAD_CAP_SCALE = Vector(3, 3, 3)
+local HEAD_CAP_POS, HEAD_CAP_ANG = Vector(-1.2, 0, 0), Angle(90, 0, 0)
 local HEAD_LIFE = 300 -- голова лежит столько секунд
 local BLEED_TIME = 40
 -- срез шеи: угол и сдвиг по типу модели (у Zippy - по имени модели)
@@ -168,10 +166,10 @@ for _, f in ipairs({
 	"materials/models/headpartial/headvar1_bump.vtf", "materials/models/headpartial/headvar1_phongexp.vtf",
 	"materials/models/headpartial/headvar5.vmt", "materials/models/headpartial/headvar5_basecolor.vtf",
 	"materials/models/headpartial/headvar5_bump.vtf", "materials/models/headpartial/headvar5_phongexp.vtf",
-	"models/gore/debris_goredebris02.mdl", "models/gore/debris_goredebris02.vvd", "models/gore/debris_goredebris02.phy",
-	"models/gore/debris_goredebris02.dx80.vtx", "models/gore/debris_goredebris02.dx90.vtx",
-	"materials/models/gore/gorehumanhead.vmt", "materials/models/gore/gorehumanhead_d.vtf",
-	"materials/models/gore/gorehumanhead_n.vtf", "materials/models/gore/gorehumanhead_exp.vtf",
+	"models/limbspartial/unistump.mdl", "models/limbspartial/unistump.vvd",
+	"models/limbspartial/unistump.dx80.vtx", "models/limbspartial/unistump.dx90.vtx",
+	"materials/models/limbspartial/unistump.vmt", "materials/models/limbspartial/unistump_basecolor.vtf",
+	"materials/models/limbspartial/unistump_bump.vtf", "materials/models/limbspartial/unistump_phongexp.vtf",
 	"models/noob_dev2323/gib/l4d/common_infected_w_neck.mdl", "models/noob_dev2323/gib/l4d/common_infected_w_neck.vvd",
 	"models/noob_dev2323/gib/l4d/common_infected_w_neck.dx80.vtx", "models/noob_dev2323/gib/l4d/common_infected_w_neck.dx90.vtx",
 	"materials/models/noob_dev2323/gibs/l4d/master_wound_cmapmaterial.vmt",
@@ -297,10 +295,8 @@ local function SpawnHead(rag, headBone, force)
 		rp:AddVelocity((force or vector_origin) * 0.6 + VectorRand(-40, 40) + Vector(0, 0, 80))
 		rp:AddAngleVelocity(VectorRand(-300, 300))
 	end
-	-- срез снизу головы: случайно - кусок мяса Zippy на кости головы или срез Lambda (bonemerge, если есть)
-	if LambdaHeadCapOk() and math.random(2) == 1 then
-		BonemergeProp(e, HEAD_CAP_LAMBDA)
-	elseif util.IsValidModel(HEAD_CAP) then
+	-- срез снизу головы - рваный обрубок на кости головы
+	if util.IsValidModel(HEAD_CAP) then
 		local cap = ents.Create("prop_dynamic")
 		if IsValid(cap) then
 			cap:SetModel(HEAD_CAP)
@@ -308,10 +304,10 @@ local function SpawnHead(rag, headBone, force)
 			cap:SetNotSolid(true)
 			cap:DrawShadow(false)
 			cap:Spawn()
-			cap:ManipulateBoneScale(0, Vector(3, 3, 2))
+			cap:ManipulateBoneScale(0, HEAD_CAP_SCALE)
 			cap:FollowBone(e, root)
-			cap:SetLocalPos(Vector(2, -2, 0))
-			cap:SetLocalAngles(Angle(0, 0, 0))
+			cap:SetLocalPos(HEAD_CAP_POS)
+			cap:SetLocalAngles(HEAD_CAP_ANG)
 			e:DeleteOnRemove(cap)
 		end
 	end
