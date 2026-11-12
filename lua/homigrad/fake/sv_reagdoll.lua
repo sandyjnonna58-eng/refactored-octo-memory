@@ -1,8 +1,8 @@
 -- Живые реакции регдолла (по мотивам мода ReAgdoll, свой код поверх управления регдоллом Z-City - sv_control.lua):
 --  1) хватается за рану: свежая рана (org.wounds / org.arterialwounds) -> свободная рука (не раненая, не отрубленная, не
 --     занятая игроком) тянется к ней и держит; в сознании - 4..10 с, без сознания слабо, у мёртвого - угасает за DEATH_FADE;
---  2) пошатнулся и осел: упал в регдолл стоя от попадания (рана моложе 1 с) или умер стоя - первые 0.7..1.4 с тело
---     частично держит вес (верх сильнее низа) и покачивается, потом подкашивается - не валится мешком сразу;
+--  2) пытается устоять: упал в регдолл стоя от попадания (рана моложе 1 с) - 2.5..5 с держит таз и корпус, ставит ноги
+--     под себя, спотыкается, колени подкашиваются, держась за рану; потом падает. Умер стоя - оседает за 0.8..1.5 с;
 --  3) машет руками и ногами в полёте (падение с высоты, отбросило); руки не трогаем, когда Z-City закрывается ими
 --     перед землёй (fallCover в sv_control.lua);
 --  4) цепляется рукой: в полёте/при падении рука в сознании задела стену или край - на 1.5..4 с держится (ballsocket).
@@ -11,6 +11,7 @@ local cvOn = CreateConVar("rem_reag", "1", FCVAR_ARCHIVE, "Ragdoll reactions: ho
 local cvHold = CreateConVar("rem_reag_hold_chance", "80", FCVAR_ARCHIVE, "Chance (%) to grab a fresh wound", 0, 100)
 local cvStagger = CreateConVar("rem_reag_stagger", "1", FCVAR_ARCHIVE, "Stagger before collapsing when shot down", 0, 1)
 local cvFlail = CreateConVar("rem_reag_flail", "1", FCVAR_ARCHIVE, "Flail limbs while flying/falling", 0, 1)
+local cvStand = CreateConVar("rem_reag_stand_time", "1", FCVAR_ARCHIVE, "Multiplier for how long a shot person tries to stay on feet", 0, 5)
 local cvGrab = CreateConVar("rem_reag_grab", "1", FCVAR_ARCHIVE, "Grab walls/ledges with a hand while falling", 0, 1)
 
 local DEATH_FADE = 9      -- столько секунд мёртвый ещё держится за рану (слабее и слабее)
@@ -107,8 +108,8 @@ local function BusyHands(st, rag)
 end
 
 -- ================= 1) хватается за рану =================
-local function StartHold(st, rag, w)
-	if math.random(100) > cvHold:GetFloat() then return end
+local function StartHold(st, rag, w, forced)
+	if not forced and math.random(100) > cvHold:GetFloat() then return end
 	local org = st.org
 	local bone = WoundBoneName(rag, w) or ""
 	local canL = not (org and org.larmamputated) and not LEFT_ARM[bone]
@@ -164,47 +165,147 @@ local function ApplyHolds(st, rag, now, busyL, busyR)
 	end
 end
 
--- ================= 2) пошатнулся и осел =================
--- таз над землёй: стоя ~35-40, лёжа ~5-10
-local function pos_z_above(pelvis, tr) return pelvis:GetPos().z - tr.HitPos.z end
-local function StartStagger(st, rag, now)
-	if not cvStagger:GetBool() then return end
-	local pelvis = Phys(rag, 0)
-	local spine = Phys(rag, 1)
-	if not pelvis or not spine then return end
-	if pelvis:GetVelocity():Length() > 260 then return end -- отбросило (взрыв и т.п.) - сразу летит
-	local tr = util.TraceLine({start = pelvis:GetPos(), endpos = pelvis:GetPos() - Vector(0, 0, 60), filter = {rag, st.ply}, mask = MASK_SOLID})
-	if not tr.Hit or pos_z_above(pelvis, tr) < 22 then return end -- не на ногах (лежит или в воздухе)
-	st.stagger = {start = now, dur = math.Rand(0.7, 1.4), nextSway = 0}
+-- ================= 2) пытается устоять =================
+-- Упал от попадания стоя (или умер стоя): тело ещё борется - держит таз на прежней высоте, выпрямляет корпус и
+-- голову, ноги ставит под себя (тянутся туда, куда его ведёт, - спотыкающиеся шаги), иногда колени подкашиваются
+-- и он снова выпрямляется. Сил всё меньше - в конце оседает и падает. Живой в сознании - 2.5..5 с (меньше от боли,
+-- крови, сломанной ноги), мёртвый - 0.8..1.5 с. Падает раньше, если всё же завалился (таз низко / корпус лёг).
+local function Ground(rag, st, pos)
+	local tr = util.TraceLine({start = pos, endpos = pos - Vector(0, 0, 90), filter = {rag, st.ply}, mask = MASK_SOLID})
+	return tr.Hit and tr.HitPos.z or nil
 end
 
-local function ApplyStagger(st, rag, now, dt)
-	local sg = st.stagger
-	-- тело уже разлетелось (взрыв, отбросило) или лежит - не держим
+-- повернуть кость так, чтобы её ось (Forward) смотрела в dir: добавка угловой скорости (град/с, в осях кости)
+local function Align(phys, dir, gain, blend)
+	local a = phys:GetAngles():Forward()
+	local c = a:Cross(dir)
+	local sinA = c:Length()
+	if sinA < 1e-4 then return end
+	local ang = math.deg(math.asin(math.min(sinA, 1)))
+	if a:Dot(dir) < 0 then ang = 180 - ang end
+	local want = phys:WorldToLocalVector(c / sinA * math.min(ang * gain, 400))
+	phys:AddAngleVelocity((want - phys:GetAngleVelocity()) * blend)
+end
+
+local function BalanceStrength(st)
+	local org = st.org
+	if not org then return 1 end
+	local s = math.Clamp(org.consciousness or 1, 0, 1)
+	s = s * (1 - math.Clamp(((org.pain or 0) - 40) / 120, 0, 0.6)) -- боль
+	if org.blood and org.blood < 4000 then s = s * math.Clamp((org.blood - 2500) / 1500, 0.2, 1) end
+	return s
+end
+
+local function StartBalance(st, rag, now)
+	if not cvStagger:GetBool() then return end
 	local pelvis, spine = Phys(rag, 0), Phys(rag, 1)
+	if not pelvis or not spine then return end
+	if pelvis:GetVelocity():Length() > 260 then return end -- отбросило (взрыв и т.п.) - сразу летит
+	local gz = Ground(rag, st, pelvis:GetPos())
+	local h0 = gz and pelvis:GetPos().z - gz
+	if not h0 or h0 < 22 then return end -- не на ногах (лежит или в воздухе)
+	local org = st.org
+	if org and org.llegamputated and org.rlegamputated then return end
+	local dur
+	if st.alive then
+		if org and org.otrub then return end -- без сознания - сразу мешком
+		local legs = 1
+		if org then
+			if org.llegamputated or org.rlegamputated then legs = 0.3 end
+			legs = legs * (1 - math.Clamp(((org.lleg or 0) + (org.rleg or 0)) * 0.35, 0, 0.7))
+		end
+		dur = math.Rand(2.5, 5) * math.Clamp(BalanceStrength(st), 0.35, 1) * legs * cvStand:GetFloat()
+	else
+		dur = math.Rand(0.8, 1.5)
+	end
+	if dur < 0.4 then return end
+	st.bal = {start = now, dur = dur, h0 = math.min(h0, 42), buckleUntil = 0, nextBuckle = now + math.Rand(0.6, 1.6),
+		nextSway = 0, stepPhase = math.Rand(0, 6)}
+	-- куда толкнуло попадание - туда и шатнёт в начале
+	local pv = pelvis:GetVelocity()
+	pv.z = 0
+	if pv:Length() > 15 then st.bal.push = pv:GetNormalized() end
+end
+
+local LEGS = {{thigh = 8, calf = 9, side = 1}, {thigh = 11, calf = 12, side = -1}}
+
+local function ApplyBalance(st, rag, now, dt)
+	local b = st.bal
+	local pelvis, spine, head = Phys(rag, 0), Phys(rag, 1), Phys(rag, 10)
 	if not pelvis or not spine or pelvis:GetVelocity():Length() > 400 or pelvis:GetPos():DistToSqr(spine:GetPos()) > 40 * 40 then
-		st.stagger = nil
+		st.bal = nil
 		return
 	end
-	local t = (now - sg.start) / sg.dur
-	if t >= 1 then st.stagger = nil return end
-	local k = (1 - t) ^ 1.5 -- держит вес всё слабее - колени подкашиваются
+	local t = (now - b.start) / b.dur
+	local gz = Ground(rag, st, pelvis:GetPos())
+	local h = gz and pelvis:GetPos().z - gz
+	local up = Vector(0, 0, 1)
+	local tilt = spine:GetAngles():Forward():Dot(up) -- 1 - стоит прямо, 0 - лёг
+	-- всё: время вышло, повалился (таз низко, корпус лёг) или в воздухе
+	if t >= 1 or not h or (now - b.start > 0.3 and (h < b.h0 * 0.45 or tilt < 0.25)) then
+		st.bal = nil
+		return
+	end
+	-- сила: живой держится почти до конца и быстро сдаёт, мёртвый слабеет сразу
+	local k = st.alive and (t < 0.7 and 1 or 1 - (t - 0.7) / 0.3) * math.Clamp(BalanceStrength(st), 0.4, 1) or (1 - t) ^ 1.5
+	-- колени подкашиваются на мгновение - и снова выпрямляется
+	if st.alive and now >= b.nextBuckle then
+		b.buckleUntil = now + math.Rand(0.2, 0.4)
+		b.nextBuckle = now + math.Rand(0.8, 1.8)
+	end
+	if now < b.buckleUntil then k = k * 0.25 end
+	if k <= 0.01 then return end
+
 	local g = physenv.GetGravity() * dt
-	-- противовес тяжести: верх держится сильнее низа - сначала оседает, а не падает плашмя
-	local lift = {[0] = 0.75, [1] = 0.95, [10] = 0.95, [8] = 0.5, [11] = 0.5, [9] = 0.35, [12] = 0.35}
+	-- противовес тяжести (верх сильнее низа) + таз тянется к прежней высоте
+	local lift = {[0] = 0.8, [1] = 0.95, [10] = 0.95, [8] = 0.55, [11] = 0.55, [9] = 0.35, [12] = 0.35}
 	for n, m in pairs(lift) do
 		local p = Phys(rag, n)
 		if p then p:AddVelocity(-g * m * k) end
 	end
-	-- покачивается: короткие толчки корпуса в стороны (шаг, другой - и падает)
-	if now >= sg.nextSway then
-		sg.nextSway = now + math.Rand(0.18, 0.32)
-		local spine = Phys(rag, 1)
-		if spine then
-			local v = VectorRand(-1, 1)
-			v.z = 0
-			spine:AddVelocity(v:GetNormalized() * 45 * k)
+	local pv = pelvis:GetVelocity()
+	local wantZ = math.Clamp((b.h0 * 0.95 - h) * 7, -60, 110)
+	pelvis:AddVelocity(Vector(-pv.x * 0.04 * k, -pv.y * 0.04 * k, (wantZ - pv.z) * 0.3 * k))
+
+	-- корпус и голова - вертикально
+	Align(spine, up, 5, 0.25 * k)
+	if head then Align(head, up, 4, 0.2 * k) end
+
+	-- ноги под себя: бедро и голень смотрят вниз, чуть в сторону, куда клонится тело (ловит равновесие);
+	-- при движении ноги по очереди выносятся вперёд - спотыкающиеся шаги
+	local drift = Vector(pv.x, pv.y, 0)
+	local speed = drift:Length()
+	local lean = spine:GetPos() - pelvis:GetPos()
+	lean.z = 0
+	local catchDir = (drift * 0.012 + lean * 0.05)
+	if catchDir:Length() > 0.6 then catchDir = catchDir:GetNormalized() * 0.6 end
+	local right = spine:GetAngles():Right()
+	right.z = 0
+	if right:LengthSqr() > 0.01 then right:Normalize() end
+	b.stepPhase = b.stepPhase + dt * math.Clamp(speed / 12, 2, 9)
+	local org = st.org
+	for i, L in ipairs(LEGS) do
+		if not (org and org[i == 1 and "rlegamputated" or "llegamputated"]) then
+			local thigh, tn = Phys(rag, L.thigh)
+			local calf = Phys(rag, L.calf)
+			if thigh and calf and not Floppy(rag, tn) then
+				local swing = math.sin(b.stepPhase + (i - 1) * math.pi) * math.Clamp(speed / 120, 0, 0.35)
+				local dir = -up + catchDir + right * (0.08 * L.side) + (speed > 1 and drift / speed or vector_origin) * swing
+				dir:Normalize()
+				Align(thigh, dir, 5, 0.3 * k)
+				Align(calf, (dir - up * 0.4):GetNormalized(), 5, 0.3 * k)
+			end
 		end
+	end
+
+	-- покачивается: толчки корпуса (в сторону удара в начале), будто ловит равновесие
+	if now >= b.nextSway then
+		b.nextSway = now + math.Rand(0.25, 0.5)
+		local v = VectorRand(-1, 1)
+		v.z = 0
+		v = v:GetNormalized() * 35
+		if b.push and now - b.start < 0.6 then v = v + b.push * 60 end
+		spine:AddVelocity(v * k)
 	end
 end
 
@@ -309,10 +410,11 @@ local function Track(rag, ply, dead)
 	if st.org then w, t = NewestWound(st.org) end
 	if w and t > st.lastWound and now - t < WOUND_FRESH then
 		st.lastWound = t
-		StartHold(st, rag, w)
-		if now - t < 1 then StartStagger(st, rag, now) end
-	elseif dead and not st.stagger then
-		StartStagger(st, rag, now) -- умер стоя без раны (кровопотеря, сердце) - тоже оседает
+		-- пробует устоять, а свободной рукой - за рану (пока стоит - почти всегда)
+		if now - t < 1 then StartBalance(st, rag, now) end
+		StartHold(st, rag, w, st.bal ~= nil and math.random() < 0.95)
+	elseif dead and not st.bal then
+		StartBalance(st, rag, now) -- умер стоя без раны (кровопотеря, сердце) - тоже оседает
 	end
 end
 
@@ -351,6 +453,7 @@ hook.Add("Think", "rem_reagdoll", function()
 		if st.alive and IsValid(ply) and not ply:Alive() then
 			-- умер в регдолле: держится за рану и мёртвым, угасая (DoPlayerDeath ниже сделает то же)
 			st.alive, st.deathT = false, now
+			if st.bal then st.bal.dur = math.min(st.bal.dur, now - st.bal.start + 0.8) end -- умер на ногах - оседает
 			for side in pairs(st.grab) do Release(st, side) end
 			for _, h in pairs(st.holds) do h.untilT = now + DEATH_FADE end
 		end
@@ -400,7 +503,7 @@ hook.Add("Think", "rem_reagdoll", function()
 			end
 		end
 
-		if st.stagger then ApplyStagger(st, rag, now, dt) end
+		if st.bal then ApplyBalance(st, rag, now, dt) end
 		ApplyHolds(st, rag, now, busyL, busyR)
 		local conscious = st.alive and not (st.org and st.org.otrub)
 		if cvFlail:GetBool() and st.air > 0.25 and (conscious or (not st.alive and now - (st.deathT or now) < DEATH_FLAIL)) then
