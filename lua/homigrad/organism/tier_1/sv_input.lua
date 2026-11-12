@@ -978,7 +978,8 @@ hook.Add("EntityTakeDamage", "homigrad-damage", function(ent, dmgInfo)
 		org.shock_turn = 10 * (!org.otrub and 1 or 0.1)
 	
 		if org.shock > org.shock_turn * 1.5 * analgesiaMul * painkillerMul then
-			timer.Simple(0, function() hg.Fake(org.owner) end)
+			local owner = org.owner -- к следующему тику организм может остаться без владельца
+			timer.Simple(0, function() if IsValid(owner) then hg.Fake(owner) end end)
 		end
 
 		if bullet and hg.ammotypeshuy[bullet.AmmoType] and hg.ammotypeshuy[bullet.AmmoType].BulletSettings.tranquilizer then
@@ -1063,8 +1064,10 @@ hook.Add("EntityTakeDamage", "homigrad-damage", function(ent, dmgInfo)
 			
 			hg.AddForceRag(ply, bone, force * 0.5, 0.5)
 
-			if ply.AddForceRag[bone][2] and ply.AddForceRag[bone][2]:Length() > 4500 then //по-моему какие-то большие значения, не?
-				if ply.AddForceRag[bone][2]:Length() > 7000 then
+			-- у игрока с регдоллом (упал / уже мёртв, его ещё пилят) сила уходит в регдолл и ply.AddForceRag[bone] нет
+			local afr = ply.AddForceRag and ply.AddForceRag[bone]
+			if afr and afr[2] and afr[2]:Length() > 4500 then //по-моему какие-то большие значения, не?
+				if afr[2]:Length() > 7000 then
 					hg.StunPlayer(ply, 0.5)
 					hg.LightStunPlayer(ply, 2)
 				else
