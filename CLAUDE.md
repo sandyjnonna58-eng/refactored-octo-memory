@@ -197,3 +197,7 @@
   A* по навмешу (без навмеша - по прямой), атака держит IN_ATTACK2 (оружие homigrad без прицеливания не стреляет),
   из регдолла встаёт hg.FakeUp. Речь - hook.Run("PlayerSay", bot) (ZChat подписывает именем) или bot:Say; ведущие !/. срезаются.
   Слух - HG_PlayerSay + PlayerSay (дубли отсекаются), ИИ-соседи будят друг друга только по имени (иначе бесконечная болтовня).
+  Реальное время: opts.fast в GeminiAI.Request - thinkingConfig.thinkingBudget = 0 (модель без размышлений; если 400 про
+  thinking - повтор без него, модель в GeminiAI.NoFastMode). Wake(char, delay): обращение (имя / смотрит на бота / ближе 350)
+  - мысль сразу; занят - char.pending, после ответа думает снова. Облачка над головой и «...» - NW2 GeminiSay/GeminiSayTime/
+  GeminiThinking/GeminiChar, рисует HUDPaint "GeminiAI_CharBubbles" в cl_character.lua.

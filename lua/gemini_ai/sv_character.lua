@@ -23,6 +23,7 @@ local cv = GeminiAI.CVars
 local ACTIONS = {
 	"idle", "follow", "goto", "flee", "attack", "wander",
 	"pickup", "equip", "holster", "jump", "crouch", "lie_down", "get_up",
+	"look", "use", "give", "drop", "reload",
 }
 
 local SCHEMA = {
@@ -113,10 +114,16 @@ local function Debug(char, text)
 	end
 end
 
+-- Разбудить мозг через delay секунд; если он сейчас занят — подумает сразу после ответа
+local function Wake(char, delay)
+	if char.busy then char.pending = true end
+	char.nextThink = math.min(char.nextThink, CurTime() + (delay or 0))
+end
+
 local function AddEvent(char, text, urgent)
 	char.events[#char.events + 1] = text
 	while #char.events > 12 do table.remove(char.events, 1) end
-	if urgent then char.nextThink = math.min(char.nextThink, CurTime() + urgent) end
+	if urgent then Wake(char, urgent) end
 end
 
 ---------------------------------------------------------------------------
@@ -161,7 +168,15 @@ local function SystemPrompt(char)
   holster   убрать оружие
   jump, crouch       прыгнуть / присесть
   lie_down, get_up   лечь / встать
+  look      повернуться и смотреть на target (стоя на месте)
+  use       нажать «E» на target (открыть дверь, взаимодействовать)
+  give      отдать оружие из рук игроку target (бросить ему)
+  drop      выбросить оружие из рук
+  reload    перезарядиться
 Действие продолжается, пока ты не выберешь другое. Нападай только если это оправдано ролью или ситуацией.
+
+ЖИВОЙ РАЗГОВОР: если тебе что-то сказали или к тебе обратились — отвечай СРАЗУ (say не пустой), как в реальном диалоге,
+и обычно смотри на собеседника (look). Отвечай по существу сказанного, задавай встречные вопросы, если это в характере.
 
 ОТВЕТ — строго JSON: {"say": "...", "action": "...", "target": "...", "thought": "..."}
 ]]
@@ -272,6 +287,9 @@ local function Say(char, text)
 	if bot.organism and bot.organism.otrub then return end
 
 	char.lastSaid = text
+	-- облачко речи над головой (cl_character.lua)
+	bot:SetNW2String("GeminiSay", text)
+	bot:SetNW2Float("GeminiSayTime", CurTime())
 	local tbl = hook.GetTable().PlayerSay
 	if tbl and tbl.ZChat then
 		hook.Run("PlayerSay", bot, text) -- рекос: ZChat сам разошлёт и подпишет именем персонажа
@@ -325,6 +343,27 @@ local function ApplyDecision(char, data)
 	elseif action == "get_up" then
 		if IsHG() and hg.FakeUp and IsValid(bot.FakeRagdoll) then hg.FakeUp(bot) end
 		action = "idle"
+	elseif action == "reload" then
+		char.reloadUntil = CurTime() + 0.6
+		action = char.action
+	elseif action == "drop" then
+		local wep = bot:GetActiveWeapon()
+		if IsValid(wep) and not string.find(wep:GetClass(), "hands", 1, true) then bot:DropWeapon(wep) end
+		action = "idle"
+	elseif action == "look" or action == "use" or action == "give" then
+		local p = FindPlayerByName(target)
+		if IsValid(p) and p ~= bot then char.lookAt = p end
+		if action == "use" then
+			char.useUntil = CurTime() + 0.5
+		elseif action == "give" and IsValid(p) then
+			local wep = bot:GetActiveWeapon()
+			if IsValid(wep) and not string.find(wep:GetClass(), "hands", 1, true) then
+				local to = BodyOf(p):WorldSpaceCenter()
+				bot:DropWeapon(wep, to, (to - bot:EyePos()):GetNormalized() * 150)
+				AddEvent(char, "Ты отдал " .. wep:GetClass() .. " игроку " .. NameOf(p) .. ".")
+			end
+		end
+		action = "idle"
 	end
 
 	char.action = action
@@ -368,7 +407,10 @@ function GeminiAI.CharThink(char)
 
 	reqTimes[#reqTimes + 1] = CurTime()
 	char.busy = true
+	char.pending = false
 	char.lastThink = CurTime()
+	local started = SysTime()
+	char.bot:SetNW2Bool("GeminiThinking", true) -- «...» над головой, пока думает
 
 	local perception = Perception(char)
 	local contents = {}
@@ -379,26 +421,36 @@ function GeminiAI.CharThink(char)
 
 	GeminiAI.Request(contents, function(res, err)
 		char.busy = false
+		char.latency = SysTime() - started
 		char.nextThink = CurTime() + cv.char_idle:GetFloat() * math.Rand(0.8, 1.2)
 		if not IsValid(char.bot) then return end
+		char.bot:SetNW2Bool("GeminiThinking", false)
 
 		if not res then
 			Debug(char, "ошибка: " .. tostring(err))
+			char.lastError = tostring(err)
 			char.nextThink = CurTime() + 15
 			return
 		end
+		char.lastError = nil
 
 		char.history[#char.history + 1] = { role = "user", text = perception }
 		char.history[#char.history + 1] = { role = "model", text = res.raw }
-		while #char.history > 20 do table.remove(char.history, 1) end
+		while #char.history > 14 do table.remove(char.history, 1) end -- короче история — быстрее ответ
 
 		ApplyDecision(char, res.data or {})
+		Debug(char, string.format("ответ за %.1f с", char.latency))
+
+		-- пока думал, что-то случилось — думаем снова сразу
+		if char.pending then char.pending = false char.nextThink = CurTime() end
 	end, {
 		system = SystemPrompt(char),
 		schema = SCHEMA,
 		model = cv.char_model:GetString(),
 		temperature = 0.9,
-		maxTokens = 400,
+		maxTokens = 250,
+		fast = true,    -- без «размышлений» модели: ответ ~в 2-4 раза быстрее
+		timeout = 20,
 	})
 end
 
@@ -564,13 +616,15 @@ hook.Add("StartCommand", "GeminiAI_CharBody", function(bot, cmd)
 	end
 
 	if char.jumpUntil and char.jumpUntil > now then cmd:AddKey(IN_JUMP) end
+	if char.useUntil and char.useUntil > now then cmd:AddKey(IN_USE) end
+	if char.reloadUntil and char.reloadUntil > now then cmd:AddKey(IN_RELOAD) end
 	if action == "crouch" then cmd:AddKey(IN_DUCK) end
 
 	if action == "idle" or action == "crouch" then
 		-- смотрит на того, кто последним говорил, или на ближайшего
 		local look = char.lookAt
 		if not IsValid(look) or not look:Alive() then look = nil end
-		if look then Look(char, cmd, BodyOf(look):WorldSpaceCenter() + Vector(0, 0, 20), 0.08) end
+		if look then Look(char, cmd, BodyOf(look):WorldSpaceCenter() + Vector(0, 0, 20), 0.18) end
 
 	elseif action == "follow" or action == "goto" then
 		local tpos = BodyOf(target):GetPos()
@@ -696,13 +750,19 @@ local function Hear(speaker, text)
 			local dist = BodyOf(bot):GetPos():Distance(BodyOf(speaker):GetPos())
 			local range = speaker.ChatWhisper and 200 or cv.char_hear:GetFloat()
 			local named = string.find(lowered, ULower(char.name), 1, true) ~= nil
+			-- «обращаются ко мне»: по имени, смотрят на меня вблизи, или я тут единственный персонаж рядом
+			local looking = dist < 600 and OwnerOf(speaker:GetEyeTrace().Entity) == bot
+			local addressed = named or looking or (not fromAI and dist < 350)
 			if dist <= range or named then
 				char.heard[#char.heard + 1] = string.format("%s (%d м): «%s»", NameOf(speaker), Meters(dist), text)
 				while #char.heard > 8 do table.remove(char.heard, 1) end
-				char.lookAt = speaker
-				-- на живых отвечаем быстро; ИИ-соседи — только если обратились по имени (иначе бесконечная болтовня)
-				if not fromAI or named then
-					char.nextThink = math.min(char.nextThink, CurTime() + math.Rand(0.6, 1.4))
+				char.lookAt = speaker -- рефлекс: сразу поворачивается к говорящему
+				-- к нему обратились — думает немедленно; просто болтовня рядом — чуть позже;
+				-- ИИ-соседи будят только по имени (иначе бесконечная болтовня)
+				if addressed and (not fromAI or named) then
+					Wake(char, 0)
+				elseif not fromAI then
+					Wake(char, 1.5)
 				end
 			end
 		end
@@ -724,7 +784,7 @@ hook.Add("EntityTakeDamage", "GeminiAI_CharPain", function(ent, dmg)
 		if (char.lastPainEvent or 0) < CurTime() - 2 then
 			char.lastPainEvent = CurTime()
 			if IsValid(attacker) and attacker ~= victim then
-				AddEvent(char, NameOf(attacker) .. " напал на тебя и ранил!", 0.4)
+				AddEvent(char, NameOf(attacker) .. " напал на тебя и ранил!", 0)
 				char.lookAt = attacker
 			else
 				AddEvent(char, "Тебе больно — ты получил травму.", 0.8)
@@ -807,6 +867,7 @@ function GeminiAI.CreateCharacter(creator, name, role, pos, ang)
 		nextThink = CurTime() + 2, creator = IsValid(creator) and creator:Nick() or "Консоль",
 	}
 	bot.GeminiChar = char
+	bot:SetNW2Bool("GeminiChar", true) -- клиент рисует облачка речи
 	Chars[bot] = char
 
 	AddEvent(char, "Ты только что появился здесь.")
@@ -848,6 +909,7 @@ function GeminiAI.SendCharList(ply)
 			list[#list + 1] = {
 				name = char.name, role = char.role, action = char.action, target = char.targetName,
 				thought = char.thought, alive = bot:Alive(), said = char.lastSaid or "",
+				latency = char.latency or 0, err = char.lastError or "",
 			}
 		end
 	end

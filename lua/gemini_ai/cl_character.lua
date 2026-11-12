@@ -73,12 +73,15 @@ local function CharCard(parent, info)
 		draw.RoundedBox(2, 0, 10, 3, h - 20, info.alive and c.accent or c.bad)
 		draw.SimpleText(info.name, "GeminiAI_Bold", 14, 14, c.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 		local status = info.alive and (info.action .. (info.target ~= "" and (" → " .. info.target) or "")) or "мёртв"
+		if (info.latency or 0) > 0 then status = status .. string.format("  •  %.1f с", info.latency) end
 		draw.SimpleText(status, "GeminiAI_Small", w - 12, 14, info.alive and c.good or c.bad, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 		draw.SimpleText(string.sub(info.role, 1, 70) .. (#info.role > 70 and "…" or ""), "GeminiAI_Small", 14, 34, c.dim)
 		if info.said ~= "" then
 			draw.SimpleText("«" .. string.sub(info.said, 1, 60) .. (#info.said > 60 and "…" or "") .. "»", "GeminiAI_Small", 14, 52, c.text)
 		end
-		if info.thought ~= "" then
+		if (info.err or "") ~= "" then
+			draw.SimpleText("ошибка: " .. string.sub(info.err, 1, 70), "GeminiAI_Small", 14, 70, c.bad)
+		elseif info.thought ~= "" then
 			draw.SimpleText("думает: " .. string.sub(info.thought, 1, 60) .. (#info.thought > 60 and "…" or ""), "GeminiAI_Small", 14, 70, Color(c.accent2.r, c.accent2.g, c.accent2.b, 200))
 		end
 	end
@@ -284,4 +287,91 @@ net.Receive("GeminiAI_CharList", function()
 	local data = util.JSONToTable(util.Decompress(net.ReadData(len)) or "") or {}
 	GeminiAI.CharList = data
 	hook.Run("GeminiAI_CharListUpdated")
+end)
+
+---------------------------------------------------------------------------
+-- Облачка над головой: что персонаж сказал и «...», пока он думает
+---------------------------------------------------------------------------
+surface.CreateFont("GeminiAI_Bubble",     { font = "Roboto", size = 18, weight = 600, extended = true, antialias = true })
+surface.CreateFont("GeminiAI_BubbleName", { font = "Roboto", size = 14, weight = 800, extended = true, antialias = true })
+
+local bubbleCache = {} -- [бот] = { text, markup }
+
+local function HeadPos(ply)
+	-- в рекосе лежащий игрок — это регдолл
+	local body = ply:GetNWEntity("FakeRagdoll")
+	if not IsValid(body) then body = ply end
+	local bone = body:LookupBone("ValveBiped.Bip01_Head1")
+	local pos = bone and body:GetBonePosition(bone)
+	return (pos or (body:GetPos() + Vector(0, 0, 64))) + Vector(0, 0, 16), body
+end
+
+local function Escape(s)
+	s = tostring(s or "")
+	if markup.Escape then return markup.Escape(s) end
+	return (s:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"))
+end
+
+hook.Add("HUDPaint", "GeminiAI_CharBubbles", function()
+	local lp = LocalPlayer()
+	if not IsValid(lp) then return end
+	local eye = lp:EyePos()
+	local now = CurTime()
+	local c = GeminiAI.UIColors
+
+	for _, ply in player.Iterator() do
+		if ply ~= lp and ply:GetNW2Bool("GeminiChar", false) and ply:Alive() then
+			local said = ply:GetNW2String("GeminiSay", "")
+			local sayAge = now - ply:GetNW2Float("GeminiSayTime", -100)
+			local showFor = 4 + #said * 0.04
+			local thinking = ply:GetNW2Bool("GeminiThinking", false)
+
+			if (said ~= "" and sayAge < showFor) or thinking then
+				local pos, body = HeadPos(ply)
+				local dist = eye:Distance(pos)
+				if dist < 1300 then
+					local tr = util.TraceLine({ start = eye, endpos = pos, filter = { lp, ply, body }, mask = MASK_VISIBLE })
+					local scr = pos:ToScreen()
+					if not tr.Hit and scr.visible then
+						local alpha = math.Clamp((1300 - dist) / 300, 0, 1)
+						if said ~= "" and sayAge < showFor then
+							alpha = alpha * math.Clamp((showFor - sayAge) / 0.5, 0, 1) * math.Clamp(sayAge / 0.15, 0, 1)
+						end
+						local a = 255 * alpha
+						local name = ply:GetNWString("PlayerName", ply:Nick())
+
+						if said ~= "" and sayAge < showFor then
+							local cache = bubbleCache[ply]
+							if not cache or cache.text ~= said then
+								cache = { text = said, mk = markup.Parse("<font=GeminiAI_Bubble>" .. Escape(said) .. "</font>", 300) }
+								bubbleCache[ply] = cache
+							end
+							local mk = cache.mk
+							local w = math.max(mk:GetWidth(), 60) + 24
+							local h = mk:GetHeight() + 30
+							local x, y = scr.x - w / 2, scr.y - h - 12 - (1 - math.Clamp(sayAge / 0.2, 0, 1)) * 10
+
+							draw.RoundedBox(10, x, y, w, h, Color(14, 15, 22, 225 * alpha))
+							draw.RoundedBox(2, x + 8, y + 6, 3, 14, Color(c.accent.r, c.accent.g, c.accent.b, a))
+							draw.SimpleText(name, "GeminiAI_BubbleName", x + 16, y + 13, Color(c.accent2.r, c.accent2.g, c.accent2.b, a), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+							-- хвостик облачка
+							draw.NoTexture()
+							surface.SetDrawColor(14, 15, 22, 225 * alpha)
+							surface.DrawPoly({ { x = scr.x - 8, y = y + h }, { x = scr.x + 8, y = y + h }, { x = scr.x, y = y + h + 9 } })
+							mk:Draw(x + 12, y + 24, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP, a)
+						elseif thinking then
+							-- «печатает...»
+							local w, h = 58, 26
+							local x, y = scr.x - w / 2, scr.y - h - 12
+							draw.RoundedBox(13, x, y, w, h, Color(14, 15, 22, 210 * alpha))
+							for i = 0, 2 do
+								local k = (math.sin(now * 7 - i * 0.9) + 1) / 2
+								draw.RoundedBox(4, x + 13 + i * 12, y + 9 - k * 3, 8, 8, Color(c.accent.r, c.accent.g + k * 70, c.accent.b, (120 + k * 135) * alpha))
+							end
+						end
+					end
+				end
+			end
+		end
+	end
 end)

@@ -42,7 +42,7 @@ GeminiAI.CVars = {
 	-- ИИ-персонажи (боты, которых ведёт Gemini)
 	char_model  = CreateConVar("gemini_ai_char_model", "gemini-flash-lite-latest", FLAGS, "Модель для ИИ-персонажей (lite - больше бесплатных запросов)"),
 	char_idle   = CreateConVar("gemini_ai_char_idle", "20", FLAGS, "Как часто персонаж думает, когда ничего не происходит (сек)", 5, 600),
-	char_gap    = CreateConVar("gemini_ai_char_gap", "4", FLAGS, "Минимальная пауза между мыслями одного персонажа (сек)", 1, 60),
+	char_gap    = CreateConVar("gemini_ai_char_gap", "1.5", FLAGS, "Минимальная пауза между мыслями одного персонажа (сек)", 0.5, 60),
 	char_rpm    = CreateConVar("gemini_ai_char_rpm", "12", FLAGS, "Максимум запросов в минуту на всех персонажей (лимит бесплатного ключа)", 1, 300),
 	char_hear   = CreateConVar("gemini_ai_char_hear", "900", FLAGS, "Дальность слуха персонажа (юниты)", 100, 5000),
 	char_debug  = CreateConVar("gemini_ai_char_debug", "0", FLAGS, "Показывать админам мысли и действия персонажей в чате", 0, 1),

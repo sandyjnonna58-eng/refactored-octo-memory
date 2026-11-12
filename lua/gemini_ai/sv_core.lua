@@ -270,7 +270,9 @@ local function ParseResponse(code, body)
 	return { say = text, lua = "", raw = util.TableToJSON({ say = text, lua = "" }), data = { say = text } }
 end
 
--- opts (необязательно): system - своя инструкция, schema - своя схема ответа,
+GeminiAI.NoFastMode = GeminiAI.NoFastMode or {} -- модели, которые не умеют отключать размышления
+
+-- opts (необязательно): system - своя инструкция, schema - своя схема ответа, fast - без размышлений,
 -- model - своя модель, temperature, maxTokens (так работают ИИ-персонажи)
 function GeminiAI.Request(contents, onDone, opts)
 	opts = opts or {}
@@ -297,14 +299,27 @@ function GeminiAI.Request(contents, onDone, opts)
 		},
 	}
 
+	-- Быстрый режим: без «размышлений» модели ответ приходит в разы быстрее.
+	-- Не все модели это понимают — тогда один раз повторяем запрос без настройки и запоминаем.
+	local model = opts.model or cv.model:GetString()
+	local fastTried = false
+	if opts.fast and not GeminiAI.NoFastMode[model] then
+		body.generationConfig.thinkingConfig = { thinkingBudget = 0 }
+		fastTried = true
+	end
+
 	local ok = HTTP({
-		url = string.format(API_URL, opts.model or cv.model:GetString()),
+		url = string.format(API_URL, model),
 		method = "POST",
 		type = "application/json",
 		body = util.TableToJSON(body),
 		headers = { ["x-goog-api-key"] = API_KEY },
-		timeout = 60,
+		timeout = opts.timeout or 60,
 		success = function(code, resp)
+			if fastTried and code == 400 and string.find(string.lower(resp or ""), "think", 1, true) then
+				GeminiAI.NoFastMode[model] = true
+				return GeminiAI.Request(contents, onDone, opts)
+			end
 			local res, err = ParseResponse(code, resp)
 			onDone(res, err)
 		end,
