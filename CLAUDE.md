@@ -149,16 +149,8 @@
   hg.renderOverride: проход 1 - всё по свою сторону плоскости, проход 2 - тело без туловища (кости туловища в NaN) по
   другую сторону, чтобы не срезать руки/ноги за плоскостью. Тест: `rem_halve_test` (админ, на кого смотришь) или
   контекстное меню -> Amputate Limb -> Cut In Half (diagonal) (admintools/sh_player_properties.lua, id 6).
-- Отрубленные конечности (`organism/sv_severedlimbs.lua` + `cl_severedlimbs.lua`): на хук Z-City OnAmputateLimb (любое
-  отрубание: катана, сильный режущий удар, взрыв, придавило) - копия регдолла, видны только голень+стопа / предплечье+кисть
-  (LIMB_BONE и потомки), остальные кости: на сервере ManipulateBoneScale 0, физ. кости без столкновений и каждый тик едут в
-  начало конечности; на клиенте hg.RemLimbCollapse (cl_severedlimbs.lua, колбэк BuildBonePositions) ставит им всем нулевую
-  матрицу в точке среза - иначе кожа между точками сжатия тянется чёрными треугольниками, а на ClientsideModel (в руке)
-  ноль у родителя гасит саму конечность. COLLISION_GROUP_WEAPON - берётся руками/E, не мешает ходить. Кровь: NW2 rem_limb_bleed (45 с),
-  клиент - hg.addBloodPart из среза (rem_limb_bone), удары о пол - util.Decal. Шапки/броня не копируются (Accessories none).
-  rem_severed_limbs 0 - выкл., _life (300 с), _max (16). Катана: 5% отрубить конечность - раз за взмах (MultiDmg1 бьёт каждый тик).
-  E на конечность (PlayerUse) -> предмет `weapon_rem_flesh` (в руке - ClientsideModel тела, видна только конечность,
-  PlaceRoot ставит начало конечности к ладони): ЛКМ - укус (5), сытость +6, тошнота 0.22 + 0.05 за каждый укус за жизнь.
+- Отрубленные конечности отдельными кусками (подбирать, есть - weapon_rem_flesh) делали - убраны по просьбе.
+  Катана: 5% отрубить конечность - раз за взмах (MultiDmg1 бьёт каждый тик).
 - Наркотики (`modules/sv_drugs.lua` + `cl_drugs.lua`, предметы `weapon_rem_heroin` / `_meth` / `_lsd` на основе
   `weapon_rem_drug_base`): org.heroin / meth / lsd (доза ~1, выводятся минутами, тик из sv_organism после никотина).
   Героин - analgesia, сон, передоз > 1.8 - кислород падает (налоксон выводит); мет - выносливость, пульс (org.remHRAdd ->
@@ -171,8 +163,8 @@
   "Reset organism" (контекстное меню, hg.organism.Clear -> хук "Org Clear") сбрасывает панику, наркотики, тошноту и ломку.
 - Тошнота: стадии в sv_vomit.lua AddNausea (0.45 / 0.8 - мысль; плитка Queasy / Nauseous / About to vomit), экран -
   `modules/cl_nausea.lua` (зеленеет, плывёт, качает). От вида расчленёнки - `modules/sv_gorenausea.lua` (раз в секунду:
-  конечности, разрубленные тела, без головы в поле зрения до 450; привыкание rem_goreTol до -90%; ярость и героин глушат;
-  тошнота сама проходит 0.003/с); от плоти - weapon_rem_flesh; от героина и ломки - sv_drugs.lua. rem_gore_nausea 0 - выкл.
+  разрубленные тела, без головы в поле зрения до 450; привыкание rem_goreTol до -90%; ярость и героин глушат;
+  тошнота сама проходит 0.003/с); от героина и ломки - sv_drugs.lua. rem_gore_nausea 0 - выкл.
 - Осколки (гранаты ent_hg_grenade, взрывы hg.PropExplosion / StartShrapnel в explosives/sv_explosives.lua, СВУ weapon_traitor_ied):
   попадание в стену / проп -> `hg.ShrapnelImpact` - короткая пуля Z-City (FireLuaBullets, урон 1) у места попадания: след и
   пробоина, её видят аддоны пробоин через EntityFireBullets / PostEntityFireBullets / callback. Лимит на взрыв `rem_frag_impacts`.

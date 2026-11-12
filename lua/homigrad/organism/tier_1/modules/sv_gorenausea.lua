@@ -1,9 +1,9 @@
 -- Тошнота от вида расчленёнки: раз в секунду смотрим, что игрок видит рядом (до 450 юнитов, в поле зрения, без стены
--- между): отрубленные конечности (sv_severedlimbs.lua), разрубленные пополам тела (sv_torsohalve.lua), тела без головы.
+-- между): разрубленные пополам тела (sv_torsohalve.lua) и тела без головы.
 -- Тошнота (sv_vomit.lua AddNausea) копится быстрее, чем больше этого видно. Привыкание: кто насмотрелся, того мутит
 -- всё меньше (до -90%), без такого зрелища привычка медленно проходит. Не мутит без сознания, в ярости и под героином.
 -- Первый взгляд на новую жуть - мысль. Тошнота сама понемногу проходит (NAUSEA_DECAY), если её ничего не держит.
-local cvOn = CreateConVar("rem_gore_nausea", "1", FCVAR_ARCHIVE, "Seeing gore (severed limbs, halved bodies) makes you nauseous", 0, 1)
+local cvOn = CreateConVar("rem_gore_nausea", "1", FCVAR_ARCHIVE, "Seeing gore (halved or headless bodies) makes you nauseous", 0, 1)
 
 local RANGE = 450
 local RATE = 0.014           -- тошноты в секунду за одну "единицу" жути
@@ -23,7 +23,6 @@ local firstLook = {
 -- сколько жути в сущности (0 - не жуть)
 local function GoreWeight(ent)
 	if not IsValid(ent) or not ent:IsRagdoll() then return 0 end
-	if ent:GetNW2Bool("rem_limb", false) then return 1 end
 	if ent:GetNWBool("hgTorsoSevered", false) or ent:GetNWBool("hgTorsoLower", false) then return 2 end
 	if ent.headexploded then return 1.5 end
 	return 0
