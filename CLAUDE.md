@@ -85,7 +85,7 @@
   метка remUKGun). Поля навешиваются на таблицы оружия (PreRegisterSWEP + уже созданные).
   `hg.CameraYield(ply)` (там же, её зовёт `cl_camera.lua`) теперь только для Снейка. Монетки (ultrakill_toss_coin) кода не
   требуют: их урон - обычный TakeDamageInfo с позицией попадания.
-- Lambda gore mod (связка `compat/sh_lambdagore.lua`) пробовали - убран по просьбе; расчленёнка только своя у Z-City.
+- Lambda gore mod (связка `compat/sh_lambdagore.lua`) пробовали - убран по просьбе; из мода взято только отрезание головы (sv_decap.lua).
 - Ярость (3 стадии, растёт ТОЛЬКО от: удара игрока, жеста «фак», «фак»/fuck в чате; удар - рывок и x2, без удара не выше 2-й):
   `modules/sv_rage.lua` и `cl_rage.lua` (музыка по стадиям `sound/rem_rage/anger.mp3`, права у пользователя,
   куски 0-59 / 58-117 / 117-конец), плитка «anger» с описанием в `cl_health_indicator.lua`.
@@ -145,12 +145,16 @@
   добавлены эта функция и задержка 0.15 с в EnsureFakeAndSplit, если человек только что упал в регдолл: иначе обрубок
   цеплялся к ещё не вставшим костям и съезжал к плечу). Косой разрез (плоскость отсечения на клиенте) пробовали - рисовался с багами, убран по
   просьбе. Тест: `rem_halve_test` (админ, на кого смотришь); в меню - Amputate Limb -> Amputate Torso (это Z-City).
-- Отрубание головы режущим оружием: `organism/sv_decap.lua` - ножи, мачете, топоры, мечи, бензопила (CLASS_KIND + по имени
-  класса). Z-City сносит голову с одного сильного удара (sv_input.lua, instant) - для этого оружия заблокировано
-  (hg.RemDecapBlocks); здесь: удар по голове/шее (HeadHit у костей Head1/Neck1), раз за взмах (пила - раз в 0.5 с),
-  с 4-го удара шанс по виду (KIND_CHANCE: нож 20%, мачете 35%, топор 45%, меч 50%, пила 60%) -> hg.ExplodeHead (своё
-  обезглавливание Z-City: обрубок headpartial, фонтан, куски). rem_decap 0 - выкл. Lambda Gore Mod не берём (чужие
-  модели, архив пользователя был битый).
+- Отрезание головы режущим оружием: `organism/sv_decap.lua` + `cl_decap.lua` - ножи, мачете, топоры, мечи, бензопила
+  (CLASS_KIND + по имени класса). Z-City сносит голову с одного сильного удара (sv_input.lua, instant) - для этого оружия
+  заблокировано (hg.RemDecapBlocks); здесь: удар по голове/шее (HeadHit у Head1/Neck1), раз за взмах (пила - раз в 0.5 с),
+  с 4-го удара шанс по виду (KIND_CHANCE: нож 20%, мачете 35%, топор 45%, меч 50%, пила 60%) -> hg.Decapitate (живого -
+  Kill и через 0.15 с регдолл смерти). Само отрезание по Lambda Gore Mod (модели мода, права на копию у пользователя):
+  голова - копия регдолла, видна только Head1 (сервер - scale 0 и физ. кости едут за головой, клиент - колбэк
+  BuildBonePositions сжимает всё в точку среза), снизу bonemerge headcap.mdl; на теле Gib_RemoveBone(Head1), на шее
+  common_infected_w_neck.mdl (FollowBone Neck1, углы/смещения из giblist.lua мода), фонтан Z-City (addfountain),
+  шапки/очки уходят с головой, шлем/маска падают. Ассеты - models/noob_dev2323/gib/l4d, materials/models/noob_dev2323,
+  materials/models/mosi. Тест: rem_decap_test, меню Amputate Limb -> Cut Off Head (id 7). rem_decap 0 - выкл.
 - Отрубленные конечности отдельными кусками (подбирать, есть - weapon_rem_flesh) делали - убраны по просьбе.
   Катана: 5% отрубить конечность - раз за взмах (MultiDmg1 бьёт каждый тик).
 - Наркотики (`modules/sv_drugs.lua` + `cl_drugs.lua`, предметы `weapon_rem_heroin` / `_meth` / `_lsd` на основе

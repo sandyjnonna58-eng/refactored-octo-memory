@@ -1,0 +1,16 @@
+VertexLitGeneric
+{
+$basetexture "Models\noob_dev2323\gibs\l4d\master_wound_cmap"
+$bumpmap "Models\noob_dev2323\gibs\l4d\master_wound_normal"
+
+
+$color2 "[.45 .45 .45]"
+
+$phong 1
+$phongexponent 70
+
+$phongfresnelranges "[.2 .5 1]"
+
+$phongboost 10
+$diffuseexp "1.75"
+}
