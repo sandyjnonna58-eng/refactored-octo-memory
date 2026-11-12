@@ -160,7 +160,8 @@
   .vvd целый есть в игре (LambdaHeadCapOk; в присланном rar битый). Bonemerge - BonemergeProp: SetParent + Fire
   SetParentAttachment (как у Lambda / кишок Z-City), без точки крепления модель встаёт в таз. HeadHit - отрезок шея..макушка
   вдоль кости Head1, у регдолла по физике (матрицы костей регдолла на сервере бывают старые). В консоль - [rem_decap]:
-  счёт ударов, промах шанса, отрезано / почему нет. Ассеты - models/headpartial, models/gore,
+  счёт ударов, промах шанса, отрезано / почему нет. У головы клиент ставит SetRenderClipPlane на 2 ниже начала кости
+  головы (cl_decap.lua CLIP_BELOW) - иначе воротник торчит лоскутами вокруг головы. Ассеты - models/headpartial, models/gore,
   models/mosi (+ materials).
   Тест: rem_decap_test, меню Amputate Limb -> Cut Off Head (id 7). rem_decap 0 - выкл.
 - Отрубленные конечности отдельными кусками (подбирать, есть - weapon_rem_flesh) делали - убраны по просьбе.

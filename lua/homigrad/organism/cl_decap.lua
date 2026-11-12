@@ -2,8 +2,11 @@
 -- 1) Все кости, кроме головы, сжимаем в ОДНУ точку - у среза (колбэк BuildBonePositions ставит им нулевую матрицу
 --    в начале кости головы). Просто ManipulateBoneScale 0 так не умеет: каждая кость сжимается в своё начало, и кожа
 --    между ними тянется чёрными плоскими треугольниками.
--- 2) Кровь: капли Z-City (hg.addBloodPart) из шеи, сначала льёт, к концу (rem_head_bleed) капает.
+-- 2) Плоскость отсечения у самой головы (SetRenderClipPlane, едет с костью головы): всё ниже основания головы не
+--    рисуется - иначе воротник (его вершины привязаны и к голове, и к шее) торчит лоскутами вокруг головы.
+-- 3) Кровь: капли Z-City (hg.addBloodPart) из шеи, сначала льёт, к концу (rem_head_bleed) капает.
 local BLEED_TIME = 40
+local CLIP_BELOW = 2 -- насколько ниже начала кости головы режем (подбородок не задеть)
 local ZERO = Vector(0, 0, 0)
 
 local function Collect(ent, bone, out)
@@ -43,6 +46,18 @@ local nextScan, nextDrip = 0, 0
 
 hook.Add("Think", "rem_decap_heads", function()
 	local now = CurTime()
+	-- плоскость отсечения - каждый кадр за костью головы
+	for _, e in ipairs(heads) do
+		if IsValid(e) and not e:IsDormant() then
+			local m = e:GetBoneMatrix(e:GetNW2Int("rem_head_bone", 0))
+			if m then
+				local up = m:GetAngles():Forward() -- кость головы смотрит к макушке
+				local p = m:GetTranslation() - up * CLIP_BELOW
+				e:SetRenderClipPlaneEnabled(true)
+				e:SetRenderClipPlane(up, up:Dot(p))
+			end
+		end
+	end
 	if now >= nextScan then
 		nextScan = now + 0.5
 		heads = {}
