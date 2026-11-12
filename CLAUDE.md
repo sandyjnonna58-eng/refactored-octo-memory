@@ -157,8 +157,8 @@
   падают. Голова: лишние кости без физики ещё и ManipulateBonePosition(-местное смещение) - к началу родителя, а
   физические каждый тик в начале головы: всё тело в одной точке у среза даже без клиентского колбэка (он у регдоллов,
   похоже, не всегда работает - воротник торчал вокруг головы). Разнообразие: срез Fallout NV на шее
-  (models/mosi/fnv/props/character/headcap.mdl) встал боком на плечо - отключён (USE_FNV_NECK = false); на шее случайно
-  headpartial5 Zippy или обрубок L4D из Lambda (models/noob_dev2323/gib/l4d/common_infected_w_neck.mdl, FollowBone Neck1,
+  (models/mosi/fnv/props/character/headcap.mdl) встал боком на плечо - отключён (USE_FNV_NECK = false); на шее всегда
+  обрубок L4D из Lambda (headpartial5 Zippy - только запасной: торчал над плечами) (models/noob_dev2323/gib/l4d/common_infected_w_neck.mdl, FollowBone Neck1,
   угол/сдвиг из giblist.lua мода; родная текстура битая - своя перекраска жёлтой materials/rem_gore/l4d_neck_wound.vtf,
   tools/gore/make_l4d_neck.py, vmt master_wound_cmapmaterial переписан на неё); под головой - кусок
   Zippy или headcap Lambda (models/noob_dev2323/gib/l4d/headcap.mdl, привязан к Head1 - bonemerge) - только если его

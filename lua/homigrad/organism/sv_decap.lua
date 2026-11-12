@@ -372,7 +372,7 @@ local function CutHead(rag, force)
 	local useFNV = USE_FNV_NECK and util.IsValidModel(NECK_CAP_FNV) and (math.random(2) == 1 or not util.IsValidModel(NECK_CAP))
 	if useFNV then
 		BonemergeProp(rag, NECK_CAP_FNV)
-	elseif util.IsValidModel(NECK_CAP_L4D) and (math.random(2) == 1 or not util.IsValidModel(NECK_CAP)) then
+	elseif util.IsValidModel(NECK_CAP_L4D) then -- на шее всегда обрубок Lambda (так просили); Zippy - запасной
 		local gap = ents.Create("prop_dynamic")
 		if IsValid(gap) then
 			gap:SetModel(NECK_CAP_L4D)
