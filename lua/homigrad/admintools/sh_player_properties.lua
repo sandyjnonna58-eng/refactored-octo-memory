@@ -538,12 +538,6 @@ properties.Add( "amputate_limb", {
 		torso:SetRadio(true)
 		torso:SetIsCheckable(true)
 		torso.OnChecked = function(s, checked) self:AmputateLimb(ent, 5) end
-
-		-- косой разрез пополам (organism/sv_meleehalve.lua): от подмышки наискось к другому боку
-		local halve = submenu:AddOption("Cut In Half (diagonal)")
-		halve:SetRadio(true)
-		halve:SetIsCheckable(true)
-		halve.OnChecked = function(s, checked) self:AmputateLimb(ent, 6) end
 	end,
 
 	AmputateLimb = function( self, ent, id )
@@ -575,11 +569,6 @@ properties.Add( "amputate_limb", {
 			hg.organism.AmputateLimb(ent.organism, "rleg")
 		elseif limb == 5 then
 			hg.AmputateTorso(ent, VectorRand(-250, 250), false)
-		elseif limb == 6 and hg.CutTorso then
-			-- случайный косой разрез: начало у одной подмышки, конец на другом боку не ниже пояса
-			local side = math.random(2) == 1 and -1 or 1
-			local target = IsValid(ent.FakeRagdoll) and ent.FakeRagdoll or ent
-			hg.CutTorso(target, VectorRand(-250, 250), {side * 0.9, math.Rand(0.6, 0.85), -side, math.Rand(0.3, 0.75)})
 		end
 	end
 } )

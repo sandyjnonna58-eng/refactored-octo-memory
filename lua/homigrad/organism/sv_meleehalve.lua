@@ -1,11 +1,10 @@
--- Горизонтальное разрубание пополам оружием ближнего боя (по рисунку пользователя).
--- Удар режущим/рубящим оружием по туловищу -> с шансом тело разрезается: начало разреза - точно место удара
--- (по хитбоксу), конец - случайная точка на другом боку, не ниже пояса (от подмышки до подмышки и наискось вниз).
--- Само разделение, обрубки и травма - sv_torsohalve.lua (hg.CutTorso), косой срез на клиенте - cl_torsocut.lua.
+-- Разрубание пополам оружием ближнего боя. Удар режущим/рубящим оружием по туловищу (между поясом и плечами, по
+-- хитбоксу) -> с шансом тело разрубается. Разрез ровный, как у Z-City: само разделение, обрубки и травма -
+-- sv_torsohalve.lua (hg.CutTorso). Косой разрез от точки удара пробовали - рисовался с багами, убран по просьбе.
 -- Шанс всегда случайный: база по оружию, каждая прошлая рана туловища режущим оружием +20% (до x3);
 -- ножам нужно много ударов (не меньше KNIFE_HITS прошлых ран). Заведённая бензопила с зажатой ЛКМ режет
 -- наверняка - через SAW_TIME секунд непрерывного пиления одного и того же человека.
-local cvOn = CreateConVar("rem_halve", "1", FCVAR_ARCHIVE, "Melee weapons can cut a person in half (diagonal torso cut)", 0, 1)
+local cvOn = CreateConVar("rem_halve", "1", FCVAR_ARCHIVE, "Melee weapons can cut a person in half", 0, 1)
 local cvMul = CreateConVar("rem_halve_chance", "1", FCVAR_ARCHIVE, "Multiplier for melee halving chances", 0, 100)
 
 local CHANCE = {
@@ -44,20 +43,30 @@ local function Owner(ent)
 	return nil
 end
 
--- точка удара -> разрез в координатах торса (hg.TorsoFrame); nil - удар не по туловищу
+-- позиция кости: у регдолла - по физике, у стоящего игрока - по матрице костей
+local function BonePos(ent, name)
+	local b = ent:LookupBone(name)
+	if not b then return nil end
+	local m = ent:GetBoneMatrix(b)
+	return m and m:GetTranslation() or ent:GetBonePosition(b)
+end
+
+-- удар пришёлся по туловищу? (между поясом и плечами, не по руке сбоку)
 local function CutFromHit(body, hitPos)
-	local f = hg.TorsoFrame and hg.TorsoFrame(body)
-	if not f or not hitPos then return nil end
-	local d = hitPos - f.P
-	local x, y = d:Dot(f.right), d:Dot(f.up)
-	local yLow, yHigh = math.max(4, f.yArm * 0.28), f.yArm - 3 -- пояс .. подмышки
-	if y < yLow - 7 or y > f.yArm + 5 or math.abs(x) > f.w * 1.8 then return nil end
-	local sx = math.Clamp(x, -f.w, f.w)
-	if math.abs(sx) < 0.5 then sx = (math.random(2) == 1 and -0.5 or 0.5) end
-	local sy = math.Clamp(y, yLow, yHigh)
-	local ex = sx > 0 and -f.w or f.w
-	local ey = math.Rand(yLow, yHigh)
-	return {sx / f.w, sy / f.yArm, ex / f.w, ey / f.yArm}
+	if not IsValid(body) or not hitPos then return nil end
+	local P = BonePos(body, "ValveBiped.Bip01_Pelvis")
+	local top = BonePos(body, "ValveBiped.Bip01_Spine4") or BonePos(body, "ValveBiped.Bip01_Spine2")
+	local L, Rr = BonePos(body, "ValveBiped.Bip01_L_UpperArm"), BonePos(body, "ValveBiped.Bip01_R_UpperArm")
+	if not (P and top and L and Rr) then return nil end
+	local up = (top - P):GetNormalized()
+	local right = Rr - L
+	right = (right - up * right:Dot(up)):GetNormalized()
+	local yArm = ((L + Rr) * 0.5 - P):Dot(up)
+	local w = math.max((Rr - L):Dot(right) * 0.4, 3)
+	local d = hitPos - P
+	local x, y = d:Dot(right), d:Dot(up)
+	if yArm < 5 or y < math.max(4, yArm * 0.28) - 7 or y > yArm + 5 or math.abs(x) > w * 1.8 then return nil end
+	return true
 end
 
 -- только урон, нанесённый самим оружием (не кровотечение и т.п. от того, кто держит нож)
@@ -75,7 +84,7 @@ local function DoCut(target, attacker, cut, dmg)
 	local force = dir * 300
 	timer.Simple(0, function()
 		if not IsValid(target) or not hg.CutTorso then return end
-		hg.CutTorso(target, force, cut)
+		hg.CutTorso(target, force)
 	end)
 end
 
@@ -113,7 +122,7 @@ local function OnDamage(target, dmg)
 			wep.__remSaw = st
 		end
 		st.last = now
-		st.cut = st.cut or cut -- начало разреза - там, где пила вошла в туловище
+		st.cut = st.cut or cut -- пила хоть раз прошла по туловищу
 		if now - st.start >= SAW_TIME and st.cut then
 			wep.__remSaw = nil
 			DoCut(target, attacker, st.cut, dmg)
@@ -137,7 +146,7 @@ end
 hook.Add("EntityTakeDamage", "rem_meleehalve", function(target, dmg) OnDamage(target, dmg) end)
 hook.Add("PostEntityTakeDamage", "rem_meleehalve", function(target, dmg) OnDamage(target, dmg) end)
 
--- проверка (админ): rem_halve_test - разрубить того, на кого смотришь (точка разреза - куда смотришь)
+-- проверка (админ): rem_halve_test - разрубить того, на кого смотришь
 concommand.Add("rem_halve_test", function(ply)
 	if IsValid(ply) and not ply:IsAdmin() then return end
 	if not IsValid(ply) then return end
@@ -147,11 +156,5 @@ concommand.Add("rem_halve_test", function(ply)
 		ply:ChatPrint("rem_halve_test: look at a player or a body")
 		return
 	end
-	local body = target:IsPlayer() and hg.GetCurrentCharacter and hg.GetCurrentCharacter(target) or target
-	local cut = CutFromHit(body, tr.HitPos)
-	if not cut then
-		local side = math.random(2) == 1 and -1 or 1
-		cut = {side * 0.8, math.Rand(0.45, 0.8), -side, math.Rand(0.3, 0.8)}
-	end
-	hg.CutTorso(target, ply:GetAimVector() * 300, cut)
+	hg.CutTorso(target, ply:GetAimVector() * 300)
 end)
