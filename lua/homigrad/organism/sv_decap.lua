@@ -136,6 +136,7 @@ local NECK_CAP = "models/headpartial/headpartial5.mdl"
 -- второй вариант обрубка на шее (разнообразие, выбор случайный): срез шеи из Fallout NV - тот же, что ставит Lambda Gore
 -- Mod; модель привязана к кости Neck1, поэтому встаёт сама (bonemerge)
 local NECK_CAP_FNV = "models/mosi/fnv/props/character/headcap.mdl"
+local USE_FNV_NECK = false
 local HEAD_CAP = "models/gore/debris_goredebris02.mdl"
 -- второй вариант среза под головой - из Lambda Gore Mod (срез Fallout NV, перепривязанный к Head1, ставится сам -
 -- bonemerge). Его .vvd в присланном архиве был битый: вариант включается, только если файлы модели целые лежат в игре
@@ -246,8 +247,24 @@ local function SpawnHead(rag, headBone, force)
 	if not rootPhys or rootPhys < 0 then e:Remove() return nil end
 	local keep = {}
 	Collect(e, root, keep)
+	-- лишние кости: в ноль, а кости без физики ещё и сдвигаем в начало родителя (их местное смещение - обратно).
+	-- Физические кости каждый тик стоят в начале головы (Think ниже), значит всё тело собирается в одну точку у
+	-- среза - даже если клиентское сжатие (cl_decap.lua) не сработало. Иначе воротник и плечи торчат вокруг головы
+	e:SetupBones()
 	for b = 0, e:GetBoneCount() - 1 do
-		if not keep[b] then e:ManipulateBoneScale(b, Vector(0, 0, 0)) end
+		if not keep[b] then
+			e:ManipulateBoneScale(b, Vector(0, 0, 0))
+			local physB = e:TranslateBoneToPhysBone(b)
+			local isPhys = physB and physB >= 0 and e:TranslatePhysBoneToBone(physB) == b
+			local parent = e:GetBoneParent(b)
+			if not isPhys and parent and parent >= 0 then
+				local mb, mp = e:GetBoneMatrix(b), e:GetBoneMatrix(parent)
+				if mb and mp then
+					local lpos = WorldToLocal(mb:GetTranslation(), mb:GetAngles(), mp:GetTranslation(), mp:GetAngles())
+					e:ManipulateBonePosition(b, -lpos)
+				end
+			end
+		end
 	end
 	local hidden = {}
 	for i = 0, e:GetPhysicsObjectCount() - 1 do
@@ -339,7 +356,8 @@ local function CutHead(rag, force)
 	if rag.SetNetVar then rag:SetNetVar("Accessories", "none") end -- шапки ушли с головой
 
 	-- обрубок на шее: случайно - срез Zippy (headpartial5, ставим по кости шеи) или срез Fallout NV (bonemerge)
-	local useFNV = util.IsValidModel(NECK_CAP_FNV) and (math.random(2) == 1 or not util.IsValidModel(NECK_CAP))
+	-- срез Fallout NV на шее: у модели свой скелет, к шее Z-City встаёт боком на плечо - отключён (USE_FNV_NECK)
+	local useFNV = USE_FNV_NECK and util.IsValidModel(NECK_CAP_FNV) and (math.random(2) == 1 or not util.IsValidModel(NECK_CAP))
 	if useFNV then
 		BonemergeProp(rag, NECK_CAP_FNV)
 	elseif util.IsValidModel(NECK_CAP) then

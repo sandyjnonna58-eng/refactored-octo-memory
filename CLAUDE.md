@@ -154,8 +154,10 @@
   клиент - колбэк BuildBonePositions сжимает всё в точку среза), снизу debris_goredebris02 (FollowBone Head1, масштаб
   3x3x2, сдвиг 2,-2,0); на теле Gib_RemoveBone(Head1), на шее headpartial5 (FollowBone Neck1, NeckCapPlace: угол/сдвиг по
   модели - мужская / женская / alyx, mossman), фонтан Z-City (addfountain), шапки/очки уходят с головой, шлем/маска
-  падают. Разнообразие (выбор случайный): на шее - headpartial5 Zippy или срез Fallout NV
-  models/mosi/fnv/props/character/headcap.mdl (тот же, что у Lambda; привязан к Neck1 - bonemerge); под головой - кусок
+  падают. Голова: лишние кости без физики ещё и ManipulateBonePosition(-местное смещение) - к началу родителя, а
+  физические каждый тик в начале головы: всё тело в одной точке у среза даже без клиентского колбэка (он у регдоллов,
+  похоже, не всегда работает - воротник торчал вокруг головы). Разнообразие: срез Fallout NV на шее
+  (models/mosi/fnv/props/character/headcap.mdl) встал боком на плечо - отключён (USE_FNV_NECK = false); под головой - кусок
   Zippy или headcap Lambda (models/noob_dev2323/gib/l4d/headcap.mdl, привязан к Head1 - bonemerge) - только если его
   .vvd целый есть в игре (LambdaHeadCapOk; в присланном rar битый). Bonemerge - BonemergeProp: SetParent + Fire
   SetParentAttachment (как у Lambda / кишок Z-City), без точки крепления модель встаёт в таз. HeadHit - отрезок шея..макушка
