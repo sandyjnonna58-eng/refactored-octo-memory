@@ -1141,7 +1141,8 @@ hook.Add("EntityTakeDamage", "homigrad-damage", function(ent, dmgInfo)
 	if instant and blast and hitgroup == HITGROUP_HEAD and !ent.headexploded then
 		hg.ExplodeHead(ent, org.dmgstack[hitgroup][1], false, dirCool * len)
 	end
-	if instant and !blast and hitgroup == HITGROUP_HEAD and !ent.headexploded then
+	-- ножи, топоры, мечи, пила: голову с одного удара не сносим - это решает organism/sv_decap.lua (с 4-го удара, шанс)
+	if instant and !blast and hitgroup == HITGROUP_HEAD and !ent.headexploded and not (hg.RemDecapBlocks and hg.RemDecapBlocks(dmgInfo)) then
 		hg.ExplodeHead(ent, org.dmgstack[hitgroup][1], slash, force)
 	end
 
