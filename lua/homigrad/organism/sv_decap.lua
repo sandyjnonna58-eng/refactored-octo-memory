@@ -137,8 +137,9 @@ local NECK_CAP = "models/headpartial/headpartial5.mdl"
 -- Mod; модель привязана к кости Neck1, поэтому встаёт сама (bonemerge)
 local NECK_CAP_FNV = "models/mosi/fnv/props/character/headcap.mdl"
 local USE_FNV_NECK = false
--- второй вариант среза на шее (разнообразие, выбор случайный) - обрубок L4D из Lambda Gore Mod; ставится по кости шеи
--- как в моде (giblist.lua bone_name_togap): угол 180,110,90, сдвиг -0.812,-2.608,0 (женские -2.912,-2.608,0).
+-- рваный обрубок L4D из Lambda Gore Mod - вариант среза СНИЗУ НА ГОЛОВЕ (на шее тела - только Zippy): ставим туда,
+-- где он стоял бы на шее в моде (giblist.lua bone_name_togap: угол 180,110,90, сдвиг -0.812,-2.608,0, женские
+-- -2.912,-2.608,0), но привязываем к голове.
 -- Родная текстура была битой - своя перекраска materials/rem_gore/l4d_neck_wound.vtf (tools/gore/make_l4d_neck.py)
 local NECK_CAP_L4D = "models/noob_dev2323/gib/l4d/common_infected_w_neck.mdl"
 local HEAD_CAP = "models/gore/debris_goredebris02.mdl"
@@ -294,8 +295,34 @@ local function SpawnHead(rag, headBone, force)
 		rp:AddAngleVelocity(VectorRand(-300, 300))
 	end
 	-- срез снизу головы: случайно - кусок мяса Zippy на кости головы или срез Lambda (bonemerge, если есть)
-	if LambdaHeadCapOk() and math.random(2) == 1 then
+	local roll = math.random(3)
+	if LambdaHeadCapOk() and roll == 1 then
 		BonemergeProp(e, HEAD_CAP_LAMBDA)
+	elseif util.IsValidModel(NECK_CAP_L4D) and roll <= 2 then
+		-- обрубок L4D из Lambda снизу на голове: ставим туда, где он стоял бы на шее (как в моде), но привязываем к голове -
+		-- висит под ней куском рваной шеи. Перевод из осей кости шеи в оси кости головы - по позе тела на момент среза
+		local neck = rag:LookupBone("ValveBiped.Bip01_Neck1")
+		rag:SetupBones()
+		local mn = neck and rag:GetBoneMatrix(neck)
+		local hb = rag:LookupBone("ValveBiped.Bip01_Head1")
+		local hphys = hb and rag:GetPhysicsObjectNum(rag:TranslateBoneToPhysBone(hb))
+		if mn and IsValid(hphys) then
+			local fem = (ThatPlyIsFemale and ThatPlyIsFemale(rag)) or string.find(string.lower(rag:GetModel() or ""), "female", 1, true)
+			local wpos, wang = LocalToWorld(fem and Vector(-2.912, -2.608, 0) or Vector(-0.812, -2.608, 0), Angle(180, 110, 90),
+				mn:GetTranslation(), mn:GetAngles())
+			local lpos, lang = WorldToLocal(wpos, wang, hphys:GetPos(), hphys:GetAngles())
+			local cap = ents.Create("prop_dynamic")
+			if IsValid(cap) then
+				cap:SetModel(NECK_CAP_L4D)
+				cap:Spawn()
+				cap:SetNotSolid(true)
+				cap:DrawShadow(false)
+				cap:FollowBone(e, root)
+				cap:SetLocalPos(lpos)
+				cap:SetLocalAngles(lang)
+				e:DeleteOnRemove(cap)
+			end
+		end
 	elseif util.IsValidModel(HEAD_CAP) then
 		local cap = ents.Create("prop_dynamic")
 		if IsValid(cap) then
@@ -368,19 +395,6 @@ local function CutHead(rag, force)
 	local useFNV = USE_FNV_NECK and util.IsValidModel(NECK_CAP_FNV) and (math.random(2) == 1 or not util.IsValidModel(NECK_CAP))
 	if useFNV then
 		BonemergeProp(rag, NECK_CAP_FNV)
-	elseif util.IsValidModel(NECK_CAP_L4D) and (math.random(2) == 1 or not util.IsValidModel(NECK_CAP)) then
-		local gap = ents.Create("prop_dynamic")
-		if IsValid(gap) then
-			gap:SetModel(NECK_CAP_L4D)
-			gap:Spawn()
-			gap:SetNotSolid(true)
-			gap:DrawShadow(false)
-			gap:FollowBone(rag, neck)
-			gap:SetLocalAngles(Angle(180, 110, 90))
-			local fem = (ThatPlyIsFemale and ThatPlyIsFemale(rag)) or string.find(string.lower(rag:GetModel() or ""), "female", 1, true)
-			gap:SetLocalPos(fem and Vector(-2.912, -2.608, 0) or Vector(-0.812, -2.608, 0))
-			rag:DeleteOnRemove(gap)
-		end
 	elseif util.IsValidModel(NECK_CAP) then
 		local gap = ents.Create("prop_dynamic")
 		if IsValid(gap) then
