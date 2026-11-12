@@ -86,3 +86,20 @@ concommand.Add("rem_vomit", function(ply)
 	ply.rem_vomit_next = CurTime() + VOMIT_COOLDOWN
 	hg.organism.VomitNormal(ply)
 end)
+
+-- тошнота сама понемногу проходит (раз в секунду), если её ничего не подпитывает
+local NAUSEA_DECAY = 0.003
+timer.Create("rem_nausea_decay", 1, 0, function()
+	for _, ply in ipairs(player.GetAll()) do
+		local org = ply.organism
+		if org and (org.nausea or 0) > 0 and ply:Alive() then
+			org.nausea = math.max(org.nausea - NAUSEA_DECAY, 0)
+			org.nauseaStage = org.nausea >= 0.8 and 2 or org.nausea >= 0.45 and 1 or 0
+			local r = math.Round(org.nausea, 1)
+			if r ~= org.nauseaSent then
+				org.nauseaSent = r
+				ply:SetNW2Float("rem_nausea", r)
+			end
+		end
+	end
+end)

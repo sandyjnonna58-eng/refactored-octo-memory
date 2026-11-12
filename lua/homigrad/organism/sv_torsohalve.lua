@@ -535,28 +535,30 @@ local function EnsureFakeAndSplit(ply, force, fromExplosion)
 	if ply.__hgTorsoPending then return false end
 	ply.__hgTorsoPending = true
 
+	local function Split()
+		ply.__hgTorsoPending = nil
+		if not IsValid(ply) or not ply:Alive() or ply:GetNWBool("hgTorsoSevered", false) then return false end
+		local rag = IsValid(ply.FakeRagdoll) and ply.FakeRagdoll or (hg.GetCurrentCharacter and hg.GetCurrentCharacter(ply) or nil)
+		if not IsValid(rag) or not rag:IsRagdoll() then return false end
+		local state = BuildSplitRagdolls(ply, rag, force or vector_origin)
+		if not state then return false end
+		AddTorsoTrauma(ply, rag, fromExplosion)
+		return true
+	end
+
 	if not IsValid(ply.FakeRagdoll) then
 		if not hg.Fake then
 			ply.__hgTorsoPending = nil
 			return false
 		end
 		hg.Fake(ply)
+		-- только что упал: регдолл ещё не встал в позу и кости на сервере не обновились - обрубок прицепился бы
+		-- со сдвигом (к плечу и т.п.). Режем чуть позже (remorse)
+		timer.Simple(0.15, Split)
+		return true
 	end
 
-	local rag = IsValid(ply.FakeRagdoll) and ply.FakeRagdoll or (hg.GetCurrentCharacter and hg.GetCurrentCharacter(ply) or nil)
-	if not IsValid(rag) or not rag:IsRagdoll() then
-		ply.__hgTorsoPending = nil
-		return false
-	end
-
-	local state = BuildSplitRagdolls(ply, rag, force or vector_origin)
-	if not state then
-		ply.__hgTorsoPending = nil
-		return false
-	end
-	AddTorsoTrauma(ply, rag, fromExplosion)
-	ply.__hgTorsoPending = nil
-	return true
+	return Split()
 end
 
 function hg.AmputateTorso(ent, force, fromExplosion)
