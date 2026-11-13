@@ -579,7 +579,8 @@ end
 
 -- ================= 7) огонь и ток =================
 -- горит (ragdoll:IsOnFire / урон огнём) - катается по земле вдоль оси тела, меняя сторону, руками сбивает пламя с груди,
--- ноги дёргаются; игрок сам катается A/D - не мешаем. Ток (DMG_SHOCK) - судороги 2..4 с.
+-- ноги дёргаются; игрок сам катается A/D - не мешаем. Судороги - только во время эпилептического припадка
+-- (org.seizureActive, система припадков Z-City; сам ток судорог не даёт - он только запускает припадок).
 local LIMBS = {2, 3, 4, 6, 8, 9, 11, 12, 10}
 local function ApplyFireShock(st, rag, now, dt, ply)
 	local org = st.org
@@ -610,9 +611,9 @@ local function ApplyFireShock(st, rag, now, dt, ply)
 	else
 		st.roll = nil
 	end
-	if now < (st.shockUntil or 0) then
-		local left = st.shockUntil - now
-		local k = math.min(Str(st), 2.5) * math.Clamp(left / 1.5, 0.3, 1)
+	if org and org.seizureActive and (org.seizureEnd or 0) > now then
+		local left = org.seizureEnd - now
+		local k = math.min(Str(st), 2.5) * math.Clamp(left / 3, 0.3, 1) -- к концу приступа слабеет
 		for _, n in ipairs(LIMBS) do
 			local p = Phys(rag, n)
 			if p and math.random() < 0.6 then p:AddAngleVelocity(VectorRand(-1, 1) * 900 * k * dt * 10) end
@@ -623,7 +624,7 @@ local function ApplyFireShock(st, rag, now, dt, ply)
 end
 
 -- огонь и ток ловим отдельно: урон огнём по игроку в регдолле Z-City глушит раньше HomigradDamage.
--- Ток: сразу короткие судороги, а с шансом rem_reag_epilepsy_chance - эпилептический припадок (система припадков Z-City:
+-- Ток: с шансом rem_reag_epilepsy_chance - эпилептический припадок (система припадков Z-City, судороги - только в нём:
 -- падает, бьётся, вспышки и звук на экране; hg.organism.StartEpilepsy - 20..40 с, не смертельный)
 hook.Add("EntityTakeDamage", "rem_reagdoll_fire", function(target, dmg)
 	if not cvOn:GetBool() or not IsValid(target) or not dmg:IsDamageType(DMG_BURN + DMG_SHOCK) then return end
@@ -640,10 +641,6 @@ hook.Add("EntityTakeDamage", "rem_reagdoll_fire", function(target, dmg)
 	local st = IsValid(rag) and R[rag]
 	if not st or not st.alive then return end
 	if dmg:IsDamageType(DMG_BURN) then st.burnUntil = now + 1.5 end
-	if dmg:IsDamageType(DMG_SHOCK) then
-		if now > (st.shockUntil or 0) then Dbg("shock", tostring(rag)) end
-		st.shockUntil = math.max(st.shockUntil or 0, now + math.Rand(2, 4))
-	end
 end)
 
 -- ================= учёт регдоллов =================
