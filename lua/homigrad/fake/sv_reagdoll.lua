@@ -17,6 +17,7 @@ local cvFlail = CreateConVar("rem_reag_flail", "1", FCVAR_ARCHIVE, "Flail limbs 
 local cvStrength = CreateConVar("rem_reag_strength", "1.35", FCVAR_ARCHIVE, "Strength multiplier for ragdoll reactions", 0.2, 3)
 local cvVariety = CreateConVar("rem_reag_variety", "1", FCVAR_ARCHIVE, "Each person gets own reaction strength (weak / normal / very strong)", 0, 1)
 local cvFire = CreateConVar("rem_reag_fire", "1", FCVAR_ARCHIVE, "Roll on the ground when burning, convulse from electric shock", 0, 1)
+local cvEpi = CreateConVar("rem_reag_epilepsy_chance", "100", FCVAR_ARCHIVE, "Chance (%) that an electric shock starts an epileptic seizure", 0, 100)
 local cvGuard = CreateConVar("rem_reag_guard", "1", FCVAR_ARCHIVE, "Cover the head when beaten with fists/kicks", 0, 1)
 local cvStand = CreateConVar("rem_reag_stand_time", "1", FCVAR_ARCHIVE, "Multiplier for how long a shot person tries to stay on feet", 0, 5)
 local cvGrab = CreateConVar("rem_reag_grab", "1", FCVAR_ARCHIVE, "Grab walls/ledges with a hand while falling", 0, 1)
@@ -621,13 +622,23 @@ local function ApplyFireShock(st, rag, now, dt, ply)
 	end
 end
 
--- огонь и ток ловим отдельно: урон огнём по игроку в регдолле Z-City глушит раньше HomigradDamage
+-- огонь и ток ловим отдельно: урон огнём по игроку в регдолле Z-City глушит раньше HomigradDamage.
+-- Ток: сразу короткие судороги, а с шансом rem_reag_epilepsy_chance - эпилептический припадок (система припадков Z-City:
+-- падает, бьётся, вспышки и звук на экране; hg.organism.StartEpilepsy - 20..40 с, не смертельный)
 hook.Add("EntityTakeDamage", "rem_reagdoll_fire", function(target, dmg)
 	if not cvOn:GetBool() or not IsValid(target) or not dmg:IsDamageType(DMG_BURN + DMG_SHOCK) then return end
+	local now = CurTime()
+	local ply = target:IsPlayer() and target or (target:IsRagdoll() and hg.RagdollOwner and hg.RagdollOwner(target)) or nil
+	if dmg:IsDamageType(DMG_SHOCK) and IsValid(ply) and ply:Alive() and cvFire:GetBool() and (ply.remEpiNext or 0) < now then
+		ply.remEpiNext = now + 1 -- ток бьёт каждый тик - бросок раз в секунду
+		local org = ply.organism
+		if org and not org.seizureActive and hg.organism.StartEpilepsy and math.random(100) <= cvEpi:GetFloat() then
+			if hg.organism.StartEpilepsy(ply, org, math.Rand(20, 40)) then Dbg("epilepsy from shock", ply:Nick()) end
+		end
+	end
 	local rag = target:IsRagdoll() and target or (target:IsPlayer() and target.FakeRagdoll) or nil
 	local st = IsValid(rag) and R[rag]
 	if not st or not st.alive then return end
-	local now = CurTime()
 	if dmg:IsDamageType(DMG_BURN) then st.burnUntil = now + 1.5 end
 	if dmg:IsDamageType(DMG_SHOCK) then
 		if now > (st.shockUntil or 0) then Dbg("shock", tostring(rag)) end

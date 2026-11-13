@@ -465,6 +465,7 @@ local function stop_seizure(owner, org)
 	org.seizureStart = 0
 	org.seizureEnd = 0
 	org.nextSeizureSpasm = 0
+	org.remSeizureDur = nil
 
 	if wasActive and IsValid(owner) and owner:IsPlayer() and owner:Alive() then
 		owner.fullsend = true
@@ -479,10 +480,20 @@ local function start_seizure(owner, org)
 	org.seizure = 1
 	org.seizureActive = true
 	org.seizureStart = time
-	org.seizureEnd = time + seizure_duration
+	org.seizureEnd = time + (org.remSeizureDur or seizure_duration) -- remorse: эпилепсия от тока - короче
 	org.nextSeizureSpasm = time
 	owner.fullsend = true
 	send_organism(org, owner)
+end
+
+-- remorse: эпилептический припадок (удар током и т.п.) - тот же припадок, но короткий (dur с) и не смертельный:
+-- без урона мозгу в конце (обычный припадок длится 90 с и убивает). Уже идёт - не перезапускаем
+function hg.organism.StartEpilepsy(owner, org, dur)
+	if not org or org.seizureActive or not IsValid(owner) or not owner:IsPlayer() or not owner:Alive() then return false end
+	org.remSeizureDur = dur or 30
+	start_seizure(owner, org)
+	if not org.seizureActive then org.remSeizureDur = nil return false end
+	return true
 end
 
 local function resolve_panic_attacker(victim, attacker)
@@ -806,10 +817,10 @@ hook.Add("Org Think", "Main", function(owner, org, timeValue)
 		owner.fakecd = math.max(owner.fakecd or 0, seizureEnd)
 
 		if time >= seizureEnd then
-			org.brain = math.max(org.brain or 0, seizure_brain_damage_final)
+			if not org.remSeizureDur then org.brain = math.max(org.brain or 0, seizure_brain_damage_final) end -- эпилепсия - без смерти мозга
 			stop_seizure(owner, org)
 		else
-			if time >= seizureStart + seizure_brain_damage_start then
+			if not org.remSeizureDur and time >= seizureStart + seizure_brain_damage_start then
 				local frac = math.Clamp((time - (seizureStart + seizure_brain_damage_start)) / math.max(seizure_duration - seizure_brain_damage_start, 0.001), 0, 1)
 				org.brain = math.max(org.brain or 0, seizure_brain_damage_final * frac)
 			end
