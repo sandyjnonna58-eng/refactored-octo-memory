@@ -18,6 +18,7 @@ local cvStrength = CreateConVar("rem_reag_strength", "1.35", FCVAR_ARCHIVE, "Str
 local cvVariety = CreateConVar("rem_reag_variety", "1", FCVAR_ARCHIVE, "Each person gets own reaction strength (weak / normal / very strong)", 0, 1)
 local cvFire = CreateConVar("rem_reag_fire", "1", FCVAR_ARCHIVE, "Roll on the ground when burning, convulse from electric shock", 0, 1)
 local cvEpi = CreateConVar("rem_reag_epilepsy_chance", "100", FCVAR_ARCHIVE, "Chance (%) that an electric shock starts an epileptic seizure", 0, 100)
+local cvYield = CreateConVar("rem_reag_yield", "1", FCVAR_ARCHIVE, "Reactions give the ragdoll back while the player presses any control key", 0, 1)
 local cvGuard = CreateConVar("rem_reag_guard", "1", FCVAR_ARCHIVE, "Cover the head when beaten with fists/kicks", 0, 1)
 local cvStand = CreateConVar("rem_reag_stand_time", "1", FCVAR_ARCHIVE, "Multiplier for how long a shot person tries to stay on feet", 0, 5)
 local cvGrab = CreateConVar("rem_reag_grab", "1", FCVAR_ARCHIVE, "Grab walls/ledges with a hand while falling", 0, 1)
@@ -158,6 +159,18 @@ local function BusyHands(st, rag)
 		if ply:KeyDown(IN_ATTACK2) then Rr = true end
 	end
 	return L, Rr
+end
+
+-- игрок сам управляет регдоллом (E, мышь, WASD, прыжок, присед, бег) - реакции отдают ему тело: управление Z-City
+-- (руки на E/ЛКМ/ПКМ, ползание, корпус за камерой) иначе перебивалось. Ещё 0.6 с после отпускания - не дёргать туда-сюда
+local CONTROL_KEYS = {IN_USE, IN_ATTACK, IN_ATTACK2, IN_FORWARD, IN_BACK, IN_MOVELEFT, IN_MOVERIGHT, IN_JUMP, IN_DUCK, IN_SPEED, IN_WALK, IN_RELOAD}
+local function Controlling(st, now)
+	local ply = st.ply
+	if not st.alive or not IsValid(ply) or not cvYield:GetBool() then return false end
+	for _, k in ipairs(CONTROL_KEYS) do
+		if ply:KeyDown(k) then st.ctrlUntil = now + 0.6 break end
+	end
+	return now < (st.ctrlUntil or 0)
 end
 
 -- ================= 1) хватается за рану =================
@@ -575,11 +588,11 @@ end
 -- ноги дёргаются; игрок сам катается A/D - не мешаем. Судороги - только во время эпилептического припадка
 -- (org.seizureActive, система припадков Z-City; сам ток судорог не даёт - он только запускает припадок).
 local LIMBS = {2, 3, 4, 6, 8, 9, 11, 12, 10}
-local function ApplyFireShock(st, rag, now, dt, ply)
+local function ApplyFireShock(st, rag, now, dt, ply, ctrl)
 	local org = st.org
 	local burning = rag:IsOnFire() or (IsValid(ply) and ply:IsOnFire()) or now < (st.burnUntil or 0)
 	if burning and cvFire:GetBool() and not (org and org.otrub) then
-		local busy = IsValid(ply) and (ply:KeyDown(IN_MOVELEFT) or ply:KeyDown(IN_MOVERIGHT))
+		local busy = ctrl
 		local f, r, u, pelvis, spine = BodyFrame(rag)
 		if f and not busy then
 			if not st.roll or now > st.roll.untilT then
@@ -811,15 +824,26 @@ hook.Add("Think", "rem_reagdoll", function()
 			end
 		end
 
-		-- горит - катается, бьют током - судороги
-		if st.alive then ApplyFireShock(st, rag, now, dt, ply) end
-		if st.bal then ApplyBalance(st, rag, now, dt) end
-		ApplyHolds(st, rag, now, busyL, busyR)
-		if st.guard then ApplyGuard(st, rag, now, busyL, busyR) end
-		local conscious = st.alive and not (st.org and st.org.otrub)
-		if cvFlail:GetBool() and st.air > 0.25 and (conscious or (not st.alive and now - (st.deathT or now) < DEATH_FLAIL)) then
-			ApplyFlail(st, rag, now, busyL, busyR, coverArms)
+		-- игрок жмёт кнопки - управление его: стоять/шататься перестаёт, руки и ноги не трогаем
+		-- (судороги при припадке остаются - там управления и так нет)
+		local ctrl = Controlling(st, now)
+		if ctrl and st.bal then st.bal = nil Dbg("player took control", tostring(rag)) end
+
+		-- горит - катается, припадок - судороги
+		if st.alive then ApplyFireShock(st, rag, now, dt, ply, ctrl) end
+		if not ctrl then
+			if st.bal then ApplyBalance(st, rag, now, dt) end
+			ApplyHolds(st, rag, now, busyL, busyR)
+			if st.guard then ApplyGuard(st, rag, now, busyL, busyR) end
+			local conscious = st.alive and not (st.org and st.org.otrub)
+			if cvFlail:GetBool() and st.air > 0.25 and (conscious or (not st.alive and now - (st.deathT or now) < DEATH_FLAIL)) then
+				ApplyFlail(st, rag, now, busyL, busyR, coverArms)
+			end
+		else
+			-- держание раны и блок по времени идут дальше: отпустил кнопки - рука вернётся к ране
+			for side, h in pairs(st.holds) do if now > h.untilT then st.holds[side] = nil end end
+			if st.guard and now > st.guard.untilT then st.guard = nil end
 		end
-		UpdateGrabs(st, rag, now, busyL, busyR)
+		UpdateGrabs(st, rag, now, busyL or ctrl, busyR or ctrl)
 	end
 end)
