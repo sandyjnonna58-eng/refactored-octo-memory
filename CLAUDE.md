@@ -115,7 +115,8 @@
   пинка (NW InLegKick) рядом (< 140, целится в тело) - BlockNear: предплечья скрещены перед лицом 0.55..0.85 с; попадание -
   1.2..2 с. 7) огонь и ток (ApplyFireShock, rem_reag_fire): горит (IsOnFire регдолла/игрока или DMG_BURN 1.5 с) - катается
   вдоль оси тела (AddAngleVelocity вокруг BodyFrame up, смена стороны 0.9..1.6 с), руки хлопают по груди, ноги дёргаются;
-  жмёт A/D - не мешаем. DMG_SHOCK - судороги 2..4 с и эпилептический припадок (шанс rem_reag_epilepsy_chance 100,
+  жмёт A/D - не мешаем. Судороги (рывки конечностей, к концу слабеют) - только во время эпилептического припадка
+  (org.seizureActive до seizureEnd); сам ток судорог не даёт. DMG_SHOCK - эпилептический припадок (шанс rem_reag_epilepsy_chance 100,
   бросок раз в секунду): hg.organism.StartEpilepsy(owner, org, 20..40 с) в sv_organism.lua - обычный припадок Z-City
   (org.seizureActive: needfake, поза/тряска, вспышки и звук на клиенте), но длина org.remSeizureDur и без урона мозгу
   в конце (обычный - 90 с и смерть мозга). Огонь/ток ловит свой EntityTakeDamage (Z-City глушит урон огнём рано).
