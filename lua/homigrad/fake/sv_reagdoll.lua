@@ -38,6 +38,8 @@ local FLAIL = {
 	{n = 9, a = 300, amp = "rlegamputated"}, {n = 12, a = 300, amp = "llegamputated"},
 }
 
+local cvDebug = CreateConVar("rem_reag_debug", "0", FCVAR_ARCHIVE, "Print ragdoll reaction triggers to the server console", 0, 1)
+local function Dbg(...) if cvDebug:GetBool() then print("[rem_reag]", ...) end end
 local R = {} -- [регдолл] = состояние
 local function Str() return cvStrength:GetFloat() end
 local HANDS = {weapon_hands_sh = true, weapon_hg_coolhands = true}
@@ -500,13 +502,15 @@ local function OnBlunt(rag, st, pos, hands, now)
 	local onHead = n and n == headN
 	if hands or onHead then
 		StartGuard(st, now)
+		Dbg("guard", hands and "fists/kick" or "blunt to head", tostring(rag))
 		return
 	end
-	if not n or math.random(100) > cvHold:GetFloat() then return end
+	if not n or math.random(100) > cvHold:GetFloat() then Dbg("blunt hit, no hold (chance)") return end
 	local p = rag:GetPhysicsObjectNum(n)
 	local b = rag:TranslatePhysBoneToBone(n)
 	local spot = {spot = true, phys = n, lpos = p:WorldToLocal(pos), bone = b and b >= 0 and rag:GetBoneName(b) or ""}
-	StartHold(st, rag, spot)
+	StartHold(st, rag, spot, true)
+	Dbg("blunt hit - holding", spot.bone)
 	for _, h in pairs(st.holds) do if h.w == spot then h.untilT = now + math.Rand(2.5, 5) end end -- синяк - держится недолго
 end
 
@@ -566,28 +570,42 @@ hook.Add("DoPlayerDeath", "rem_reagdoll", function(ply)
 	end)
 end)
 
--- тупой удар (кулак, пинок, дубинка, бита): лежит - реагирует сразу; стоит - запоминаем, упадёт за 1 с - отреагирует
-hook.Add("PostEntityTakeDamage", "rem_reagdoll", function(target, dmg, took)
-	if not cvOn:GetBool() or not IsValid(target) or not dmg:IsDamageType(DMG_CLUB) then return end
-	local ply, rag
-	if target:IsPlayer() then
-		ply, rag = target, target.FakeRagdoll
-	elseif target:IsRagdoll() then
-		rag = target
-		ply = hg.RagdollOwner and hg.RagdollOwner(target) or nil
-	end
-	if not IsValid(ply) or not ply:Alive() then return end
+-- тупой удар (кулак, пинок, дубинка, бита): лежит - реагирует сразу; стоит - запоминаем, упадёт за 1 с - отреагирует.
+-- Слушаем хук урона Z-City HomigradDamage (он есть на каждое попадание по человеку; Post-хук движка до регдолла
+-- не доходил - Z-City сам перенаправляет и глушит урон) и Post как запасной; один удар - один раз.
+local function OnClubHit(ent, ply, dmg)
+	if not cvOn:GetBool() or not dmg:IsDamageType(DMG_CLUB) then return end
+	if not IsValid(ply) or not ply:IsPlayer() or not ply:Alive() then return end
+	local now = CurTime()
+	local tick = engine.TickCount()
+	if ply.remReagTick == tick then return end
+	ply.remReagTick = tick
 	local wep = dmg:GetInflictor()
-	local hands = IsValid(wep) and (HANDS[wep:GetClass()] or wep:IsPlayer()) or false
+	local att = dmg:GetAttacker()
+	-- руки/ноги: оружие "руки" или сам игрок (пинок из регдолла и т.п.)
+	local hands = IsValid(wep) and (HANDS[wep:GetClass()] or wep:IsPlayer()) or (IsValid(att) and att:IsPlayer() and wep == att) or false
+	if IsValid(att) and att:IsPlayer() and IsValid(wep) and wep == att:GetActiveWeapon() and HANDS[wep:GetClass()] then hands = true end
 	local pos = dmg:GetDamagePosition()
 	if pos == vector_origin then pos = nil end
-	local now = CurTime()
+	local rag = IsValid(ply.FakeRagdoll) and ply.FakeRagdoll or (IsValid(ent) and ent:IsRagdoll() and ent or nil)
 	local st = IsValid(rag) and R[rag]
 	if st and st.alive then
 		OnBlunt(rag, st, pos, hands, now)
 	else
 		ply.remReagHit = {t = now, pos = pos, hands = hands}
+		Dbg("club hit on standing", ply:Nick(), hands and "fists/kick" or "weapon")
 	end
+end
+
+hook.Add("HomigradDamage", "rem_reagdoll", function(ply, dmg, hitgroup, ent)
+	if IsValid(ply) and ply:IsRagdoll() then ply = hg.RagdollOwner and hg.RagdollOwner(ply) or nil end -- fakePlayer
+	OnClubHit(ent, ply, dmg)
+end)
+
+hook.Add("PostEntityTakeDamage", "rem_reagdoll", function(target, dmg)
+	if not IsValid(target) then return end
+	local ply = target:IsPlayer() and target or (target:IsRagdoll() and hg.RagdollOwner and hg.RagdollOwner(target)) or nil
+	OnClubHit(target, ply, dmg)
 end)
 
 local lastThink = CurTime()
