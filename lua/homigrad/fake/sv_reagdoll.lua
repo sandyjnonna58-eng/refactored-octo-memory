@@ -538,35 +538,7 @@ local function ApplyGuard(st, rag, now, busyL, busyR)
 	end
 end
 
--- блок: в момент замаха (ЛКМ/ПКМ с кулаками/холодным) или пинка рядом - руки рывком встают перед лицом, коротко.
--- Только на сам удар - пока просто стоят рядом, не закрывается
-local function BlockNear(att, now)
-	if not cvGuard:GetBool() then return end
-	local eye = att:EyePos()
-	local aimv = att:GetAimVector()
-	for rag, st in pairs(R) do
-		if IsValid(rag) and st.alive and st.ply ~= att and not (st.org and st.org.otrub) then
-			local head = Phys(rag, 10)
-			local spine = Phys(rag, 1)
-			if head and spine then
-				local c = (head:GetPos() + spine:GetPos()) * 0.5
-				local d = eye:Distance(c)
-				if d < 140 and aimv:Dot((c - eye):GetNormalized()) > 0.55 then
-					StartGuard(st, now, math.Rand(0.55, 0.85), true)
-					Dbg("block (swing)", tostring(rag))
-				end
-			end
-		end
-	end
-end
-
-hook.Add("KeyPress", "rem_reagdoll_block", function(att, key)
-	if not cvOn:GetBool() or (key ~= IN_ATTACK and key ~= IN_ATTACK2) or not att:Alive() or IsValid(att.FakeRagdoll) then return end
-	local wep = att:GetActiveWeapon()
-	if not (IsValid(wep) and (HANDS[wep:GetClass()] or wep.ismelee)) then return end
-	BlockNear(att, CurTime())
-end)
-
+-- блок ставится только на само попадание (не заранее на замах/ЛКМ/начало пинка - так просил пользователь).
 -- удар по человеку: кулаки/пинки - закрывается; тупое оружие - держится за место удара (по голове - закрывается)
 local function NearestPhys(rag, pos)
 	local best, bestD
@@ -779,16 +751,6 @@ hook.Add("Think", "rem_reagdoll", function()
 			R[rag] = nil
 		end
 		return
-	end
-	-- начало пинка - блок у тех, по кому целится
-	if next(R) then
-		for _, att in ipairs(player.GetAll()) do
-			local kick = att:GetNWFloat("InLegKick", 0)
-			if kick > now and att.remReagKick ~= kick then
-				att.remReagKick = kick
-				BlockNear(att, now)
-			end
-		end
 	end
 	for rag, st in pairs(R) do
 		local ply = st.ply
