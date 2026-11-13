@@ -15,6 +15,7 @@ local cvHold = CreateConVar("rem_reag_hold_chance", "80", FCVAR_ARCHIVE, "Chance
 local cvStagger = CreateConVar("rem_reag_stagger", "1", FCVAR_ARCHIVE, "Stagger before collapsing when shot down", 0, 1)
 local cvFlail = CreateConVar("rem_reag_flail", "1", FCVAR_ARCHIVE, "Flail limbs while flying/falling", 0, 1)
 local cvStrength = CreateConVar("rem_reag_strength", "1.35", FCVAR_ARCHIVE, "Strength multiplier for ragdoll reactions", 0.2, 3)
+local cvVariety = CreateConVar("rem_reag_variety", "1", FCVAR_ARCHIVE, "Each person gets own reaction strength (weak / normal / very strong)", 0, 1)
 local cvGuard = CreateConVar("rem_reag_guard", "1", FCVAR_ARCHIVE, "Cover the head when beaten with fists/kicks", 0, 1)
 local cvStand = CreateConVar("rem_reag_stand_time", "1", FCVAR_ARCHIVE, "Multiplier for how long a shot person tries to stay on feet", 0, 5)
 local cvGrab = CreateConVar("rem_reag_grab", "1", FCVAR_ARCHIVE, "Grab walls/ledges with a hand while falling", 0, 1)
@@ -41,7 +42,19 @@ local FLAIL = {
 local cvDebug = CreateConVar("rem_reag_debug", "0", FCVAR_ARCHIVE, "Print ragdoll reaction triggers to the server console", 0, 1)
 local function Dbg(...) if cvDebug:GetBool() then print("[rem_reag]", ...) end end
 local R = {} -- [регдолл] = состояние
-local function Str() return cvStrength:GetFloat() end
+-- сила реакций: общая (rem_reag_strength) x своя у каждого человека (st.mul - слабый / обычный / очень сильный)
+local function Str(st) return cvStrength:GetFloat() * (st and st.mul or 1) end
+
+-- характер тела на эту жизнь: четверть - слабые (вялые, еле держатся), половина - обычные, четверть - очень сильные
+-- (резко дёргаются, долго стоят, крепко держатся). rem_reag_variety 0 - у всех одинаково
+local function RollMul()
+	if not cvVariety:GetBool() then return 1 end
+	local r = math.random()
+	if r < 0.25 then return math.Rand(0.35, 0.7) end
+	if r < 0.75 then return math.Rand(0.85, 1.25) end
+	return math.Rand(1.6, 2.4)
+end
+
 local HANDS = {weapon_hands_sh = true, weapon_hg_coolhands = true}
 
 local function Phys(rag, n)
@@ -55,6 +68,24 @@ local function Floppy(rag, num)
 	if not f then return false end
 	local b = rag:TranslatePhysBoneToBone(num)
 	return b and b >= 0 and f[rag:GetBoneName(b)] == true
+end
+
+-- тянуть кость к точке напрямую (hg.ShadowControl ещё делит силу на ragdoll.power - от боли руки почти не двигались)
+local shadowP = {}
+local function Shadow(rag, n, pos, speed, damp)
+	local p, num = Phys(rag, n)
+	if not p or Floppy(rag, num) or not pos then return end
+	shadowP.secondstoarrive = 0.05
+	shadowP.pos = pos
+	shadowP.angle = p:GetAngles()
+	shadowP.maxangular = 0
+	shadowP.maxangulardamp = 0
+	shadowP.maxspeed = speed
+	shadowP.maxspeeddamp = damp
+	shadowP.dampfactor = 0.8
+	shadowP.teleportdistance = 0
+	p:Wake()
+	p:ComputeShadowControl(shadowP)
 end
 
 -- самая свежая рана (артериальная важнее при равном времени)
@@ -170,11 +201,11 @@ local function ApplyHolds(st, rag, now, busyL, busyR)
 			if pos and hand and fore and upper and reach and not Floppy(rag, handN) then
 				-- как ручное зажатие Z-City: плечо, предплечье, кисть - каждое к своей точке перед раной
 				local fade = math.min((now - h.start) / 0.35, 1) -- рука тянется, а не прыгает
-				local k = s * fade * (st.alive and 1 or 0.6) * Str() -- мёртвое тело - мягче
+				local k = s * fade * (st.alive and 1 or 0.6) * Str(st) -- мёртвое тело - мягче
 				local function To(phys, off) local d = pos - phys:GetPos() return d:LengthSqr() > 0.01 and pos - d:GetNormalized() * off or pos end
-				hg.ShadowControl(rag, a.upper, 0.06, nil, nil, nil, To(upper, 14), 18 * k, 12 * k)
-				hg.ShadowControl(rag, a.fore, 0.06, nil, nil, nil, To(fore, 8), 55 * k, 14 * k)
-				hg.ShadowControl(rag, a.hand, 0.06, nil, nil, nil, To(hand, 3), 55 * k, 14 * k)
+				Shadow(rag, a.upper, To(upper, 14), 18 * k, 12 * k)
+				Shadow(rag, a.fore, To(fore, 8), 55 * k, 14 * k)
+				Shadow(rag, a.hand, To(hand, 3), 55 * k, 14 * k)
 			end
 		end
 	end
@@ -230,7 +261,8 @@ local function StartBalance(st, rag, now, moveVel)
 			if org.llegamputated or org.rlegamputated then legs = 0.3 end
 			legs = legs * (1 - math.Clamp(((org.lleg or 0) + (org.rleg or 0)) * 0.35, 0, 0.7))
 		end
-		dur = math.Rand(2.5, 5) * math.Clamp(BalanceStrength(st), 0.35, 1) * legs * cvStand:GetFloat()
+		-- сильный стоит дольше, слабый валится почти сразу
+		dur = math.Rand(2.5, 5) * math.Clamp(BalanceStrength(st), 0.35, 1) * legs * cvStand:GetFloat() * math.Clamp(st.mul or 1, 0.4, 1.7)
 	else
 		dur = math.Rand(0.8, 1.5)
 	end
@@ -281,7 +313,7 @@ local function ApplyBalance(st, rag, now, dt)
 	end
 	if now < b.buckleUntil then k = k * 0.25 end
 	if k <= 0.01 then return end
-	local kf = math.min(k * Str(), 2) -- общая сила (rem_reag_strength)
+	local kf = math.min(k * Str(st), 3) -- сила (rem_reag_strength x характер тела)
 
 	local g = physenv.GetGravity() * dt
 	-- противовес тяжести (верх сильнее низа) + таз тянется к прежней высоте
@@ -365,7 +397,7 @@ local function ApplyFlail(st, rag, now, busyL, busyR, coverArms)
 			if p and not Floppy(rag, num) then
 				local ph = st.flailPhase[i]
 				local w = 7 + ph * 3
-				local av = Vector(math.sin(t * w + ph * 6) * 0.35, math.sin(t * w * 0.8 + ph * 4) * 0.6, math.cos(t * w + ph * 9)) * f.a * strength * Str()
+				local av = Vector(math.sin(t * w + ph * 6) * 0.35, math.sin(t * w * 0.8 + ph * 4) * 0.6, math.cos(t * w + ph * 9)) * f.a * strength * Str(st)
 				p:AddAngleVelocity((av - p:GetAngleVelocity() * 0.25) * 0.12)
 			end
 		end
@@ -454,7 +486,7 @@ local function ApplyGuard(st, rag, now, busyL, busyR)
 	if now > g.untilT or not st.alive then st.guard = nil return end
 	local org = st.org
 	local s = org and (org.otrub and 0.4 or math.Clamp(org.consciousness or 1, 0.5, 1)) or 1
-	local k = s * math.min((now - g.start) / 0.15, 1) * Str() -- руки взлетают к голове почти сразу
+	local k = s * math.min((now - g.start) / 0.15, 1) * Str(st) -- руки взлетают к голове почти сразу
 	local f, r, u, pelvis, spine, head = BodyFrame(rag)
 	if not f then return end
 	local hp = head:GetPos()
@@ -465,9 +497,9 @@ local function ApplyGuard(st, rag, now, busyL, busyR)
 			local sg = side == "R" and 1 or -1
 			local _, handN = Phys(rag, a.hand)
 			if not Floppy(rag, handN) then
-				hg.ShadowControl(rag, a.hand, 0.05, nil, nil, nil, hp + u * 4 + r * (3 * sg) + f * 3, 80 * k, 16 * k)
-				hg.ShadowControl(rag, a.fore, 0.05, nil, nil, nil, hp + f * 7 + r * (4 * sg) - u * 1, 80 * k, 16 * k)
-				hg.ShadowControl(rag, a.upper, 0.05, nil, nil, nil, spine:GetPos() + f * 6 + u * 4 + r * (7 * sg), 30 * k, 14 * k)
+				Shadow(rag, a.hand, hp + u * 4 + r * (3 * sg) + f * 3, 90 * k, 16 * k)
+				Shadow(rag, a.fore, hp + f * 7 + r * (4 * sg) - u * 1, 90 * k, 16 * k)
+				Shadow(rag, a.upper, spine:GetPos() + f * 6 + u * 4 + r * (7 * sg), 35 * k, 14 * k)
 			end
 		end
 	end
@@ -477,10 +509,36 @@ local function ApplyGuard(st, rag, now, busyL, busyR)
 	if tr.Hit and not st.bal then
 		for i, L in ipairs({{calf = 9, amp = "rlegamputated", sg = 1}, {calf = 12, amp = "llegamputated", sg = -1}}) do
 			if not (org and org[L.amp]) then
-				hg.ShadowControl(rag, L.calf, 0.08, nil, nil, nil, pz + f * 14 - u * 2 + r * (4 * L.sg), 25 * k, 12 * k)
+				Shadow(rag, L.calf, pz + f * 14 - u * 2 + r * (4 * L.sg), 25 * k, 12 * k)
 			end
 		end
 	end
+end
+
+-- замахиваются / пинают / целятся в упор - прикрывается руками заранее (лёжа, в сознании)
+local function ThreatNear(st, rag)
+	local head = Phys(rag, 10)
+	if not head then return false end
+	local hp = head:GetPos()
+	for _, att in ipairs(player.GetAll()) do
+		if att ~= st.ply and att:Alive() and not IsValid(att.FakeRagdoll) then
+			local eye = att:EyePos()
+			local d = eye:Distance(hp)
+			if d < 260 then
+				local aim = att:GetAimVector():Dot((hp - eye):GetNormalized())
+				local wep = att:GetActiveWeapon()
+				local melee = IsValid(wep) and (HANDS[wep:GetClass()] or wep.ismelee)
+				local kicking = att:GetNWFloat("InLegKick", 0) > CurTime()
+				local attacking = att:KeyDown(IN_ATTACK) or att:KeyDown(IN_ATTACK2)
+				-- кулак/нож/бита рядом и смотрит на него (замах или удар), пинок рядом, ствол в упор
+				if (d < 110 and kicking) or (d < 120 and melee and aim > 0.7 and attacking)
+					or (d < 200 and IsValid(wep) and not melee and ishgweapon and ishgweapon(wep) and aim > 0.97) then
+					return true
+				end
+			end
+		end
+	end
+	return false
 end
 
 -- удар по человеку: кулаки/пинки - закрывается; тупое оружие - держится за место удара (по голове - закрывается)
@@ -520,7 +578,15 @@ local function Track(rag, ply, dead, moveVel)
 	local now = CurTime()
 	local st = R[rag]
 	if not st then
-		st = {ply = ply, holds = {}, grab = {}, grabNext = {}, air = 0, lastWound = 0, flailPhase = {}}
+		st = {ply = ply, holds = {}, grab = {}, grabNext = {}, air = 0, lastWound = 0, flailPhase = {}, nextThreat = 0}
+		-- характер тела - на всю жизнь человека (каждое падение чуть по-разному)
+		local base = IsValid(ply) and ply.remReagMul
+		if not base then
+			base = RollMul()
+			if IsValid(ply) then ply.remReagMul = base end
+		end
+		st.mul = base * math.Rand(0.9, 1.1)
+		Dbg("body strength", IsValid(ply) and ply:Nick() or "?", math.Round(st.mul, 2))
 		for i = 1, #FLAIL do st.flailPhase[i] = math.Rand(0, 1) end
 		R[rag] = st
 		rag:AddCallback("PhysicsCollide", function(e, data) TryGrab(e, data) end)
@@ -553,6 +619,8 @@ local function Track(rag, ply, dead, moveVel)
 		StartBalance(st, rag, now, moveVel) -- умер стоя без раны (кровопотеря, сердце) - тоже оседает
 	end
 end
+
+hook.Add("PlayerSpawn", "rem_reagdoll", function(ply) ply.remReagMul = nil end) -- новая жизнь - новый характер
 
 hook.Add("Fake", "rem_reagdoll", function(ply, rag)
 	if not cvOn:GetBool() or not IsValid(ply) or not IsValid(rag) or ply:InVehicle() then return end
@@ -679,6 +747,14 @@ hook.Add("Think", "rem_reagdoll", function()
 			end
 		end
 
+		-- угроза рядом - прикрывается руками (проверка 5 раз в секунду)
+		if st.alive and now >= st.nextThreat and not (st.org and st.org.otrub) and cvGuard:GetBool() then
+			st.nextThreat = now + 0.2
+			if ThreatNear(st, rag) then
+				if not st.guard then Dbg("guard: threat near", tostring(rag)) end
+				StartGuard(st, now, 0.9)
+			end
+		end
 		if st.bal then ApplyBalance(st, rag, now, dt) end
 		ApplyHolds(st, rag, now, busyL, busyR)
 		if st.guard then ApplyGuard(st, rag, now, busyL, busyR) end
