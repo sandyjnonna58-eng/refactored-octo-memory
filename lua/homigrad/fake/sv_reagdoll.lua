@@ -104,11 +104,15 @@ local function NewestWound(org)
 	return best, bestT
 end
 
+-- рана ещё есть? Сравниваем по времени и кости, не по ссылке: Z-City может пересобрать список ран (тогда рука
+-- отпускала рану через полсекунды). Перевязали / рана зажила - её нет в списке
 local function WoundStillThere(org, w)
 	if w.spot then return true end -- место удара тупым - держится по времени
 	for _, list in ipairs({org.wounds, org.arterialwounds}) do
 		if istable(list) then
-			for _, x in pairs(list) do if x == w then return true end end
+			for _, x in pairs(list) do
+				if x == w or (istable(x) and x[5] == w[5] and x[4] == w[4]) then return true end
+			end
 		end
 	end
 	return false
@@ -148,7 +152,8 @@ local function BusyHands(st, rag)
 		if ply:KeyDown(IN_USE) then return true, true end
 		local wep = ply:GetActiveWeapon()
 		local gun = IsValid(wep) and ishgweapon and ishgweapon(wep)
-		if gun or (IsValid(wep) and wep.ismelee) then Rr = true end
+		-- "руки" Z-City (weapon_hands_sh) помечены ismelee - с пустыми руками правая свободна
+		if gun or (IsValid(wep) and wep.ismelee and not HANDS[wep:GetClass()]) then Rr = true end
 		if ply:KeyDown(IN_ATTACK) then L = true end
 		if ply:KeyDown(IN_ATTACK2) then Rr = true end
 	end
@@ -165,12 +170,16 @@ local function StartHold(st, rag, w, forced)
 	if not canL and not canR then return end
 	local arterial = w[7] ~= nil
 	local useL, useR
+	-- свободная рука важнее: правой держит оружие - хватается левой
+	local busyL, busyR = BusyHands(st, rag)
+	if canL and canR and busyL ~= busyR then canL, canR = not busyL, not busyR end
 	if canL and canR then
 		local d = math.random()
 		if arterial or d > 0.66 then useL, useR = true, true elseif d > 0.33 then useL = true else useR = true end
 	else
 		useL, useR = canL, canR
 	end
+	Dbg("hold wound", bone, useL and "L" or "", useR and "R" or "")
 	local now = CurTime()
 	local dur = st.alive and math.Rand(4, 10) or DEATH_FADE
 	if useL then st.holds.L = {w = w, untilT = now + dur, start = now} end
@@ -198,16 +207,28 @@ local function ApplyHolds(st, rag, now, busyL, busyR)
 			local hand, handN = Phys(rag, a.hand)
 			local fore = Phys(rag, a.fore)
 			local upper = Phys(rag, a.upper)
-			-- рана дальше, чем достаёт рука (руки на месте раны ~25 от плеча) - не тянем: иначе растягивает
-			local reach = pos and upper and pos:DistToSqr(upper:GetPos()) < 34 * 34
-			if pos and hand and fore and upper and reach and not Floppy(rag, handN) then
-				-- как ручное зажатие Z-City: плечо, предплечье, кисть - каждое к своей точке перед раной
-				local fade = math.min((now - h.start) / 0.35, 1) -- рука тянется, а не прыгает
+			if pos and hand and fore and upper and not Floppy(rag, handN) and pos:DistToSqr(upper:GetPos()) < 70 * 70 then
+				local fade = math.min((now - h.start) / 0.3, 1) -- рука тянется, а не прыгает
 				local k = s * fade * (st.alive and 1 or 0.6) * Str(st) -- мёртвое тело - мягче
-				local function To(phys, off) local d = pos - phys:GetPos() return d:LengthSqr() > 0.01 and pos - d:GetNormalized() * off or pos end
-				Shadow(rag, a.upper, To(upper, 14), 18 * k, 12 * k)
-				Shadow(rag, a.fore, To(fore, 8), 55 * k, 14 * k)
-				Shadow(rag, a.hand, To(hand, 3), 55 * k, 14 * k)
+				-- рана дальше, чем достаёт рука (нога): тянется насколько достаёт (иначе растягивает руку), а живой
+				-- подтягивает раненую ногу к рукам
+				local up = upper:GetPos()
+				local d = pos - up
+				local far = d:Length() > 28
+				local target = far and up + d:GetNormalized() * 28 or pos
+				if far and st.alive then
+					local bone = WoundBoneName(rag, h.w) or ""
+					local calf = (string.find(bone, "R_", 1, true) and 9) or (string.find(bone, "L_", 1, true) and 12) or nil
+					local spine = Phys(rag, 1)
+					if calf and spine and (string.find(bone, "Thigh", 1, true) or string.find(bone, "Calf", 1, true) or string.find(bone, "Foot", 1, true)) then
+						Shadow(rag, calf, spine:GetPos() + (pos - spine:GetPos()):GetNormalized() * 18, 30 * k, 12 * k)
+					end
+				end
+				-- как ручное зажатие Z-City: плечо, предплечье, кисть - каждое к своей точке перед раной
+				local function To(phys, off) local dd = target - phys:GetPos() return dd:LengthSqr() > 0.01 and target - dd:GetNormalized() * off or target end
+				Shadow(rag, a.upper, To(upper, 14), 30 * k, 14 * k)
+				Shadow(rag, a.fore, To(fore, 8), 85 * k, 16 * k)
+				Shadow(rag, a.hand, To(hand, 3), 85 * k, 16 * k)
 			end
 		end
 	end
