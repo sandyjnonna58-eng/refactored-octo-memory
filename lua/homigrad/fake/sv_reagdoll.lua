@@ -18,7 +18,8 @@ local cvStrength = CreateConVar("rem_reag_strength", "1.35", FCVAR_ARCHIVE, "Str
 local cvVariety = CreateConVar("rem_reag_variety", "1", FCVAR_ARCHIVE, "Each person gets own reaction strength (weak / normal / very strong)", 0, 1)
 local cvFire = CreateConVar("rem_reag_fire", "1", FCVAR_ARCHIVE, "Roll on the ground when burning, convulse from electric shock", 0, 1)
 local cvEpi = CreateConVar("rem_reag_epilepsy_chance", "100", FCVAR_ARCHIVE, "Chance (%) that an electric shock starts an epileptic seizure", 0, 100)
-local cvYield = CreateConVar("rem_reag_yield", "1", FCVAR_ARCHIVE, "Reactions give the ragdoll back while the player presses any control key", 0, 1)
+local cvYield = CreateConVar("rem_reag_yield", "0", FCVAR_ARCHIVE, "Reactions give the ragdoll back while the player presses any control key (off: reaction keeps the body)", 0, 1)
+local cvLock = CreateConVar("rem_reag_lock", "1", FCVAR_ARCHIVE, "While a reaction plays the player can only lean (E) and move the head; other keys are blocked", 0, 1)
 local cvGuard = CreateConVar("rem_reag_guard", "1", FCVAR_ARCHIVE, "Cover the head when beaten with fists/kicks", 0, 1)
 local cvStand = CreateConVar("rem_reag_stand_time", "1", FCVAR_ARCHIVE, "Multiplier for how long a shot person tries to stay on feet", 0, 5)
 local cvGrab = CreateConVar("rem_reag_grab", "1", FCVAR_ARCHIVE, "Grab walls/ledges with a hand while falling", 0, 1)
@@ -150,7 +151,8 @@ local function BusyHands(st, rag)
 	local L, Rr = IsValid(rag.ConsLH), IsValid(rag.ConsRH)
 	if st.alive and IsValid(ply) then
 		if org and org.manualHoldWound then return true, true end
-		if ply:KeyDown(IN_USE) then return true, true end
+		-- E - наклон корпуса и голова (Z-City); при блокировке рук он не занимает - руки остаются у реакции
+		if ply:KeyDown(IN_USE) and not cvLock:GetBool() then return true, true end
 		local wep = ply:GetActiveWeapon()
 		local gun = IsValid(wep) and ishgweapon and ishgweapon(wep)
 		-- "руки" Z-City (weapon_hands_sh) помечены ismelee - с пустыми руками правая свободна
@@ -375,8 +377,12 @@ local function ApplyBalance(st, rag, now, dt)
 
 	-- корпус и голова - вертикально (при ходьбе - чуть вперёд, как при шаге)
 	local spineUp = tw and (up + w.dir * 0.18):GetNormalized() or up
-	Align(spine, spineUp, 5, math.min(0.25 * kf, 0.6))
-	if head then Align(head, up, 4, math.min(0.2 * kf, 0.5)) end
+	-- корпус и голову игрок наклоняет сам (E) - тогда их не выпрямляем
+	local leaning = st.alive and IsValid(st.ply) and st.ply:KeyDown(IN_USE)
+	if not leaning then
+		Align(spine, spineUp, 5, math.min(0.25 * kf, 0.6))
+		if head then Align(head, up, 4, math.min(0.2 * kf, 0.5)) end
+	end
 
 	-- ноги под себя: бедро и голень смотрят вниз, чуть в сторону, куда клонится тело (ловит равновесие);
 	-- при движении ноги по очереди выносятся вперёд - спотыкающиеся шаги
@@ -753,6 +759,16 @@ hook.Add("PostEntityTakeDamage", "rem_reagdoll", function(target, dmg)
 	OnClubHit(target, ply, dmg)
 end)
 
+-- пока идёт реакция: все кнопки, кроме E (наклон корпуса и голова в регдолле Z-City) и мыши (камера), не доходят до
+-- управления регдоллом - иначе руки/ноги и ползание перебивали реакцию
+local LOCK_KEYS = bit.bor(IN_ATTACK, IN_ATTACK2, IN_FORWARD, IN_BACK, IN_MOVELEFT, IN_MOVERIGHT, IN_JUMP, IN_DUCK, IN_SPEED, IN_WALK, IN_RELOAD)
+hook.Add("StartCommand", "rem_reagdoll_lock", function(ply, cmd)
+	if (ply.remReagLockUntil or 0) < CurTime() or not IsValid(ply.FakeRagdoll) then return end
+	cmd:RemoveKey(LOCK_KEYS)
+	cmd:SetForwardMove(0)
+	cmd:SetSideMove(0)
+end)
+
 local lastThink = CurTime()
 hook.Add("Think", "rem_reagdoll", function()
 	local now = CurTime()
@@ -845,5 +861,13 @@ hook.Add("Think", "rem_reagdoll", function()
 			if st.guard and now > st.guard.untilT then st.guard = nil end
 		end
 		UpdateGrabs(st, rag, now, busyL or ctrl, busyR or ctrl)
+
+		-- реакция идёт - управление не перехватывается: остаются только наклон (E) и голова (StartCommand ниже)
+		if st.alive and IsValid(ply) and cvLock:GetBool() then
+			local seizing = st.org and st.org.seizureActive and (st.org.seizureEnd or 0) > now
+			if st.bal or st.guard or next(st.holds) or st.air > 0.25 or st.roll or seizing then
+				ply.remReagLockUntil = now + 0.15
+			end
+		end
 	end
 end)
