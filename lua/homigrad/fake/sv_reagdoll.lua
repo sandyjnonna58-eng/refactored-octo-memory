@@ -155,8 +155,11 @@ local function BusyHands(st, rag)
 		if ply:KeyDown(IN_USE) and not cvLock:GetBool() then return true, true end
 		local wep = ply:GetActiveWeapon()
 		local gun = IsValid(wep) and ishgweapon and ishgweapon(wep)
-		-- "руки" Z-City (weapon_hands_sh) помечены ismelee - с пустыми руками правая свободна
-		if gun or (IsValid(wep) and wep.ismelee and not HANDS[wep:GetClass()]) then Rr = true end
+		-- в правой - любой предмет, кроме пустых рук Z-City (weapon_hands_sh помечен ismelee): оружие, лекарство
+		-- (WorkWithFake / RagdollFunc - аптечка, бинт, шприц держатся правой)
+		if IsValid(wep) and not HANDS[wep:GetClass()] then Rr = true end
+		-- целится (ПКМ / E с оружием) - Z-City держит ствол обеими руками
+		if gun and (ply:KeyDown(IN_ATTACK2) or ply:KeyDown(IN_USE)) then L, Rr = true, true end
 		if ply:KeyDown(IN_ATTACK) then L = true end
 		if ply:KeyDown(IN_ATTACK2) then Rr = true end
 	end
@@ -390,7 +393,10 @@ local function ApplyBalance(st, rag, now, dt)
 	-- корпус и голова - вертикально (при ходьбе - чуть вперёд, как при шаге)
 	local spineUp = tw and (up + w.dir * 0.18):GetNormalized() or up
 	-- корпус и голову игрок наклоняет сам (E) - тогда их не выпрямляем
-	local leaning = st.alive and IsValid(st.ply) and st.ply:KeyDown(IN_USE)
+	-- целится из оружия (ПКМ) - тоже сам держит корпус
+	local pl2 = st.alive and IsValid(st.ply) and st.ply
+	local aimWep = pl2 and pl2:GetActiveWeapon()
+	local leaning = pl2 and (pl2:KeyDown(IN_USE) or (IsValid(aimWep) and ishgweapon and ishgweapon(aimWep) and pl2:KeyDown(IN_ATTACK2)))
 	if not leaning then
 		Align(spine, spineUp, 5, math.min(0.25 * kf, 0.6))
 		if head then Align(head, up, 4, math.min(0.2 * kf, 0.5)) end
@@ -771,11 +777,14 @@ hook.Add("PostEntityTakeDamage", "rem_reagdoll", function(target, dmg)
 	OnClubHit(target, ply, dmg)
 end)
 
--- пока идёт реакция: руки - у реакции (ЛКМ/ПКМ/R не доходят до управления регдоллом, иначе перебивали рану/блок);
--- телом игрок двигает сам: WASD (ползёт, перекатывается), прыжок, присед, бег, E (наклон и голова), мышь
+-- пока идёт реакция: пустые руки - у реакции (ЛКМ/ПКМ/R не доходят до хватания руками Z-City, иначе перебивали
+-- рану/блок); с оружием или лекарством в руках ничего не глушим - стрелять, целиться, перезаряжаться, колоть/бинтовать
+-- можно. Телом игрок двигает сам: WASD (ползёт, перекатывается), прыжок, присед, бег, E (наклон и голова), мышь
 local LOCK_KEYS = bit.bor(IN_ATTACK, IN_ATTACK2, IN_RELOAD)
 hook.Add("StartCommand", "rem_reagdoll_lock", function(ply, cmd)
 	if (ply.remReagLockUntil or 0) < CurTime() or not IsValid(ply.FakeRagdoll) then return end
+	local wep = ply:GetActiveWeapon()
+	if IsValid(wep) and not HANDS[wep:GetClass()] then return end -- оружие / лекарство - не мешаем
 	cmd:RemoveKey(LOCK_KEYS)
 end)
 
