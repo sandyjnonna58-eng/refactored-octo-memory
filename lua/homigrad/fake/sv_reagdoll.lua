@@ -5,12 +5,17 @@
 --     под себя, спотыкается, колени подкашиваются, держась за рану; потом падает. Умер стоя - оседает за 0.8..1.5 с;
 --  3) машет руками и ногами в полёте (падение с высоты, отбросило); руки не трогаем, когда Z-City закрывается ими
 --     перед землёй (fallCover в sv_control.lua);
---  4) цепляется рукой: в полёте/при падении рука в сознании задела стену или край - на 1.5..4 с держится (ballsocket).
+--  4) цепляется рукой: в полёте/при падении рука в сознании задела стену или край - на 1.5..4 с держится (ballsocket);
+--  5) закрывается: бьют руками/ногами (пинки, кулаки - инфликтор "руки") - руки прикрывают голову, колени к груди;
+--     удар тупым оружием (DMG_CLUB) по телу - держится за место удара, по голове - тоже закрывается;
+--  6) шёл/бежал и сбили - по инерции ещё идёт регдоллом: ноги шагают, тело тянет вперёд, потом падает.
 -- Пока игрок сам управляет рукой (ЛКМ / ПКМ / E, оружие, свой захват ConsLH/ConsRH, ручное зажатие раны) - её не трогаем.
 local cvOn = CreateConVar("rem_reag", "1", FCVAR_ARCHIVE, "Ragdoll reactions: hold wounds, stagger, flail, grab ledges", 0, 1)
 local cvHold = CreateConVar("rem_reag_hold_chance", "80", FCVAR_ARCHIVE, "Chance (%) to grab a fresh wound", 0, 100)
 local cvStagger = CreateConVar("rem_reag_stagger", "1", FCVAR_ARCHIVE, "Stagger before collapsing when shot down", 0, 1)
 local cvFlail = CreateConVar("rem_reag_flail", "1", FCVAR_ARCHIVE, "Flail limbs while flying/falling", 0, 1)
+local cvStrength = CreateConVar("rem_reag_strength", "1.35", FCVAR_ARCHIVE, "Strength multiplier for ragdoll reactions", 0.2, 3)
+local cvGuard = CreateConVar("rem_reag_guard", "1", FCVAR_ARCHIVE, "Cover the head when beaten with fists/kicks", 0, 1)
 local cvStand = CreateConVar("rem_reag_stand_time", "1", FCVAR_ARCHIVE, "Multiplier for how long a shot person tries to stay on feet", 0, 5)
 local cvGrab = CreateConVar("rem_reag_grab", "1", FCVAR_ARCHIVE, "Grab walls/ledges with a hand while falling", 0, 1)
 
@@ -34,6 +39,8 @@ local FLAIL = {
 }
 
 local R = {} -- [регдолл] = состояние
+local function Str() return cvStrength:GetFloat() end
+local HANDS = {weapon_hands_sh = true, weapon_hg_coolhands = true}
 
 local function Phys(rag, n)
 	local num = hg.realPhysNum and hg.realPhysNum(rag, n) or n
@@ -63,6 +70,7 @@ local function NewestWound(org)
 end
 
 local function WoundStillThere(org, w)
+	if w.spot then return true end -- место удара тупым - держится по времени
 	for _, list in ipairs({org.wounds, org.arterialwounds}) do
 		if istable(list) then
 			for _, x in pairs(list) do if x == w then return true end end
@@ -72,6 +80,7 @@ local function WoundStillThere(org, w)
 end
 
 local function WoundBoneName(rag, w)
+	if w.spot then return w.bone end
 	local b = w[4]
 	if isnumber(b) then return rag:GetBoneName(b) end
 	return b
@@ -80,6 +89,10 @@ end
 -- позиция раны - по физике кости (матрицы костей регдолла на сервере бывают старые, у свежего тела смерти - вообще
 -- нулевые: рука тянулась к точке далеко от тела и растягивала регдолл). Кость без своей физики - от физ. родителя.
 local function WoundPos(rag, w)
+	if w.spot then
+		local p = rag:GetPhysicsObjectNum(w.phys)
+		return IsValid(p) and p:LocalToWorld(w.lpos) or nil
+	end
 	local b = w[4]
 	if isstring(b) then b = rag:LookupBone(b) end
 	if not isnumber(b) or b < 0 then return nil end
@@ -141,7 +154,7 @@ local function ApplyHolds(st, rag, now, busyL, busyR)
 	if not st.alive and now - (st.deathT or now) < 0.25 then return end -- тело смерти только создано - пусть встанет
 	local s = HoldStrength(st, now)
 	for side, h in pairs(st.holds) do
-		local busy = (side == "L" and busyL) or (side == "R" and busyR)
+		local busy = (side == "L" and busyL) or (side == "R" and busyR) or (st.guard and st.alive)
 		if now > h.untilT or s <= 0.02 or (st.org and (now - h.start) > 0.5 and not WoundStillThere(st.org, h.w)) then
 			st.holds[side] = nil
 		elseif not busy then
@@ -155,7 +168,7 @@ local function ApplyHolds(st, rag, now, busyL, busyR)
 			if pos and hand and fore and upper and reach and not Floppy(rag, handN) then
 				-- как ручное зажатие Z-City: плечо, предплечье, кисть - каждое к своей точке перед раной
 				local fade = math.min((now - h.start) / 0.35, 1) -- рука тянется, а не прыгает
-				local k = s * fade * (st.alive and 1 or 0.6) -- мёртвое тело - мягче
+				local k = s * fade * (st.alive and 1 or 0.6) * Str() -- мёртвое тело - мягче
 				local function To(phys, off) local d = pos - phys:GetPos() return d:LengthSqr() > 0.01 and pos - d:GetNormalized() * off or pos end
 				hg.ShadowControl(rag, a.upper, 0.06, nil, nil, nil, To(upper, 14), 18 * k, 12 * k)
 				hg.ShadowControl(rag, a.fore, 0.06, nil, nil, nil, To(fore, 8), 55 * k, 14 * k)
@@ -196,11 +209,12 @@ local function BalanceStrength(st)
 	return s
 end
 
-local function StartBalance(st, rag, now)
+local function StartBalance(st, rag, now, moveVel)
 	if not cvStagger:GetBool() then return end
 	local pelvis, spine = Phys(rag, 0), Phys(rag, 1)
 	if not pelvis or not spine then return end
-	if pelvis:GetVelocity():Length() > 260 then return end -- отбросило (взрыв и т.п.) - сразу летит
+	local pv0 = pelvis:GetVelocity()
+	if math.abs(pv0.z) > 220 or Vector(pv0.x, pv0.y, 0):Length() > 450 then return end -- отбросило (взрыв и т.п.) - сразу летит
 	local gz = Ground(rag, st, pelvis:GetPos())
 	local h0 = gz and pelvis:GetPos().z - gz
 	if not h0 or h0 < 22 then return end -- не на ногах (лежит или в воздухе)
@@ -225,6 +239,16 @@ local function StartBalance(st, rag, now)
 	local pv = pelvis:GetVelocity()
 	pv.z = 0
 	if pv:Length() > 15 then st.bal.push = pv:GetNormalized() end
+	-- шёл/бежал, когда сбили: ещё идёт регдоллом по инерции (скорость игрока на момент падения или самого тела)
+	local mv = moveVel and Vector(moveVel.x, moveVel.y, 0) or vector_origin
+	if mv:Length() < pv:Length() then mv = pv end
+	local sp = mv:Length()
+	if sp > 50 then
+		-- убитый на ходу делает ещё шаг-другой
+		local walk = st.alive and math.Rand(1.2, 2.6) * math.Clamp(BalanceStrength(st), 0.5, 1) or math.Rand(0.5, 0.9)
+		st.bal.walk = {dir = mv / sp, speed = math.min(sp, 230), dur = walk}
+		st.bal.dur = math.max(st.bal.dur, walk + 0.8)
+	end
 end
 
 local LEGS = {{thigh = 8, calf = 9, side = 1}, {thigh = 11, calf = 12, side = -1}}
@@ -249,27 +273,40 @@ local function ApplyBalance(st, rag, now, dt)
 	-- сила: живой держится почти до конца и быстро сдаёт, мёртвый слабеет сразу
 	local k = st.alive and (t < 0.7 and 1 or 1 - (t - 0.7) / 0.3) * math.Clamp(BalanceStrength(st), 0.4, 1) or (1 - t) ^ 1.5
 	-- колени подкашиваются на мгновение - и снова выпрямляется
-	if st.alive and now >= b.nextBuckle then
+	if st.alive and now >= b.nextBuckle and not (b.walk and now - b.start < b.walk.dur) then
 		b.buckleUntil = now + math.Rand(0.2, 0.4)
 		b.nextBuckle = now + math.Rand(0.8, 1.8)
 	end
 	if now < b.buckleUntil then k = k * 0.25 end
 	if k <= 0.01 then return end
+	local kf = math.min(k * Str(), 2) -- общая сила (rem_reag_strength)
 
 	local g = physenv.GetGravity() * dt
 	-- противовес тяжести (верх сильнее низа) + таз тянется к прежней высоте
 	local lift = {[0] = 0.8, [1] = 0.95, [10] = 0.95, [8] = 0.55, [11] = 0.55, [9] = 0.35, [12] = 0.35}
 	for n, m in pairs(lift) do
 		local p = Phys(rag, n)
-		if p then p:AddVelocity(-g * m * k) end
+		if p then p:AddVelocity(-g * m * math.min(kf, 1)) end
 	end
 	local pv = pelvis:GetVelocity()
-	local wantZ = math.Clamp((b.h0 * 0.95 - h) * 7, -60, 110)
-	pelvis:AddVelocity(Vector(-pv.x * 0.04 * k, -pv.y * 0.04 * k, (wantZ - pv.z) * 0.3 * k))
+	local wantZ = math.Clamp((b.h0 * 0.95 - h) * 7, -60, 120)
+	-- идёт по инерции: тело тянет вперёд со скоростью шага (затухает), иначе гасим сползание
+	local w = b.walk
+	local tw = w and (now - b.start) / w.dur
+	local hx, hy = -pv.x * 0.04, -pv.y * 0.04
+	if tw and tw < 1 then
+		local want = w.dir * w.speed * (1 - tw * 0.7)
+		hx, hy = (want.x - pv.x) * 0.12, (want.y - pv.y) * 0.12
+		spine:AddVelocity(Vector(want.x - spine:GetVelocity().x, want.y - spine:GetVelocity().y, 0) * 0.08 * math.min(kf, 1.5))
+	else
+		tw = nil
+	end
+	pelvis:AddVelocity(Vector(hx * kf, hy * kf, (wantZ - pv.z) * math.min(0.3 * kf, 0.6)))
 
-	-- корпус и голова - вертикально
-	Align(spine, up, 5, 0.25 * k)
-	if head then Align(head, up, 4, 0.2 * k) end
+	-- корпус и голова - вертикально (при ходьбе - чуть вперёд, как при шаге)
+	local spineUp = tw and (up + w.dir * 0.18):GetNormalized() or up
+	Align(spine, spineUp, 5, math.min(0.25 * kf, 0.6))
+	if head then Align(head, up, 4, math.min(0.2 * kf, 0.5)) end
 
 	-- ноги под себя: бедро и голень смотрят вниз, чуть в сторону, куда клонится тело (ловит равновесие);
 	-- при движении ноги по очереди выносятся вперёд - спотыкающиеся шаги
@@ -282,18 +319,21 @@ local function ApplyBalance(st, rag, now, dt)
 	local right = spine:GetAngles():Right()
 	right.z = 0
 	if right:LengthSqr() > 0.01 then right:Normalize() end
-	b.stepPhase = b.stepPhase + dt * math.Clamp(speed / 12, 2, 9)
+	b.stepPhase = b.stepPhase + dt * math.Clamp(speed / 12, 2, tw and 11 or 9)
 	local org = st.org
 	for i, L in ipairs(LEGS) do
 		if not (org and org[i == 1 and "rlegamputated" or "llegamputated"]) then
 			local thigh, tn = Phys(rag, L.thigh)
 			local calf = Phys(rag, L.calf)
 			if thigh and calf and not Floppy(rag, tn) then
-				local swing = math.sin(b.stepPhase + (i - 1) * math.pi) * math.Clamp(speed / 120, 0, 0.35)
+				local swing = math.sin(b.stepPhase + (i - 1) * math.pi) * math.Clamp(speed / 120, 0, tw and 0.6 or 0.35)
 				local dir = -up + catchDir + right * (0.08 * L.side) + (speed > 1 and drift / speed or vector_origin) * swing
 				dir:Normalize()
-				Align(thigh, dir, 5, 0.3 * k)
-				Align(calf, (dir - up * 0.4):GetNormalized(), 5, 0.3 * k)
+				Align(thigh, dir, 5, math.min(0.3 * kf, 0.6))
+				-- голень: шагающая нога сгибается в колене (идёт назад), опорная - прямая
+				local knee = tw and math.max(-swing, 0) * 0.8 or 0
+				local cdir = (dir - up * 0.4) - (speed > 1 and drift / speed or vector_origin) * knee
+				Align(calf, cdir:GetNormalized(), 5, math.min(0.3 * kf, 0.6))
 			end
 		end
 	end
@@ -305,7 +345,7 @@ local function ApplyBalance(st, rag, now, dt)
 		v.z = 0
 		v = v:GetNormalized() * 35
 		if b.push and now - b.start < 0.6 then v = v + b.push * 60 end
-		spine:AddVelocity(v * k)
+		spine:AddVelocity(v * math.min(kf, 1.5))
 	end
 end
 
@@ -316,14 +356,14 @@ local function ApplyFlail(st, rag, now, busyL, busyR, coverArms)
 	local strength = st.alive and 1 or math.Clamp(1 - (now - (st.deathT or now)) / DEATH_FLAIL, 0, 1)
 	if strength <= 0 then return end
 	for i, f in ipairs(FLAIL) do
-		local skip = (org and org[f.amp]) or (f.arm == "L" and (busyL or coverArms or st.holds.L or st.grab.L))
-			or (f.arm == "R" and (busyR or coverArms or st.holds.R or st.grab.R))
+		local skip = (org and org[f.amp]) or (f.arm == "L" and (busyL or coverArms or st.holds.L or st.grab.L or st.guard))
+			or (f.arm == "R" and (busyR or coverArms or st.holds.R or st.grab.R or st.guard))
 		if not skip then
 			local p, num = Phys(rag, f.n)
 			if p and not Floppy(rag, num) then
 				local ph = st.flailPhase[i]
 				local w = 7 + ph * 3
-				local av = Vector(math.sin(t * w + ph * 6) * 0.35, math.sin(t * w * 0.8 + ph * 4) * 0.6, math.cos(t * w + ph * 9)) * f.a * strength
+				local av = Vector(math.sin(t * w + ph * 6) * 0.35, math.sin(t * w * 0.8 + ph * 4) * 0.6, math.cos(t * w + ph * 9)) * f.a * strength * Str()
 				p:AddAngleVelocity((av - p:GetAngleVelocity() * 0.25) * 0.12)
 			end
 		end
@@ -384,8 +424,94 @@ local function UpdateGrabs(st, rag, now, busyL, busyR)
 	end
 end
 
+-- ================= 5) закрывается от ударов =================
+-- перед/право/верх тела считаем по точкам (оси костей у разных моделей ведут себя по-разному)
+local function BodyFrame(rag)
+	local pelvis, spine, head = Phys(rag, 0), Phys(rag, 1), Phys(rag, 10)
+	local lu, ru = Phys(rag, 3), Phys(rag, 2)
+	if not (pelvis and spine and head and lu and ru) then return nil end
+	local up = head:GetPos() - pelvis:GetPos()
+	if up:LengthSqr() < 1 then return nil end
+	up:Normalize()
+	local right = ru:GetPos() - lu:GetPos()
+	right = right - up * right:Dot(up)
+	if right:LengthSqr() < 0.01 then return nil end
+	right:Normalize()
+	return up:Cross(right), right, up, pelvis, spine, head
+end
+
+local function StartGuard(st, now, dur)
+	if not cvGuard:GetBool() or not st.alive then return end
+	local untilT = now + (dur or math.Rand(2, 3.5))
+	if st.guard then st.guard.untilT = math.max(st.guard.untilT, untilT) return end
+	st.guard = {start = now, untilT = untilT}
+end
+
+local function ApplyGuard(st, rag, now, busyL, busyR)
+	local g = st.guard
+	if now > g.untilT or not st.alive then st.guard = nil return end
+	local org = st.org
+	local s = org and (org.otrub and 0.4 or math.Clamp(org.consciousness or 1, 0.5, 1)) or 1
+	local k = s * math.min((now - g.start) / 0.15, 1) * Str() -- руки взлетают к голове почти сразу
+	local f, r, u, pelvis, spine, head = BodyFrame(rag)
+	if not f then return end
+	local hp = head:GetPos()
+	-- руки: кисти на макушку/виски, предплечья перед лицом, плечи к груди
+	for side, a in pairs(ARM) do
+		local busy = (side == "L" and busyL) or (side == "R" and busyR)
+		if not busy and not (org and org[a.amp]) then
+			local sg = side == "R" and 1 or -1
+			local _, handN = Phys(rag, a.hand)
+			if not Floppy(rag, handN) then
+				hg.ShadowControl(rag, a.hand, 0.05, nil, nil, nil, hp + u * 4 + r * (3 * sg) + f * 3, 80 * k, 16 * k)
+				hg.ShadowControl(rag, a.fore, 0.05, nil, nil, nil, hp + f * 7 + r * (4 * sg) - u * 1, 80 * k, 16 * k)
+				hg.ShadowControl(rag, a.upper, 0.05, nil, nil, nil, spine:GetPos() + f * 6 + u * 4 + r * (7 * sg), 30 * k, 14 * k)
+			end
+		end
+	end
+	-- колени к груди (лёжа) - сжимается в комок
+	local pz = pelvis:GetPos()
+	local tr = util.TraceLine({start = pz, endpos = pz - Vector(0, 0, 30), filter = {rag, st.ply}, mask = MASK_SOLID})
+	if tr.Hit and not st.bal then
+		for i, L in ipairs({{calf = 9, amp = "rlegamputated", sg = 1}, {calf = 12, amp = "llegamputated", sg = -1}}) do
+			if not (org and org[L.amp]) then
+				hg.ShadowControl(rag, L.calf, 0.08, nil, nil, nil, pz + f * 14 - u * 2 + r * (4 * L.sg), 25 * k, 12 * k)
+			end
+		end
+	end
+end
+
+-- удар по человеку: кулаки/пинки - закрывается; тупое оружие - держится за место удара (по голове - закрывается)
+local function NearestPhys(rag, pos)
+	local best, bestD
+	for i = 0, rag:GetPhysicsObjectCount() - 1 do
+		local p = rag:GetPhysicsObjectNum(i)
+		if IsValid(p) then
+			local d = p:GetPos():DistToSqr(pos)
+			if not bestD or d < bestD then best, bestD = i, d end
+		end
+	end
+	return best
+end
+
+local function OnBlunt(rag, st, pos, hands, now)
+	local headN = select(2, Phys(rag, 10))
+	local n = pos and NearestPhys(rag, pos)
+	local onHead = n and n == headN
+	if hands or onHead then
+		StartGuard(st, now)
+		return
+	end
+	if not n or math.random(100) > cvHold:GetFloat() then return end
+	local p = rag:GetPhysicsObjectNum(n)
+	local b = rag:TranslatePhysBoneToBone(n)
+	local spot = {spot = true, phys = n, lpos = p:WorldToLocal(pos), bone = b and b >= 0 and rag:GetBoneName(b) or ""}
+	StartHold(st, rag, spot)
+	for _, h in pairs(st.holds) do if h.w == spot then h.untilT = now + math.Rand(2.5, 5) end end -- синяк - держится недолго
+end
+
 -- ================= учёт регдоллов =================
-local function Track(rag, ply, dead)
+local function Track(rag, ply, dead, moveVel)
 	if not IsValid(rag) or not rag:IsRagdoll() then return end
 	local now = CurTime()
 	local st = R[rag]
@@ -411,25 +537,57 @@ local function Track(rag, ply, dead)
 	if w and t > st.lastWound and now - t < WOUND_FRESH then
 		st.lastWound = t
 		-- пробует устоять, а свободной рукой - за рану (пока стоит - почти всегда)
-		if now - t < 1 then StartBalance(st, rag, now) end
+		if now - t < 1 then StartBalance(st, rag, now, moveVel) end
 		StartHold(st, rag, w, st.bal ~= nil and math.random() < 0.95)
+	elseif IsValid(ply) and ply.remReagHit and now - ply.remReagHit.t < 1 then
+		-- сбили без раны (кулак, пинок, дубинка) - тоже пробует устоять и закрывается / держится за ушиб
+		local hit = ply.remReagHit
+		ply.remReagHit = nil
+		StartBalance(st, rag, now, moveVel)
+		if not dead then OnBlunt(rag, st, hit.pos, hit.hands, now) end
 	elseif dead and not st.bal then
-		StartBalance(st, rag, now) -- умер стоя без раны (кровопотеря, сердце) - тоже оседает
+		StartBalance(st, rag, now, moveVel) -- умер стоя без раны (кровопотеря, сердце) - тоже оседает
 	end
 end
 
 hook.Add("Fake", "rem_reagdoll", function(ply, rag)
 	if not cvOn:GetBool() or not IsValid(ply) or not IsValid(rag) or ply:InVehicle() then return end
-	timer.Simple(0, function() if IsValid(rag) and IsValid(ply) then Track(rag, ply, false) end end)
+	local vel = ply:GetVelocity() -- шёл/бежал в момент падения - ещё пройдёт по инерции
+	timer.Simple(0, function() if IsValid(rag) and IsValid(ply) then Track(rag, ply, false, vel) end end)
 end)
 
 hook.Add("DoPlayerDeath", "rem_reagdoll", function(ply)
 	if not cvOn:GetBool() then return end
+	local vel = ply:GetVelocity()
 	timer.Simple(0, function()
 		if not IsValid(ply) then return end
 		local rag = IsValid(ply.RagdollDeath) and ply.RagdollDeath or ply:GetNWEntity("RagdollDeath")
-		if IsValid(rag) then Track(rag, ply, true) end
+		if IsValid(rag) then Track(rag, ply, true, vel) end
 	end)
+end)
+
+-- тупой удар (кулак, пинок, дубинка, бита): лежит - реагирует сразу; стоит - запоминаем, упадёт за 1 с - отреагирует
+hook.Add("PostEntityTakeDamage", "rem_reagdoll", function(target, dmg, took)
+	if not cvOn:GetBool() or not IsValid(target) or not dmg:IsDamageType(DMG_CLUB) then return end
+	local ply, rag
+	if target:IsPlayer() then
+		ply, rag = target, target.FakeRagdoll
+	elseif target:IsRagdoll() then
+		rag = target
+		ply = hg.RagdollOwner and hg.RagdollOwner(target) or nil
+	end
+	if not IsValid(ply) or not ply:Alive() then return end
+	local wep = dmg:GetInflictor()
+	local hands = IsValid(wep) and (HANDS[wep:GetClass()] or wep:IsPlayer()) or false
+	local pos = dmg:GetDamagePosition()
+	if pos == vector_origin then pos = nil end
+	local now = CurTime()
+	local st = IsValid(rag) and R[rag]
+	if st and st.alive then
+		OnBlunt(rag, st, pos, hands, now)
+	else
+		ply.remReagHit = {t = now, pos = pos, hands = hands}
+	end
 end)
 
 local lastThink = CurTime()
@@ -505,6 +663,7 @@ hook.Add("Think", "rem_reagdoll", function()
 
 		if st.bal then ApplyBalance(st, rag, now, dt) end
 		ApplyHolds(st, rag, now, busyL, busyR)
+		if st.guard then ApplyGuard(st, rag, now, busyL, busyR) end
 		local conscious = st.alive and not (st.org and st.org.otrub)
 		if cvFlail:GetBool() and st.air > 0.25 and (conscious or (not st.alive and now - (st.deathT or now) < DEATH_FLAIL)) then
 			ApplyFlail(st, rag, now, busyL, busyR, coverArms)
