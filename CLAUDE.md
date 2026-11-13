@@ -234,28 +234,4 @@
 - Совместимость с InfMap (бесконечные карты): `lua/autorun/!zcity_infmap.lua` + `lua/zcity_infmap/`, описание в `INFMAP.md`.
   Работает только на картах InfMap, выключается `zc_infmap 0`. Новое net-сообщение с позицией - дописать в списки
   `lua/zcity_infmap/sh_net.lua`.
-- ИИ-помощник Gemini AI (бесплатный API Google Gemini, ИИ пишет и выполняет серверный GLua): `lua/autorun/gemini_ai_init.lua`,
-  `lua/gemini_ai/` (sv_core - запросы и выполнение кода, sv_commands - команды gemini_ai_* и !ai, cl_chat - окно и вкладка Q,
-  cl_settings - Q -> Утилиты -> Gemini AI), энтити `gemini_ai_terminal` (Q -> Энтити -> Gemini AI, E - открыть чат).
-  Ключ - только на сервере, `data/gemini_ai/config.json` (gemini_ai_setkey), лог кода - `data/gemini_ai/log.txt`.
-  Связка с рекосом - `lua/gemini_ai/sv_compat_remorse.lua`: организм в контексте ИИ, помощники AI.Heal (hg.organism.Clear),
-  AI.Ragdoll/GetUp (hg.Fake/FakeUp), AI.Stun, AI.Vomit, AI.Org, AI.Give. Чат: команды ловятся в HG_PlayerSay (ZChat) и
-  глушатся в PlayerSay (ply.GeminiAI_Suppress), иначе !aikey с ключом ушёл бы в общий чат. Права: GeminiAI.Chat/Execute/Admin
-  (CAMI, без него - superadmin). Описание и все команды - `GEMINI_AI.md`.
-  ИИ-персонажи (`lua/gemini_ai/sv_character.lua`, окно `cl_character.lua`, энтити-спавнер `gemini_ai_character`):
-  бот player.CreateNextBot + bot.GeminiChar. Мозг - таймер GeminiAI_CharBrain: восприятие (Perception: своё состояние
-  по организму, кто рядом и виден, оружие на земле, услышанное, события, [РЕЖИССЁР]-приказы) -> Gemini (своя схема
-  {say, action, target, thought}, модель gemini_ai_char_model, общий лимит char_rpm) -> ApplyDecision. Тело - StartCommand:
-  A* по навмешу (без навмеша - по прямой), атака держит IN_ATTACK2 (оружие homigrad без прицеливания не стреляет),
-  из регдолла встаёт hg.FakeUp. Речь - hook.Run("PlayerSay", bot) (ZChat подписывает именем) или bot:Say; ведущие !/. срезаются.
-  Слух - HG_PlayerSay + PlayerSay (дубли отсекаются), ИИ-соседи будят друг друга только по имени (иначе бесконечная болтовня).
-  Реальное время: opts.fast в GeminiAI.Request - thinkingConfig.thinkingBudget = 0 (модель без размышлений). На любой 400
-  (кроме ключа/региона) запрос упрощается и повторяется: GeminiAI.ModelLevel[model] 1 - без fast, 2 - ещё и без
-  responseSchema (JSON по инструкции); ответ Google пишется в консоль сервера. Проверка пути персонажей: gemini_ai_test char. Wake(char, delay): обращение (имя / смотрит на бота / ближе 350)
-  - мысль сразу; занят - char.pending, после ответа думает снова. Облачка над головой и «...» - NW2 GeminiSay/GeminiSayTime/
-  GeminiThinking/GeminiChar, рисует HUDPaint "GeminiAI_CharBubbles" в cl_character.lua.
-  Провайдеры (gemini_ai_provider): gemini / deepseek / custom (OpenAI-совместимый: OpenRouter, Ollama...). GeminiAI.Request
-  выбирает RequestGemini или RequestOpenAI (sv_core.lua); у OpenAI-формата схема ответа уходит текстом (SchemaHint) +
-  response_format json_object (на 400 - повтор без него), <think> и ``` вырезаются в ParseJSONText. Ключи - API_KEYS[провайдер]
-  в config.json (keys), старый key переносится в gemini. Модель - GeminiAI.ActiveModel(forChar) (sh_shared): у Gemini
-  model/char_model, у DeepSeek ds_model, у custom custom_model; в запросах персонажей opts.char = true, не модель.
+- ИИ-помощник Gemini AI (lua/gemini_ai, энтити gemini_ai_terminal / gemini_ai_character, GEMINI_AI.md) - убран из сборки по просьбе.
