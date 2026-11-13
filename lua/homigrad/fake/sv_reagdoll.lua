@@ -175,6 +175,14 @@ local function Controlling(st, now)
 	return now < (st.ctrlUntil or 0)
 end
 
+-- игрок сам двигает телом (ползёт, катается, прыгает)
+local MOVE_KEYS = {IN_FORWARD, IN_BACK, IN_MOVELEFT, IN_MOVERIGHT, IN_JUMP, IN_DUCK, IN_SPEED}
+local function Moving(ply)
+	if not IsValid(ply) then return false end
+	for _, k in ipairs(MOVE_KEYS) do if ply:KeyDown(k) then return true end end
+	return false
+end
+
 -- ================= 1) хватается за рану =================
 local function StartHold(st, rag, w, forced)
 	if not forced and math.random(100) > cvHold:GetFloat() then return end
@@ -366,6 +374,10 @@ local function ApplyBalance(st, rag, now, dt)
 	local w = b.walk
 	local tw = w and (now - b.start) / w.dur
 	local hx, hy = -pv.x * 0.04, -pv.y * 0.04
+	-- игрок сам двигает телом (WASD и т.п.) - по горизонтали не держим и не ведём, только вес и выпрямление
+	local pl = st.alive and st.ply
+	local steering = IsValid(pl) and (pl:KeyDown(IN_FORWARD) or pl:KeyDown(IN_BACK) or pl:KeyDown(IN_MOVELEFT) or pl:KeyDown(IN_MOVERIGHT))
+	if steering then hx, hy, tw = 0, 0, nil end
 	if tw and tw < 1 then
 		local want = w.dir * w.speed * (1 - tw * 0.7)
 		hx, hy = (want.x - pv.x) * 0.12, (want.y - pv.y) * 0.12
@@ -598,7 +610,7 @@ local function ApplyFireShock(st, rag, now, dt, ply, ctrl)
 	local org = st.org
 	local burning = rag:IsOnFire() or (IsValid(ply) and ply:IsOnFire()) or now < (st.burnUntil or 0)
 	if burning and cvFire:GetBool() and not (org and org.otrub) then
-		local busy = ctrl
+		local busy = ctrl or Moving(ply)
 		local f, r, u, pelvis, spine = BodyFrame(rag)
 		if f and not busy then
 			if not st.roll or now > st.roll.untilT then
@@ -759,15 +771,14 @@ hook.Add("PostEntityTakeDamage", "rem_reagdoll", function(target, dmg)
 	OnClubHit(target, ply, dmg)
 end)
 
--- пока идёт реакция: все кнопки, кроме E (наклон корпуса и голова в регдолле Z-City) и мыши (камера), не доходят до
--- управления регдоллом - иначе руки/ноги и ползание перебивали реакцию
-local LOCK_KEYS = bit.bor(IN_ATTACK, IN_ATTACK2, IN_FORWARD, IN_BACK, IN_MOVELEFT, IN_MOVERIGHT, IN_JUMP, IN_DUCK, IN_SPEED, IN_WALK, IN_RELOAD)
+-- пока идёт реакция: руки - у реакции (ЛКМ/ПКМ/R не доходят до управления регдоллом, иначе перебивали рану/блок);
+-- телом игрок двигает сам: WASD (ползёт, перекатывается), прыжок, присед, бег, E (наклон и голова), мышь
+local LOCK_KEYS = bit.bor(IN_ATTACK, IN_ATTACK2, IN_RELOAD)
 hook.Add("StartCommand", "rem_reagdoll_lock", function(ply, cmd)
 	if (ply.remReagLockUntil or 0) < CurTime() or not IsValid(ply.FakeRagdoll) then return end
 	cmd:RemoveKey(LOCK_KEYS)
-	cmd:SetForwardMove(0)
-	cmd:SetSideMove(0)
 end)
+
 
 local lastThink = CurTime()
 hook.Add("Think", "rem_reagdoll", function()
