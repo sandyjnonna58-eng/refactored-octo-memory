@@ -19,7 +19,7 @@ local cvVariety = CreateConVar("rem_reag_variety", "1", FCVAR_ARCHIVE, "Each per
 local cvFire = CreateConVar("rem_reag_fire", "1", FCVAR_ARCHIVE, "Roll on the ground when burning, convulse from electric shock", 0, 1)
 local cvEpi = CreateConVar("rem_reag_epilepsy_chance", "100", FCVAR_ARCHIVE, "Chance (%) that an electric shock starts an epileptic seizure", 0, 100)
 local cvYield = CreateConVar("rem_reag_yield", "0", FCVAR_ARCHIVE, "Reactions give the ragdoll back while the player presses any control key (off: reaction keeps the body)", 0, 1)
-local cvLock = CreateConVar("rem_reag_lock", "1", FCVAR_ARCHIVE, "While a reaction plays the player can only lean (E) and move the head; other keys are blocked", 0, 1)
+local cvLock = CreateConVar("rem_reag_lock", "1", FCVAR_ARCHIVE, "E (lean/head) does not take the hands away from a reaction (wound hold, block)", 0, 1)
 local cvGuard = CreateConVar("rem_reag_guard", "1", FCVAR_ARCHIVE, "Cover the head when beaten with fists/kicks", 0, 1)
 local cvStand = CreateConVar("rem_reag_stand_time", "1", FCVAR_ARCHIVE, "Multiplier for how long a shot person tries to stay on feet", 0, 5)
 local cvGrab = CreateConVar("rem_reag_grab", "1", FCVAR_ARCHIVE, "Grab walls/ledges with a hand while falling", 0, 1)
@@ -220,11 +220,35 @@ local function HoldStrength(st, now)
 	return math.Clamp(org.consciousness or 1, 0.4, 1)
 end
 
+-- отпустил руку (была у игрока, стала свободной) - если есть кровоточащая рана (до 2 мин), рука сама её зажимает
+local function ReturnToWound(st, rag, now, busyL, busyR)
+	if not st.alive or not st.org then return end
+	for side, busy in pairs({L = busyL, R = busyR}) do
+		local was = st.prevBusy and st.prevBusy[side]
+		if was and not busy and not st.holds[side] and not st.org[ARM[side].amp] then
+			local w, t = NewestWound(st.org)
+			local bone = w and WoundBoneName(rag, w) or ""
+			local ownArm = (side == "L" and LEFT_ARM[bone]) or (side == "R" and RIGHT_ARM[bone])
+			if w and now - t < 120 and not ownArm then
+				st.holds[side] = {w = w, untilT = now + math.Rand(4, 10), start = now}
+				Dbg("hand back to wound", side, bone)
+			end
+		end
+	end
+	st.prevBusy = st.prevBusy or {}
+	st.prevBusy.L, st.prevBusy.R = busyL, busyR
+end
+
 local function ApplyHolds(st, rag, now, busyL, busyR)
 	if not st.alive and now - (st.deathT or now) < 0.25 then return end -- тело смерти только создано - пусть встанет
 	local s = HoldStrength(st, now)
 	for side, h in pairs(st.holds) do
 		local busy = (side == "L" and busyL) or (side == "R" and busyR) or (st.guard and st.alive)
+		if busy and st.alive then
+			-- рука у игрока (вытянул, держит оружие) - время держания стоит, после отпускания рука плавно вернётся
+			h.untilT = h.untilT + FrameTime()
+			h.start = now
+		end
 		if now > h.untilT or s <= 0.02 or (st.org and (now - h.start) > 0.5 and not WoundStillThere(st.org, h.w)) then
 			st.holds[side] = nil
 		elseif not busy then
@@ -777,16 +801,8 @@ hook.Add("PostEntityTakeDamage", "rem_reagdoll", function(target, dmg)
 	OnClubHit(target, ply, dmg)
 end)
 
--- пока идёт реакция: пустые руки - у реакции (ЛКМ/ПКМ/R не доходят до хватания руками Z-City, иначе перебивали
--- рану/блок); с оружием или лекарством в руках ничего не глушим - стрелять, целиться, перезаряжаться, колоть/бинтовать
--- можно. Телом игрок двигает сам: WASD (ползёт, перекатывается), прыжок, присед, бег, E (наклон и голова), мышь
-local LOCK_KEYS = bit.bor(IN_ATTACK, IN_ATTACK2, IN_RELOAD)
-hook.Add("StartCommand", "rem_reagdoll_lock", function(ply, cmd)
-	if (ply.remReagLockUntil or 0) < CurTime() or not IsValid(ply.FakeRagdoll) then return end
-	local wep = ply:GetActiveWeapon()
-	if IsValid(wep) and not HANDS[wep:GetClass()] then return end -- оружие / лекарство - не мешаем
-	cmd:RemoveKey(LOCK_KEYS)
-end)
+-- кнопки рук во время реакции больше не глушим: игрок может вытянуть руки (ЛКМ/ПКМ - хватание Z-City), стрелять,
+-- лечиться; отпустил - рука возвращается зажимать рану (ApplyHolds: пока рука у игрока, держание на паузе)
 
 
 local lastThink = CurTime()
@@ -869,6 +885,7 @@ hook.Add("Think", "rem_reagdoll", function()
 		if st.alive then ApplyFireShock(st, rag, now, dt, ply, ctrl) end
 		if not ctrl then
 			if st.bal then ApplyBalance(st, rag, now, dt) end
+			ReturnToWound(st, rag, now, busyL, busyR)
 			ApplyHolds(st, rag, now, busyL, busyR)
 			if st.guard then ApplyGuard(st, rag, now, busyL, busyR) end
 			local conscious = st.alive and not (st.org and st.org.otrub)
@@ -881,13 +898,5 @@ hook.Add("Think", "rem_reagdoll", function()
 			if st.guard and now > st.guard.untilT then st.guard = nil end
 		end
 		UpdateGrabs(st, rag, now, busyL or ctrl, busyR or ctrl)
-
-		-- реакция идёт - управление не перехватывается: остаются только наклон (E) и голова (StartCommand ниже)
-		if st.alive and IsValid(ply) and cvLock:GetBool() then
-			local seizing = st.org and st.org.seizureActive and (st.org.seizureEnd or 0) > now
-			if st.bal or st.guard or next(st.holds) or st.air > 0.25 or st.roll or seizing then
-				ply.remReagLockUntil = now + 0.15
-			end
-		end
 	end
 end)
