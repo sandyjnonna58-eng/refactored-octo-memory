@@ -16,6 +16,7 @@ local cvStagger = CreateConVar("rem_reag_stagger", "1", FCVAR_ARCHIVE, "Stagger 
 local cvFlail = CreateConVar("rem_reag_flail", "1", FCVAR_ARCHIVE, "Flail limbs while flying/falling", 0, 1)
 local cvStrength = CreateConVar("rem_reag_strength", "1.35", FCVAR_ARCHIVE, "Strength multiplier for ragdoll reactions", 0.2, 3)
 local cvVariety = CreateConVar("rem_reag_variety", "1", FCVAR_ARCHIVE, "Each person gets own reaction strength (weak / normal / very strong)", 0, 1)
+local cvFire = CreateConVar("rem_reag_fire", "1", FCVAR_ARCHIVE, "Roll on the ground when burning, convulse from electric shock", 0, 1)
 local cvGuard = CreateConVar("rem_reag_guard", "1", FCVAR_ARCHIVE, "Cover the head when beaten with fists/kicks", 0, 1)
 local cvStand = CreateConVar("rem_reag_stand_time", "1", FCVAR_ARCHIVE, "Multiplier for how long a shot person tries to stay on feet", 0, 5)
 local cvGrab = CreateConVar("rem_reag_grab", "1", FCVAR_ARCHIVE, "Grab walls/ledges with a hand while falling", 0, 1)
@@ -474,11 +475,11 @@ local function BodyFrame(rag)
 	return up:Cross(right), right, up, pelvis, spine, head
 end
 
-local function StartGuard(st, now, dur)
+local function StartGuard(st, now, dur, block)
 	if not cvGuard:GetBool() or not st.alive then return end
-	local untilT = now + (dur or math.Rand(2, 3.5))
+	local untilT = now + (dur or math.Rand(1.2, 2))
 	if st.guard then st.guard.untilT = math.max(st.guard.untilT, untilT) return end
-	st.guard = {start = now, untilT = untilT}
+	st.guard = {start = now, untilT = untilT, block = block}
 end
 
 local function ApplyGuard(st, rag, now, busyL, busyR)
@@ -486,20 +487,20 @@ local function ApplyGuard(st, rag, now, busyL, busyR)
 	if now > g.untilT or not st.alive then st.guard = nil return end
 	local org = st.org
 	local s = org and (org.otrub and 0.4 or math.Clamp(org.consciousness or 1, 0.5, 1)) or 1
-	local k = s * math.min((now - g.start) / 0.15, 1) * Str(st) -- руки взлетают к голове почти сразу
+	local k = s * math.min((now - g.start) / 0.06, 1) * Str(st) -- рывком, как блок
 	local f, r, u, pelvis, spine, head = BodyFrame(rag)
 	if not f then return end
 	local hp = head:GetPos()
-	-- руки: кисти на макушку/виски, предплечья перед лицом, плечи к груди
+	-- блок: предплечья скрещены перед лицом, кисти у лба/висков, локти вперёд, плечи к груди
 	for side, a in pairs(ARM) do
 		local busy = (side == "L" and busyL) or (side == "R" and busyR)
 		if not busy and not (org and org[a.amp]) then
 			local sg = side == "R" and 1 or -1
 			local _, handN = Phys(rag, a.hand)
 			if not Floppy(rag, handN) then
-				Shadow(rag, a.hand, hp + u * 4 + r * (3 * sg) + f * 3, 90 * k, 16 * k)
-				Shadow(rag, a.fore, hp + f * 7 + r * (4 * sg) - u * 1, 90 * k, 16 * k)
-				Shadow(rag, a.upper, spine:GetPos() + f * 6 + u * 4 + r * (7 * sg), 35 * k, 14 * k)
+				Shadow(rag, a.hand, hp + u * 3 - r * (2 * sg) + f * 6, 150 * k, 20 * k)
+				Shadow(rag, a.fore, hp + f * 9 + r * (3 * sg) - u * 2, 150 * k, 20 * k)
+				Shadow(rag, a.upper, spine:GetPos() + f * 7 + u * 4 + r * (7 * sg), 45 * k, 16 * k)
 			end
 		end
 	end
@@ -515,31 +516,34 @@ local function ApplyGuard(st, rag, now, busyL, busyR)
 	end
 end
 
--- замахиваются / пинают / целятся в упор - прикрывается руками заранее (лёжа, в сознании)
-local function ThreatNear(st, rag)
-	local head = Phys(rag, 10)
-	if not head then return false end
-	local hp = head:GetPos()
-	for _, att in ipairs(player.GetAll()) do
-		if att ~= st.ply and att:Alive() and not IsValid(att.FakeRagdoll) then
-			local eye = att:EyePos()
-			local d = eye:Distance(hp)
-			if d < 260 then
-				local aim = att:GetAimVector():Dot((hp - eye):GetNormalized())
-				local wep = att:GetActiveWeapon()
-				local melee = IsValid(wep) and (HANDS[wep:GetClass()] or wep.ismelee)
-				local kicking = att:GetNWFloat("InLegKick", 0) > CurTime()
-				local attacking = att:KeyDown(IN_ATTACK) or att:KeyDown(IN_ATTACK2)
-				-- кулак/нож/бита рядом и смотрит на него (замах или удар), пинок рядом, ствол в упор
-				if (d < 110 and kicking) or (d < 120 and melee and aim > 0.7 and attacking)
-					or (d < 200 and IsValid(wep) and not melee and ishgweapon and ishgweapon(wep) and aim > 0.97) then
-					return true
+-- блок: в момент замаха (ЛКМ/ПКМ с кулаками/холодным) или пинка рядом - руки рывком встают перед лицом, коротко.
+-- Только на сам удар - пока просто стоят рядом, не закрывается
+local function BlockNear(att, now)
+	if not cvGuard:GetBool() then return end
+	local eye = att:EyePos()
+	local aimv = att:GetAimVector()
+	for rag, st in pairs(R) do
+		if IsValid(rag) and st.alive and st.ply ~= att and not (st.org and st.org.otrub) then
+			local head = Phys(rag, 10)
+			local spine = Phys(rag, 1)
+			if head and spine then
+				local c = (head:GetPos() + spine:GetPos()) * 0.5
+				local d = eye:Distance(c)
+				if d < 140 and aimv:Dot((c - eye):GetNormalized()) > 0.55 then
+					StartGuard(st, now, math.Rand(0.55, 0.85), true)
+					Dbg("block (swing)", tostring(rag))
 				end
 			end
 		end
 	end
-	return false
 end
+
+hook.Add("KeyPress", "rem_reagdoll_block", function(att, key)
+	if not cvOn:GetBool() or (key ~= IN_ATTACK and key ~= IN_ATTACK2) or not att:Alive() or IsValid(att.FakeRagdoll) then return end
+	local wep = att:GetActiveWeapon()
+	if not (IsValid(wep) and (HANDS[wep:GetClass()] or wep.ismelee)) then return end
+	BlockNear(att, CurTime())
+end)
 
 -- удар по человеку: кулаки/пинки - закрывается; тупое оружие - держится за место удара (по голове - закрывается)
 local function NearestPhys(rag, pos)
@@ -572,13 +576,72 @@ local function OnBlunt(rag, st, pos, hands, now)
 	for _, h in pairs(st.holds) do if h.w == spot then h.untilT = now + math.Rand(2.5, 5) end end -- синяк - держится недолго
 end
 
+-- ================= 7) огонь и ток =================
+-- горит (ragdoll:IsOnFire / урон огнём) - катается по земле вдоль оси тела, меняя сторону, руками сбивает пламя с груди,
+-- ноги дёргаются; игрок сам катается A/D - не мешаем. Ток (DMG_SHOCK) - судороги 2..4 с.
+local LIMBS = {2, 3, 4, 6, 8, 9, 11, 12, 10}
+local function ApplyFireShock(st, rag, now, dt, ply)
+	local org = st.org
+	local burning = rag:IsOnFire() or (IsValid(ply) and ply:IsOnFire()) or now < (st.burnUntil or 0)
+	if burning and cvFire:GetBool() and not (org and org.otrub) then
+		local busy = IsValid(ply) and (ply:KeyDown(IN_MOVELEFT) or ply:KeyDown(IN_MOVERIGHT))
+		local f, r, u, pelvis, spine = BodyFrame(rag)
+		if f and not busy then
+			if not st.roll or now > st.roll.untilT then
+				st.roll = {dir = (st.roll and -st.roll.dir) or (math.random(2) == 1 and 1 or -1), untilT = now + math.Rand(0.9, 1.6)}
+			end
+			local k = math.min(Str(st), 2.5)
+			local spin = u * (st.roll.dir * 260 * k) -- вокруг оси тела - перекат
+			for _, p in ipairs({pelvis, spine}) do
+				p:AddAngleVelocity((p:WorldToLocalVector(spin) - p:GetAngleVelocity()) * 0.08)
+				p:AddVelocity(r * (st.roll.dir * 22 * k * dt * 10))
+			end
+			-- руки хлопают по груди, ноги дёргаются
+			local t = now * 9
+			local bL, bR = BusyHands(st, rag)
+			if not bL and not (org and org.larmamputated) then Shadow(rag, 5, spine:GetPos() + f * (6 + math.sin(t) * 4) - r * 3, 90 * k, 14 * k) end
+			if not bR and not (org and org.rarmamputated) then Shadow(rag, 7, spine:GetPos() + f * (6 + math.cos(t) * 4) + r * 3, 90 * k, 14 * k) end
+			for _, n in ipairs({9, 12}) do
+				local p = Phys(rag, n)
+				if p then p:AddAngleVelocity(VectorRand(-1, 1) * 220 * k * dt * 10) end
+			end
+		end
+	else
+		st.roll = nil
+	end
+	if now < (st.shockUntil or 0) then
+		local left = st.shockUntil - now
+		local k = math.min(Str(st), 2.5) * math.Clamp(left / 1.5, 0.3, 1)
+		for _, n in ipairs(LIMBS) do
+			local p = Phys(rag, n)
+			if p and math.random() < 0.6 then p:AddAngleVelocity(VectorRand(-1, 1) * 900 * k * dt * 10) end
+		end
+		local spine = Phys(rag, 1)
+		if spine and math.random() < 0.15 then spine:AddVelocity(VectorRand(-1, 1) * 40 * k) end
+	end
+end
+
+-- огонь и ток ловим отдельно: урон огнём по игроку в регдолле Z-City глушит раньше HomigradDamage
+hook.Add("EntityTakeDamage", "rem_reagdoll_fire", function(target, dmg)
+	if not cvOn:GetBool() or not IsValid(target) or not dmg:IsDamageType(DMG_BURN + DMG_SHOCK) then return end
+	local rag = target:IsRagdoll() and target or (target:IsPlayer() and target.FakeRagdoll) or nil
+	local st = IsValid(rag) and R[rag]
+	if not st or not st.alive then return end
+	local now = CurTime()
+	if dmg:IsDamageType(DMG_BURN) then st.burnUntil = now + 1.5 end
+	if dmg:IsDamageType(DMG_SHOCK) then
+		if now > (st.shockUntil or 0) then Dbg("shock", tostring(rag)) end
+		st.shockUntil = math.max(st.shockUntil or 0, now + math.Rand(2, 4))
+	end
+end)
+
 -- ================= учёт регдоллов =================
 local function Track(rag, ply, dead, moveVel)
 	if not IsValid(rag) or not rag:IsRagdoll() then return end
 	local now = CurTime()
 	local st = R[rag]
 	if not st then
-		st = {ply = ply, holds = {}, grab = {}, grabNext = {}, air = 0, lastWound = 0, flailPhase = {}, nextThreat = 0}
+		st = {ply = ply, holds = {}, grab = {}, grabNext = {}, air = 0, lastWound = 0, flailPhase = {}}
 		-- характер тела - на всю жизнь человека (каждое падение чуть по-разному)
 		local base = IsValid(ply) and ply.remReagMul
 		if not base then
@@ -688,6 +751,16 @@ hook.Add("Think", "rem_reagdoll", function()
 		end
 		return
 	end
+	-- начало пинка - блок у тех, по кому целится
+	if next(R) then
+		for _, att in ipairs(player.GetAll()) do
+			local kick = att:GetNWFloat("InLegKick", 0)
+			if kick > now and att.remReagKick ~= kick then
+				att.remReagKick = kick
+				BlockNear(att, now)
+			end
+		end
+	end
 	for rag, st in pairs(R) do
 		local ply = st.ply
 		if not IsValid(rag) then
@@ -747,14 +820,8 @@ hook.Add("Think", "rem_reagdoll", function()
 			end
 		end
 
-		-- угроза рядом - прикрывается руками (проверка 5 раз в секунду)
-		if st.alive and now >= st.nextThreat and not (st.org and st.org.otrub) and cvGuard:GetBool() then
-			st.nextThreat = now + 0.2
-			if ThreatNear(st, rag) then
-				if not st.guard then Dbg("guard: threat near", tostring(rag)) end
-				StartGuard(st, now, 0.9)
-			end
-		end
+		-- горит - катается, бьют током - судороги
+		if st.alive then ApplyFireShock(st, rag, now, dt, ply) end
 		if st.bal then ApplyBalance(st, rag, now, dt) end
 		ApplyHolds(st, rag, now, busyL, busyR)
 		if st.guard then ApplyGuard(st, rag, now, busyL, busyR) end
