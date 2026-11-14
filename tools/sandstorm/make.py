@@ -26,7 +26,8 @@ def mat_cols(f, l, u): return [[f[0], l[0], u[0]], [f[1], l[1], u[1]], [f[2], l[
 def mm(A, B): return [[sum(A[i][k]*B[k][j] for k in range(3)) for j in range(3)] for i in range(3)]
 def tr(A): return [[A[j][i] for j in range(3)] for i in range(3)]
 def mv(A, v): return [dot(A[i], v) for i in range(3)]
-RX = [[1, 0, 0], [0, -1, 0], [0, 0, -1]]  # поворот на 180 вокруг оси вперёд (так делает homigrad_base)
+RX = [[1, 0, 0], [0, -1, 0], [0, 0, -1]]
+YAW_FIX = 90  # см. ниже: подобрано в игре на SG 552 (rem_sand_tune 0 -91 0)  # поворот на 180 вокруг оси вперёд (так делает homigrad_base)
 
 def angles(M):
     # матрица (столбцы: вперёд, влево, вверх) -> Angle(pitch, yaw, roll) движка Source
@@ -270,6 +271,10 @@ for name, s in sorted(src_by.items()):
     # WorldAng: модель повернуть так, чтобы M * R = прицел;  M = прицел * RX * W * RX  ->  W = RX * R^-1 * RX
     W = mm(mm(RX, tr(R)), RX)
     wang = angles(W)
+    # проверка в игре (SG 552, rem_sand_tune): модель вышла повёрнутой на 90 градусов вбок (дулом вправо) - в цепочке
+    # sh_worldmodel.lua есть ещё четверть оборота, которую формула не учитывает; добавка -90 к рысканию WorldAng (оно
+    # внешнее, значит это поворот всей модели) ставит ствол вперёд
+    wang[1] = round((wang[1] - YAW_FIX + 180) % 360 - 180, 3)
     # WorldPos: кисть - как у шаблона по длине, ствол - на той же высоте и сбоку, что у шаблона
     wpos = [T["W"][0], T["W"][1] - T["M"][1] + m[1], T["W"][2] - T["M"][2] + m[2]]
     mang = angles(R)
