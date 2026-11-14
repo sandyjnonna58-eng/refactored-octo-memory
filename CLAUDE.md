@@ -52,6 +52,8 @@
 - Таймер смерти «вихрь» (84 с, ничего не вращается, медленно растёт): `lua/homigrad/vortexdeath/`. Запускается (sv_organism.lua,
   `dying`) только без сознания и если: сердце стоит, крови < death_blood (2500) или мозг теряет клетки (повреждение само
   растёт >= death_brain_rate 0.15%/с уже death_brain_hold 2 с; скачки от попаданий не в счёт); тогда же incapacitated. Позвоночник/трахея и т.п. - только incapacitated, без таймера.
+- Начало раунда Homicide: звук `sound/rem_homicide.mp3` (10.5 с, доигрывает сам), экран роли закрывается на 7-й секунде
+  (HMCD_ScreenDuration в `gamemodes/zcity/gamemode/modes/homicide/cl_homicide.lua`; rem_newroundcommence.mp3 остался только в радио).
 - Экран смерти и выбор звука смерти (`rem_deathsound` 0 - rem_brutaldeath.mp3, 1 - остановка сердца rem_heartstop.ogg;
   Gameplay -> «Death sound: heart stop»; старый rem_deathost.mp3 убран по просьбе):
   `lua/autorun/client/cl_cdeath.lua`, настройки - `lua/initpost/menu-n-derma/derma/cl_menu_options.lua`.

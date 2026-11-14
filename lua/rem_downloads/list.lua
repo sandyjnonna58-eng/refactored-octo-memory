@@ -523,6 +523,7 @@ return {
 	"sound/rem_heartstop.ogg",
 	"sound/rem_heartstop.wav",
 	"sound/rem_heartstopuncon.wav",
+	"sound/rem_homicide.mp3",
 	"sound/rem_laststand.mp3",
 	"sound/rem_letitgo.mp3",
 	"sound/rem_levelup.mp3",

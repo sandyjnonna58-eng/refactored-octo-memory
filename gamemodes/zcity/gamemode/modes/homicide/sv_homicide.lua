@@ -1,4 +1,5 @@
 local MODE = MODE
+resource.AddSingleFile("sound/rem_homicide.mp3") -- звук начала раунда (cl_homicide.lua)
 MODE.start_time = 1
 MODE.end_time = 7
  

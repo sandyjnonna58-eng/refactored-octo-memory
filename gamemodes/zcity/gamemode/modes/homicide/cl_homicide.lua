@@ -11,7 +11,10 @@ MODE.TypeSounds = {
 	["standard"] = {"snd_jack_hmcd_psycho.mp3","snd_jack_hmcd_shining.mp3"},
 }
 local fade = 0
-local HMCD_ScreenDuration = 10
+-- экран роли в начале раунда закрывается на 7-й секунде - под звук rem_homicide.mp3 (10.5 с),
+-- сам звук доигрывает до конца и после экрана
+local HMCD_ScreenDuration = 7
+local HMCD_RoundSound = "rem_homicide.mp3"
 local hmcd_show_associates
 local hmcd_clear_associates
 net.Receive("HMCD_RoundStart",function()
@@ -94,7 +97,7 @@ net.Receive("HMCD_RoundStart",function()
 			MODE.RoundBeginSound = nil
 		end
 
-		MODE.RoundBeginSound = CreateSound(LocalPlayer(), "rem_newroundcommence.mp3")
+		MODE.RoundBeginSound = CreateSound(LocalPlayer(), HMCD_RoundSound)
 		MODE.RoundBeginSound:PlayEx(1, 100)
 	end
 
@@ -426,11 +429,7 @@ function MODE:HUDPaint()
 
 	local t = CurTime() - StartTime
 	if t > HMCD_ScreenDuration then
-		if MODE.RoundBeginSound then
-			MODE.RoundBeginSound:Stop()
-			MODE.RoundBeginSound = nil
-		end
-
+		-- звук не глушим: он короткий и доигрывает сам (остановит следующий раунд)
 		hmcd_clear_associates()
 
 		return
@@ -438,9 +437,6 @@ function MODE:HUDPaint()
 
 	local out_fade = math.Clamp((HMCD_ScreenDuration - t) / 1.5, 0, 1)
 
-	if MODE.RoundBeginSound then
-		MODE.RoundBeginSound:ChangeVolume(out_fade, 0)
-	end
 
 	MODE.CursorLerpX = Lerp(FrameTime() * 6, MODE.CursorLerpX or 0, (gui.MouseX() - sw * 0.5) / (sw * 0.5))
 	MODE.CursorLerpY = Lerp(FrameTime() * 6, MODE.CursorLerpY or 0, (gui.MouseY() - sh * 0.5) / (sh * 0.5))
