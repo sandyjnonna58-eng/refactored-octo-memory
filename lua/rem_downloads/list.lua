@@ -512,6 +512,7 @@ return {
 	"sound/rem_aftermath.mp3",
 	"sound/rem_appearencemenu.mp3",
 	"sound/rem_braindeath.mp3",
+	"sound/rem_brutaldeath.mp3",
 	"sound/rem_death_cfyt.ogg",
 	"sound/rem_deathost.mp3",
 	"sound/rem_drugs/snort.wav",
