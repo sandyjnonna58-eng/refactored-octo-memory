@@ -2,7 +2,8 @@ if not SERVER then return end
 
 resource.AddSingleFile("sound/rem_deathost.mp3") -- звук экрана смерти (cl_cdeath.lua)
 resource.AddSingleFile("sound/rem_oneandonly.mp3") -- он же, если умер в последние моменты
-resource.AddSingleFile("sound/rem_heartstop.ogg") -- другой звук смерти на выбор (настройка rem_deathsound)
+resource.AddSingleFile("sound/rem_heartstop.ogg") -- другой звук смерти на выбор (настройка rem_deathsound 1)
+resource.AddSingleFile("sound/rem_brutaldeath.mp3") -- ещё один на выбор (rem_deathsound 2)
 
 
 
