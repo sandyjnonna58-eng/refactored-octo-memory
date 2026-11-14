@@ -463,7 +463,6 @@ local brainFrontalColor = {
 
 local show_image_time = 0
 local show_some_images_time = 0
-local rem_prev_concussion = 0 -- для серии вспышек при ударе в голову (ниже)
 local lobotomy_mats = {
 	[1] = Material("overlays/photopsiaoverlay1.png"),
 	[2] = Material("overlays/photopsiaoverlay2.png"),
@@ -1226,8 +1225,9 @@ hook.Add("Post Post Processing", "ItHurts", function()
 	local flashBrain = math.min(math.max(brain, (org.concussion or 0) > 0.5 and (org.concussion or 0) / 7 or 0), 0.9)
 	-- сотрясение резко выросло (удар в голову) - серия вспышек сразу
 	local conc = org.concussion or 0
-	if conc > rem_prev_concussion + 2 then show_some_images_time = 250 end
-	rem_prev_concussion = conc
+	-- прошлое значение - в hg, не в local файла: у этой функции уже 60 upvalue (предел LuaJIT, больше - файл не грузится)
+	if conc > (hg.remPrevConcussion or 0) + 2 then show_some_images_time = 250 end
+	hg.remPrevConcussion = conc
 	if flashBrain > 0.1 and not org.otrub then
 		if show_some_images_time > 0 then
 			brain_motionblur = true

@@ -10,7 +10,7 @@
   Исключение: локальная копия в `GarrysMod/garrysmod/addons/refactored-octo-memory-main` - распакованный zip без `.git`,
   там правим файлы напрямую, без коммитов и push.
 - Комментарии в коде - по-русски, коротко: что делает и почему.
-- В игре изменения проверяет пользователь; у Claude - только проверка синтаксиса Lua: `python3 tools/luacheck/check.py [файлы]`
+- В игре изменения проверяет пользователь; у Claude - только проверка синтаксиса Lua и лимитов LuaJIT: `python3 tools/luacheck/check.py [файлы]`
   (без аргументов - все .lua; нужен pip-пакет luaparser).
 - Серверный профайлер `lua/autorun/00_remorse_profiler.lua` работает только если `rem_profiler_enabled 1` на старте карты
   (иначе ничего не оборачивает); разовый замер - `rem_profile_sv` / `rem_profile` (homigrad/sh_hookprofiler.lua).
@@ -46,6 +46,10 @@
 - Чужие модели игрока с другой кистью/пальцами: позы кисти (`hg.set_hold`/`set_holdrh`) и `hg.KeepFingerLengths` (cl_bones.lua,
   зовётся в fake/sh_render.lua после оружия) берут положение суставов пальцев из скелета самой модели, иначе пальцы рвутся.
   Модели без `$includemodel "models/m_anm.mdl"` не получают анимаций wOS DynaBase (пинок и т.п.) - T-поза.
+
+- Лимиты LuaJIT: у функции не больше 60 upvalue (внешних local) и 200 локальных - иначе файл не грузится ЦЕЛИКОМ.
+  Хук "ItHurts" в `cl_screeneffects.lua` ровно на 60: новый local файла в нём - и пропадают ВСЕ эффекты экрана (их хуки
+  зовёт этот файл). Новое состояние там хранить в таблице (hg.*), не в local. check.py теперь ловит это (FAIL ... upvalues).
 
 ## Где что (сделано в этом проекте)
 - Мысли (печатаются по буквам, звук на каждую букву по состоянию: normal / bad / fast): `lua/homigrad/sh_notification.lua`,
