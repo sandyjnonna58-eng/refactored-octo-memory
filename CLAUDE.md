@@ -74,8 +74,8 @@
   self.remStrongHitT перед TakeDamageInfo, ловит хук HomigradDamage): шанс 60% (кастет x1.35, уже сотрясён +20%,
   берсерк/superfighter - всегда; x rem_punch_concussion_chance) -> звук `sound/rem_concussion/concussion1-4.mp3`,
   сотрясение 3.5..5.5 (выше 2.5 - падает, звон, глухой звук), org.stun 2.5..5 с (лежит), нокаут 25% (55% при сильном) -
-  org.remKOEnd 3..8 с без сознания + org.consciousness почти 0 (визуал отключки Z-City - от уровня сознания, ScreenFade
-  в cl_screeneffects при своей камере не виден; встаёт, когда сознание вернётся к 0.3, ~6 с). Выкл. - rem_punch_concussion 0.
+  org.remKOEnd 3..8 с без сознания + org.consciousness почти 0 (визуал отключки Z-City - от уровня сознания; ScreenFade
+  в cl_screeneffects, похоже, не затемняет; встаёт, когда сознание вернётся к 0.3, ~6 с). Выкл. - rem_punch_concussion 0.
   Вспышки как при лоботомии (cl_screeneffects.lua, flashBrain = max(org.brain, concussion/7), до 0.9) - только картинка,
   мозг не повреждается; резкий рост сотрясения (> +2) - серия вспышек сразу.
 - Звук хедшота `sound/rem_headshot.ogg`: пуля/дробь в голову (хук HomigradDamage, hitgroup HEAD) и смерть за 0.5 с -
