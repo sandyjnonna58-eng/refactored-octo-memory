@@ -1,0 +1,36 @@
+-- Сгенерировано tools/sandstorm/make.py из пака Мастерской «Sandstorm SWEPs» (Shotguns). Модель и звуки - из пака,
+-- в сборке только Lua. Положение модели посчитано по её геометрии; прицел можно подогнать hg_setzoompos.
+SWEP.Base = "weapon_rem_sand_shotgun"
+SWEP.Spawnable = true
+SWEP.PrintName = "KSG"
+SWEP.Instructions = "Insurgency: Sandstorm. 12/70 gauge"
+SWEP.WorldModel = "models/weapons/sandswep/w_sand_ksg.mdl"
+SWEP.Primary.Ammo = "12/70 gauge"
+SWEP.Primary.ClipSize = 7
+SWEP.Primary.DefaultClip = 7
+SWEP.Primary.Automatic = false
+SWEP.Primary.Wait = 0.857
+SWEP.Primary.Damage = 16
+SWEP.Primary.Force = 12
+SWEP.Penetration = 7
+SWEP.CustomShell = "12x70"
+SWEP.ShellEject = "ShotgunShellEject"
+SWEP.NumBullet = 8
+SWEP.Primary.Spread = Vector(0.01, 0.01, 0.01)
+SWEP.PPSMuzzleEffect = "pcf_jack_mf_mshotgun"
+SWEP.Primary.Sound = {"sandstorm/ksg/shot_01.ogg", 90, 95, 105}
+SWEP.SupressedSound = {"sandstorm/ksg/shot_supp_01.ogg", 70, 95, 105}
+SWEP.DistSound = "sandstorm/ksg/distant_01.ogg"
+SWEP.ReloadSound = "sandstorm/ksg/foley/model870_foley_shell_insert_01.ogg"
+SWEP.CockSound = "sandstorm/ksg/foley/KSG_foley_pump_back.ogg"
+SWEP.WorldPos = Vector(4.5, -1.186, -0.701)
+SWEP.WorldAng = Angle(-6.221, 10.327, -178.057)
+SWEP.LocalMuzzlePos = Vector(16.36, -3.307, -4.588)
+SWEP.LocalMuzzleAng = Angle(5.766, -10.586, 176.96)
+SWEP.ZoomPos = Vector(0, 0.092, 5.805)
+SWEP.RHPos = Vector(1, -5, 3.5)
+SWEP.RHAng = Angle(0, -15, 90)
+SWEP.LHPos = Vector(9.39, 0, -3.7)
+SWEP.LHAng = Angle(-100, -90, -90)
+SWEP.SandLHPos = SWEP.LHPos
+SWEP.lengthSub = 10

@@ -1,0 +1,32 @@
+-- Сгенерировано tools/sandstorm/make.py из пака Мастерской «Sandstorm SWEPs» (Pistols). Модель и звуки - из пака,
+-- в сборке только Lua. Положение модели посчитано по её геометрии; прицел можно подогнать hg_setzoompos.
+SWEP.Base = "weapon_rem_sand_pistol"
+SWEP.Spawnable = true
+SWEP.PrintName = "MR73"
+SWEP.Instructions = "Insurgency: Sandstorm. .357 Magnum"
+SWEP.WorldModel = "models/weapons/sandswep/w_sand_mr73.mdl"
+SWEP.Primary.Ammo = ".357 Magnum"
+SWEP.Primary.ClipSize = 6
+SWEP.Primary.DefaultClip = 6
+SWEP.Primary.Automatic = false
+SWEP.Primary.Wait = 0.25
+SWEP.Primary.Damage = 45
+SWEP.Primary.Force = 77
+SWEP.Penetration = 12
+SWEP.CustomShell = ""
+SWEP.ShellEject = ""
+SWEP.Primary.Sound = {"sandstorm/mr73/shot_01.ogg", 85, 95, 105}
+SWEP.SupressedSound = {"sandstorm/mr73/shot_supp_01.ogg", 70, 95, 105}
+SWEP.DistSound = "sandstorm/mr73/distant_01.ogg"
+SWEP.WorldPos = Vector(4.5, -1.033, 2.719)
+SWEP.WorldAng = Angle(28.182, 24.898, -175.446)
+SWEP.LocalMuzzlePos = Vector(10.445, -4.256, -1.808)
+SWEP.LocalMuzzleAng = Angle(-27.416, -25.751, -171.828)
+SWEP.ZoomPos = Vector(0, 0.267, 7.588)
+SWEP.RHPos = Vector(10, -4.5, 3)
+SWEP.RHAng = Angle(0, -5, 90)
+SWEP.LHPos = Vector(-1.2, -1.4, -2.5)
+SWEP.LHAng = Angle(5, 9, -100)
+SWEP.SandLHPos = SWEP.LHPos
+SWEP.lengthSub = 6
+SWEP.HoldType = "revolver"

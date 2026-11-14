@@ -1,0 +1,31 @@
+-- Сгенерировано tools/sandstorm/make.py из пака Мастерской «Sandstorm SWEPs» (Pistols). Модель и звуки - из пака,
+-- в сборке только Lua. Положение модели посчитано по её геометрии; прицел можно подогнать hg_setzoompos.
+SWEP.Base = "weapon_rem_sand_pistol"
+SWEP.Spawnable = true
+SWEP.PrintName = "Desert Eagle"
+SWEP.Instructions = "Insurgency: Sandstorm. .50 Action Express"
+SWEP.WorldModel = "models/weapons/sandswep/w_sand_deagle.mdl"
+SWEP.Primary.Ammo = ".50 Action Express"
+SWEP.Primary.ClipSize = 7
+SWEP.Primary.DefaultClip = 7
+SWEP.Primary.Automatic = false
+SWEP.Primary.Wait = 0.3
+SWEP.Primary.Damage = 40
+SWEP.Primary.Force = 30
+SWEP.Penetration = 11
+SWEP.CustomShell = "50ae"
+SWEP.ShellEject = "EjectBrass_9mm"
+SWEP.Primary.Sound = {"sandstorm/deagle/shot_01.ogg", 85, 95, 105}
+SWEP.SupressedSound = {"sandstorm/deagle/shot_supp_01.ogg", 70, 95, 105}
+SWEP.DistSound = "sandstorm/deagle/distant_01.ogg"
+SWEP.WorldPos = Vector(4.5, -1.14, 1.289)
+SWEP.WorldAng = Angle(15.008, 23.609, -174.095)
+SWEP.LocalMuzzlePos = Vector(10.01, -4.349, -2.461)
+SWEP.LocalMuzzleAng = Angle(-16.095, -22.906, -179.469)
+SWEP.ZoomPos = Vector(0, 0.16, 6.143)
+SWEP.RHPos = Vector(10, -4.5, 3)
+SWEP.RHAng = Angle(0, -5, 90)
+SWEP.LHPos = Vector(-1.2, -1.4, -2.5)
+SWEP.LHAng = Angle(5, 9, -100)
+SWEP.SandLHPos = SWEP.LHPos
+SWEP.lengthSub = 6

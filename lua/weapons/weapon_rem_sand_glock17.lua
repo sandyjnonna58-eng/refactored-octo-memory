@@ -1,0 +1,31 @@
+-- Сгенерировано tools/sandstorm/make.py из пака Мастерской «Sandstorm SWEPs» (Pistols). Модель и звуки - из пака,
+-- в сборке только Lua. Положение модели посчитано по её геометрии; прицел можно подогнать hg_setzoompos.
+SWEP.Base = "weapon_rem_sand_pistol"
+SWEP.Spawnable = true
+SWEP.PrintName = "Glock 17"
+SWEP.Instructions = "Insurgency: Sandstorm. 9x19 mm Parabellum"
+SWEP.WorldModel = "models/weapons/sandswep/w_sand_glock17.mdl"
+SWEP.Primary.Ammo = "9x19 mm Parabellum"
+SWEP.Primary.ClipSize = 17
+SWEP.Primary.DefaultClip = 17
+SWEP.Primary.Automatic = false
+SWEP.Primary.Wait = 0.133
+SWEP.Primary.Damage = 23
+SWEP.Primary.Force = 25
+SWEP.Penetration = 7
+SWEP.CustomShell = "9x19"
+SWEP.ShellEject = "EjectBrass_9mm"
+SWEP.Primary.Sound = {"sandstorm/pf940/shot_01.ogg", 85, 95, 105}
+SWEP.SupressedSound = {"sandstorm/pf940/shot_supp_01.ogg", 70, 95, 105}
+SWEP.DistSound = "sandstorm/pf940/distant_01.ogg"
+SWEP.WorldPos = Vector(4.5, -0.837, -1.887)
+SWEP.WorldAng = Angle(17.793, 17.664, 178.985)
+SWEP.LocalMuzzlePos = Vector(7.981, -2.933, 0.185)
+SWEP.LocalMuzzleAng = Angle(-16.604, -18.782, -173.434)
+SWEP.ZoomPos = Vector(0, 0.463, 3.374)
+SWEP.RHPos = Vector(10, -4.5, 3)
+SWEP.RHAng = Angle(0, -5, 90)
+SWEP.LHPos = Vector(-1.2, -1.4, -2.5)
+SWEP.LHAng = Angle(5, 9, -100)
+SWEP.SandLHPos = SWEP.LHPos
+SWEP.lengthSub = 6

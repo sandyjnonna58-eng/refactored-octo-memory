@@ -1,0 +1,36 @@
+-- Сгенерировано tools/sandstorm/make.py из пака Мастерской «Sandstorm SWEPs» (Shotguns). Модель и звуки - из пака,
+-- в сборке только Lua. Положение модели посчитано по её геометрии; прицел можно подогнать hg_setzoompos.
+SWEP.Base = "weapon_rem_sand_shotgun"
+SWEP.Spawnable = true
+SWEP.PrintName = "TOZ-194"
+SWEP.Instructions = "Insurgency: Sandstorm. 12/70 gauge"
+SWEP.WorldModel = "models/weapons/sandswep/w_sand_toz194.mdl"
+SWEP.Primary.Ammo = "12/70 gauge"
+SWEP.Primary.ClipSize = 7
+SWEP.Primary.DefaultClip = 7
+SWEP.Primary.Automatic = false
+SWEP.Primary.Wait = 0.857
+SWEP.Primary.Damage = 16
+SWEP.Primary.Force = 12
+SWEP.Penetration = 7
+SWEP.CustomShell = "12x70"
+SWEP.ShellEject = "ShotgunShellEject"
+SWEP.NumBullet = 8
+SWEP.Primary.Spread = Vector(0.01, 0.01, 0.01)
+SWEP.PPSMuzzleEffect = "pcf_jack_mf_mshotgun"
+SWEP.Primary.Sound = {"sandstorm/toz194/shot_01.ogg", 90, 95, 105}
+SWEP.SupressedSound = {"sandstorm/toz194/shot_supp_01.ogg", 70, 95, 105}
+SWEP.DistSound = "sandstorm/toz194/distant_01.ogg"
+SWEP.ReloadSound = "sandstorm/toz194/foley/toz_foley_shell_insert_01.ogg"
+SWEP.CockSound = "sandstorm/toz194/foley/toz_foley_pump_back.ogg"
+SWEP.WorldPos = Vector(4.5, -1.839, -1.414)
+SWEP.WorldAng = Angle(2.774, 21.515, -164.872)
+SWEP.LocalMuzzlePos = Vector(26.458, -9.695, 1.683)
+SWEP.LocalMuzzleAng = Angle(-8, -20.222, 166.828)
+SWEP.ZoomPos = Vector(0, -0.561, 4.281)
+SWEP.RHPos = Vector(1, -5, 3.5)
+SWEP.RHAng = Angle(0, -15, 90)
+SWEP.LHPos = Vector(15.48, 0, -3.7)
+SWEP.LHAng = Angle(-100, -90, -90)
+SWEP.SandLHPos = SWEP.LHPos
+SWEP.lengthSub = 14
