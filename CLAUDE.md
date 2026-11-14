@@ -146,8 +146,9 @@
   DIAG=<png> [DIAG_ONLY=a,b DIAG_MIN=26] python3 -I tools/sandstorm/make.py ... (сбоку и сверху, красная - ось ствола).
   Калибры/урон - таблицы AMMO/CAL (медианы Z-City по калибру). Звуки - первые Close/Distant и foley магазина/затвора из Lua паков.
   `lua/homigrad/compat/sh_sandstorm.lua`: rem_sand_tune <p y r> [x y z] / reset (суперадмин, ствол в руках) - сдвиг
-  WorldAng/WorldPos у всех и печать готовых строк; подсказка в консоли, если паков нет; weapon_sand_* без их основы
-  прячутся из меню.
+  WorldAng/WorldPos у всех и печать готовых строк; подсказка в консоли, если паков нет; оригинальные weapon_sand_* прячутся из меню всегда
+  (их вьюмодель с руками камера Z-City показывает боком - пользователь путал их с нашими), показать -
+  rem_sand_show_originals 1.
 - Lambda gore mod (связка `compat/sh_lambdagore.lua`) пробовали - убран по просьбе; отрезание головы - sv_decap.lua на моделях Zippy.
 - Ярость (3 стадии, растёт ТОЛЬКО от: удара игрока, жеста «фак», «фак»/fuck в чате; удар - рывок и x2, без удара не выше 2-й):
   `modules/sv_rage.lua` и `cl_rage.lua` (музыка по стадиям `sound/rem_rage/anger.mp3`, права у пользователя,

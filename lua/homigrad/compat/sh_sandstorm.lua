@@ -68,10 +68,12 @@ else
 	end)
 end
 
--- сами SWEP из паков (weapon_sand_*) без их основы weapon_sand_base (отдельный аддон) - сломанные: прячем из меню,
--- остаются наши weapon_rem_sand_* (категория «Sandstorm (Z-City)»)
+-- сами SWEP из паков (weapon_sand_*) прячем из меню: в Z-City они не работают как надо (своя вьюмодель с руками -
+-- камера Z-City её разворачивает боком, без основы weapon_sand_base они вообще сломаны). Остаются наши
+-- weapon_rem_sand_* (категория «Sandstorm (Z-City)»). Показать оригиналы: rem_sand_show_originals 1 (+ перезапуск карты)
+local cvShow = CreateConVar("rem_sand_show_originals", "0", FCVAR_ARCHIVE + FCVAR_REPLICATED, "Show the original Sandstorm SWEPs (weapon_sand_*) in the spawn menu", 0, 1)
 hook.Add("Initialize", "rem_sandstorm_hide", function()
-	if weapons.GetStored("weapon_sand_base") then return end
+	if cvShow:GetBool() then return end
 	for _, t in ipairs(weapons.GetList()) do
 		local class = t.ClassName or ""
 		if string.StartWith(class, "weapon_sand_") then
