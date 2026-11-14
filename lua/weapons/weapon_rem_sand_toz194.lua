@@ -2,6 +2,8 @@
 -- в сборке только Lua. Положение модели посчитано по её геометрии; прицел можно подогнать hg_setzoompos.
 SWEP.Base = "weapon_rem_sand_shotgun"
 SWEP.Spawnable = true
+SWEP.Category = "Sandstorm (Z-City)"
+SWEP.AdminOnly = false
 SWEP.PrintName = "TOZ-194"
 SWEP.Instructions = "Insurgency: Sandstorm. 12/70 gauge"
 SWEP.WorldModel = "models/weapons/sandswep/w_sand_toz194.mdl"

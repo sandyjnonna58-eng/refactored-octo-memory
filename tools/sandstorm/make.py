@@ -291,6 +291,10 @@ for name, s in sorted(src_by.items()):
     w("-- в сборке только Lua. Положение модели посчитано по её геометрии; прицел можно подогнать hg_setzoompos.")
     w('SWEP.Base = "weapon_rem_sand_%s"' % kind)
     w("SWEP.Spawnable = true")
+    # категорию и AdminOnly пишем в каждом файле: меню спавна (list "Weapon") берёт их из таблицы самого оружия, без
+    # наследования от основы - иначе ствол уезжает в «Прочее»
+    w('SWEP.Category = "Sandstorm (Z-City)"')
+    w("SWEP.AdminOnly = false")
     w('SWEP.PrintName = "%s"' % pname)
     w('SWEP.Instructions = "Insurgency: Sandstorm. %s"' % cal[0])
     w('SWEP.WorldModel = "%s"' % wm)

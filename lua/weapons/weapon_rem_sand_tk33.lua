@@ -2,6 +2,8 @@
 -- в сборке только Lua. Положение модели посчитано по её геометрии; прицел можно подогнать hg_setzoompos.
 SWEP.Base = "weapon_rem_sand_pistol"
 SWEP.Spawnable = true
+SWEP.Category = "Sandstorm (Z-City)"
+SWEP.AdminOnly = false
 SWEP.PrintName = "TK-33"
 SWEP.Instructions = "Insurgency: Sandstorm. 7.62x25 mm"
 SWEP.WorldModel = "models/weapons/sandswep/w_sand_tk33.mdl"

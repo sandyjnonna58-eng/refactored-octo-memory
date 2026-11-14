@@ -131,7 +131,8 @@
 - Оружие из паков Мастерской «Sandstorm SWEPs» (Pistols / Assault Rifles / Shotguns; паки прислал пользователь, их модели,
   звуки и Lua в репозиторий НЕ кладём - игроки качают паки с сервера, сервер добавляет их в свою коллекцию Мастерской;
   основа паков weapon_sand_base - отдельный аддон, не нужна): 44 своих ствола Z-City `lua/weapons/weapon_rem_sand_<имя>.lua`
-  (категория «Sandstorm (Z-City)»), основы - `weapon_rem_sand_pistol` (через weapon_browninghp), `_rifle` (через weapon_ash12:
+  (категория «Sandstorm (Z-City)» - Category/AdminOnly пишутся в КАЖДОМ файле: меню спавна берёт их из таблицы
+  самого оружия без наследования от основы, иначе стволы попадали в «Прочее»), основы - `weapon_rem_sand_pistol` (через weapon_browninghp), `_rifle` (через weapon_ash12:
   отъёмный магазин, Saiga/USAS тоже тут, NumBullet 8), `_shotgun` (через weapon_m4super, AutomaticDraw false - помпа на R).
   Файлы пишет `tools/sandstorm/make.py <папка с распакованными паками: lua + models w_*.mdl/.vvd>` (паки 1.4 ГБ - достаточно
   Lua и w_*.mdl/.vvd, их можно выкачать из zip по HTTP Range, всё скачивать не надо). Мировые модели паков - в пространстве
