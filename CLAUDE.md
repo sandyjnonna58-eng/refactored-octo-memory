@@ -54,6 +54,8 @@
   растёт >= death_brain_rate 0.15%/с уже death_brain_hold 2 с; скачки от попаданий не в счёт); тогда же incapacitated. Позвоночник/трахея и т.п. - только incapacitated, без таймера.
 - Начало раунда Homicide: звук `sound/rem_homicide.mp3` (10.5 с, доигрывает сам), экран роли закрывается на 7-й секунде
   (HMCD_ScreenDuration в `gamemodes/zcity/gamemode/modes/homicide/cl_homicide.lua`; rem_newroundcommence.mp3 остался только в радио).
+  Прибытие полиции и SWAT - трек `sound/rem_hmcd_police.mp3` (60 с) у всех на клиенте вместо сирены/вертолёта (sv_homicide.lua
+  PlayPoliceArrival -> net rem_hmcd_police; глушится концом/началом раунда; в RA.MusicPatterns). Нацгвардия (soe) - прежний звук.
 - Экран смерти и выбор звука смерти (`rem_deathsound` 0 - rem_brutaldeath.mp3, 1 - остановка сердца rem_heartstop.ogg;
   Gameplay -> «Death sound: heart stop»; старый rem_deathost.mp3 убран по просьбе):
   `lua/autorun/client/cl_cdeath.lua`, настройки - `lua/initpost/menu-n-derma/derma/cl_menu_options.lua`.

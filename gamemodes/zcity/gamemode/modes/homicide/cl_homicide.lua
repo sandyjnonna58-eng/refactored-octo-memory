@@ -17,9 +17,26 @@ local HMCD_ScreenDuration = 7
 local HMCD_RoundSound = "rem_homicide.mp3"
 local hmcd_show_associates
 local hmcd_clear_associates
+-- трек прибытия полиции и SWAT (sv_homicide.lua шлёт rem_hmcd_police); глушится концом и началом раунда
+local function StopPoliceMusic()
+	if IsValid(MODE.PoliceMusic) then MODE.PoliceMusic:Stop() end
+	MODE.PoliceMusic = nil
+end
+
+net.Receive("rem_hmcd_police", function()
+	StopPoliceMusic()
+	sound.PlayFile("sound/rem_hmcd_police.mp3", "noplay", function(chan)
+		if not IsValid(chan) then return end
+		StopPoliceMusic()
+		MODE.PoliceMusic = chan
+		chan:Play()
+	end)
+end)
+
 net.Receive("HMCD_RoundStart",function()
 	local lply = LocalPlayer()
 	if not IsValid(lply) then return end
+	StopPoliceMusic()
 
 	for i, ply in player.Iterator() do
 		ply.isTraitor = false
@@ -585,6 +602,7 @@ local CreateEndMenu
 
 net.Receive("hmcd_roundend", function()
 	hmcd_clear_associates()
+	StopPoliceMusic()
 
 	local traitors, gunners = {}, {}
 

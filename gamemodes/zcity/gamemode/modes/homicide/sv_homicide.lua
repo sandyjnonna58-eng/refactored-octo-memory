@@ -1,5 +1,12 @@
 local MODE = MODE
 resource.AddSingleFile("sound/rem_homicide.mp3") -- звук начала раунда (cl_homicide.lua)
+resource.AddSingleFile("sound/rem_hmcd_police.mp3") -- прибытие полиции и SWAT (вместо сирены/вертолёта)
+util.AddNetworkString("rem_hmcd_police")
+-- трек прибытия полиции / SWAT играет у всех на клиенте (cl_homicide.lua), не точечным звуком в мире
+local function PlayPoliceArrival()
+	net.Start("rem_hmcd_police")
+	net.Broadcast()
+end
 MODE.start_time = 1
 MODE.end_time = 7
  
@@ -1053,7 +1060,7 @@ function MODE:RoundThink()
 			if spawned > 0 then
 				self.PoliceSpawned = true
 				PrintMessage(HUD_PRINTTALK, "Police have arrived.")
-				EmitSound("snd_jack_hmcd_policesiren.wav", vector_origin, 0, CHAN_AUTO, 1, 125, 0, 100)
+				PlayPoliceArrival()
 			end
 		end
 	end
@@ -1075,7 +1082,7 @@ function MODE:RoundThink()
 	
 			if count > 0 then
 				PrintMessage(HUD_PRINTTALK, "SWAT team incoming!")
-				EmitSound("snd_jack_hmcd_heli2.mp3", vector_origin, 0, CHAN_AUTO, 1, 125, 0, 100)
+				PlayPoliceArrival()
 				MODE:SpawnForce("swat", count)
 			end
 		end)

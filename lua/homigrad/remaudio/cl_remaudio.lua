@@ -26,6 +26,7 @@ RA.MusicPatterns = {
 	"rem_letitgo", "rem_rage/", "rem_panic/",           -- критическое состояние, ярость, паника
 	"rem_excruciatingpain", "rem_despair", "rem_pain.mp3", "rem_aftermath", -- боль, отчаяние, суицид
 	"rem_laststand", "rem_lastbattle", "zbattle/pharmacia", -- последний бой, берсерк
+	"rem_hmcd_police",                                   -- прибытие полиции/SWAT в Homicide
 }
 local musicCache = setmetatable({}, {__mode = "k"})
 function RA.IsMusic(chan)
