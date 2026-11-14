@@ -521,6 +521,7 @@ return {
 	"sound/rem_drugs/snort.wav",
 	"sound/rem_earsringaswounddeepens.ogg",
 	"sound/rem_excruciatingpain.ogg",
+	"sound/rem_headshot.ogg",
 	"sound/rem_heart/arrhythmia.mp3",
 	"sound/rem_heart/heartbeat_bad.mp3",
 	"sound/rem_heartbeatbad.mp3",

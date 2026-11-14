@@ -75,6 +75,8 @@
   берсерк/superfighter - всегда; x rem_punch_concussion_chance) -> звук `sound/rem_concussion/concussion1-4.mp3`,
   сотрясение 3.5..5.5 (выше 2.5 - падает, звон, глухой звук), org.stun 2.5..5 с (лежит), нокаут 25% (55% при сильном) -
   org.remKOEnd 4..10 с без сознания. Выкл. - rem_punch_concussion 0.
+- Звук хедшота `sound/rem_headshot.ogg`: пуля/дробь в голову (хук HomigradDamage, hitgroup HEAD) и смерть за 0.5 с -
+  у головы для всех рядом, стрелку дальше 600 - отдельно (net rem_headshot): `organism/sh_headshot.lua`; выкл. rem_headshot_sound 0.
 - Тейкдауны, камера FC, лечение FC, бросок ножа (E + ПКМ): `lua/homigrad/takedowns`, `fccamera`, `fcheal`, `meleethrow`.
 - Совместимость с отдельным аддоном «Metal Gear Solid V: Gameplay SWEP» (MGSVSnake, weapon_mgsv_*; в репозиторий не кладём -
   модели/звуки MGSV чужие): `lua/homigrad/compat/sh_mgsv.lua` - `hg.MGSV.Active(ply)`; пока Снейк в руках, homigrad уступает
