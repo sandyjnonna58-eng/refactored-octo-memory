@@ -78,7 +78,8 @@ local function IsHeadHit(ent, hitgroup, pos)
 	return head and head:DistToSqr(pos) < 12 * 12 or false
 end
 
-function hg.organism.PunchConcussion(ply, org, pos, strong)
+-- forceKO: true - нокаут наверняка, false - без нокаута, nil - по шансу (для тестовых команд, sh_remtests.lua)
+function hg.organism.PunchConcussion(ply, org, pos, strong, forceKO)
 	local now = CurTime()
 	hg.organism.AddConcussion(org, math.Rand(3.5, 5.5) * (strong and 1.3 or 1))
 	org.stun = math.max(org.stun or 0, now + math.Rand(2.5, 5))
@@ -86,6 +87,7 @@ function hg.organism.PunchConcussion(ply, org, pos, strong)
 
 	local koChance = (org.concussion or 0) >= 7 and KO_CHANCE_REPEAT or KO_CHANCE
 	local ko = math.random() < koChance * (strong and 1.5 or 1)
+	if forceKO ~= nil then ko = forceKO end
 	if ko then
 		org.remKOEnd = now + math.Rand(3, 8)
 		-- сознание почти в ноль: экран отключки Z-City (темнота, зерно, виньетка) строится от org.consciousness,

@@ -25,6 +25,9 @@
   `resource.AddSingleFile` - на случай включённой раздачи.
 - Генераторы текстур - в `tools/` (Python + PIL), запуск из корня репозитория.
 
+- Тестовые команды недавних механик - `lua/homigrad/sh_remtests.lua`, список в консоли: `rem_tests` (новую механику -
+  дописывать туда команду rem_test_* и строку в HELP).
+
 ## Устройство
 - Загрузчик homigrad (`IncludeDir`) по префиксам: `sv_` - сервер, `cl_` - клиент, `sh_` - оба. В папке `cl_` грузятся раньше `sh_`.
 - Организм: `lua/homigrad/organism/tier_1/` (`sv_organism.lua` - тик; порядок: Alcohol -> Nicotine -> Addiction -> Vessels ->
