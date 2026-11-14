@@ -1153,6 +1153,8 @@ function SWEP:AttackFront(special_attack, rand)
                 Dam:SetDamageForce(hitForceVec * Mul ^ 2)
                 Dam:SetDamageType((owner.PlayerClassName == "furry" or (Ent:GetClass() == "func_breakable_surf")) and DMG_SLASH or DMG_CLUB)
                 Dam:SetDamagePosition(HitPos)
+                -- заряженный удар: метка для сотрясения от удара в голову (modules/sv_concussion.lua)
+                self.remStrongHitT = special_attack and CurTime() or nil
                 Ent:TakeDamageInfo(Dam)
 
 				if special_attack and Dam:GetDamageType() == DMG_CLUB then

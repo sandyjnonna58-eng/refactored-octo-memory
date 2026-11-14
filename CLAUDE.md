@@ -69,6 +69,12 @@
 - Алкоголь, никотин, привыкание, сосуды, рвота: `lua/homigrad/organism/tier_1/modules/` (`sv_alcohol`, `sv_nicotine`,
   `sv_addiction`, `sv_vessels`, `sv_vomit` и их `cl_`). Напитки - `weapon_hg_vodka` (база) и наследники, сигареты -
   `weapon_hg_cigarettes`.
+- Сотрясение (из MELEECITY, `modules/sv_concussion.lua` + `cl_concussion.lua`): org.concussion 0..10 от черепа и взрывов.
+  Заряженный удар кулаком в голову (weapon_hands_sh - удар после паузы 2 с, weapon_hg_coolhands - E + ЛКМ; оружие ставит
+  self.remStrongHitT перед TakeDamageInfo, ловит хук HomigradDamage): шанс 60% (кастет x1.35, уже сотрясён +20%,
+  берсерк/superfighter - всегда; x rem_punch_concussion_chance) -> звук `sound/rem_concussion/concussion1-4.mp3`,
+  сотрясение 3.5..5.5 (выше 2.5 - падает, звон, глухой звук), org.stun 2.5..5 с (лежит), нокаут 25% (55% при сильном) -
+  org.remKOEnd 4..10 с без сознания. Выкл. - rem_punch_concussion 0.
 - Тейкдауны, камера FC, лечение FC, бросок ножа (E + ПКМ): `lua/homigrad/takedowns`, `fccamera`, `fcheal`, `meleethrow`.
 - Совместимость с отдельным аддоном «Metal Gear Solid V: Gameplay SWEP» (MGSVSnake, weapon_mgsv_*; в репозиторий не кладём -
   модели/звуки MGSV чужие): `lua/homigrad/compat/sh_mgsv.lua` - `hg.MGSV.Active(ply)`; пока Снейк в руках, homigrad уступает
