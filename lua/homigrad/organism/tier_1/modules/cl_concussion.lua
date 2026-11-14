@@ -51,3 +51,14 @@ hook.Add("Post Pain Processing", "rem_concussion", function()
 	local intensity = math.Clamp(concussion_smooth / 10, 0, 1)
 	DrawBloom(0.15 * intensity, 2.88 * intensity, 20 + intensity * 30, 0, 1, 0.5, 134 / 255, 210 / 255, 240 / 255)
 end)
+
+-- звук нокаута от удара в голову: сервер шлёт, когда человек вырубился или уже без сознания (sv_concussion.lua) -
+-- через BASS, его не глушит soundfade отключки
+net.Receive("rem_concussion_snd", function()
+	local n = net.ReadUInt(3)
+	sound.PlayFile("sound/rem_concussion/concussion" .. n .. ".mp3", "noplay", function(ch)
+		if not IsValid(ch) then return end
+		if hg.RemAudio then hg.RemAudio.SetExempt(ch) end
+		ch:Play()
+	end)
+end)

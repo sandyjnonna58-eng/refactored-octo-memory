@@ -60,6 +60,7 @@ local KO_CHANCE = 0.25      -- нокаут (без сознания)
 local KO_CHANCE_REPEAT = 0.55 -- нокаут, если сотрясение уже было сильным
 
 for i = 1, 4 do resource.AddSingleFile("sound/rem_concussion/concussion" .. i .. ".mp3") end
+util.AddNetworkString("rem_concussion_snd")
 
 local function HeadPos(ent)
 	local bone = ent:LookupBone("ValveBiped.Bip01_Head1")
@@ -86,18 +87,27 @@ function hg.organism.PunchConcussion(ply, org, pos, strong, forceKO)
 	org.disorientation = math.max(org.disorientation or 0, 3)
 
 	local koChance = (org.concussion or 0) >= 7 and KO_CHANCE_REPEAT or KO_CHANCE
+	local wasOut = org.otrub
 	local ko = math.random() < koChance * (strong and 1.5 or 1)
 	if forceKO ~= nil then ko = forceKO end
+	if wasOut and forceKO ~= false then ko = true end -- уже без сознания: удар продлевает нокаут
 	if ko then
-		org.remKOEnd = now + math.Rand(3, 8)
+		org.remKOEnd = math.max(org.remKOEnd or 0, now + math.Rand(3, 8))
 		-- сознание почти в ноль: экран отключки Z-City (темнота, зерно, виньетка) строится от org.consciousness,
 		-- без этого нокаут был без визуала; потом оно само восстанавливается (~0.05/с, порог пробуждения 0.3)
 		org.consciousness = math.min(org.consciousness or 1, math.Rand(0, 0.1))
 	end
 
-	sound.Play("rem_concussion/concussion" .. math.random(4) .. ".mp3", pos or ply:EyePos(), 80, math.random(95, 105), 1)
+	local n = math.random(4)
+	sound.Play("rem_concussion/concussion" .. n .. ".mp3", pos or ply:EyePos(), 80, math.random(95, 105), 1)
+	-- без сознания Z-City глушит игроку все звуки мира (soundfade) - самому пострадавшему звук отдельно, через BASS
+	if ko or wasOut then
+		net.Start("rem_concussion_snd")
+		net.WriteUInt(n, 3)
+		net.Send(ply)
+	end
 
-	if not ko and ply.Thought then
+	if not ko and not wasOut and ply.Thought then
 		local msgs = {"My head... everything is spinning.", "Everything is ringing.", "I can't stand up.", "Where am I?"}
 		ply:Thought(msgs[math.random(#msgs)], 2, "thought_punch_concussion", 0, Color(200, 220, 255))
 	end
@@ -108,7 +118,7 @@ hook.Add("HomigradDamage", "rem_punch_concussion", function(ply, dmg, hitgroup, 
 	if IsValid(ply) and ply:IsRagdoll() then ply = hg.RagdollOwner and hg.RagdollOwner(ply) or nil end
 	if not IsValid(ply) or not ply:IsPlayer() or not ply:Alive() then return end
 	local org = ply.organism
-	if not org or org.otrub then return end
+	if not org then return end -- без сознания - тоже (продлевает нокаут, звук слышно)
 
 	local wep, att = dmg:GetInflictor(), dmg:GetAttacker()
 	if not IsValid(wep) or not FISTS[wep:GetClass()] or not IsValid(att) or not att:IsPlayer() then return end
