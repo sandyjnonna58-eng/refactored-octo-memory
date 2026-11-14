@@ -85,8 +85,10 @@
   в cl_screeneffects, похоже, не затемняет; встаёт, когда сознание вернётся к 0.3, ~6 с). Выкл. - rem_punch_concussion 0.
   Вспышки как при лоботомии (cl_screeneffects.lua, flashBrain = max(org.brain, concussion/7), до 0.9) - только картинка,
   мозг не повреждается; резкий рост сотрясения (> +2) - серия вспышек сразу.
-- Звук хедшота `sound/rem_headshot.ogg`: пуля/дробь в голову (хук HomigradDamage, hitgroup HEAD) и смерть за 0.5 с -
-  у головы для всех рядом, стрелку дальше 600 - отдельно (net rem_headshot): `organism/sh_headshot.lua`; выкл. rem_headshot_sound 0.
+- Звук хедшота `sound/rem_headshot.ogg`: попадание в голову (хук HomigradDamage, hitgroup HEAD или точка удара ближе 12 к
+  Head1) пулей/дробью или оружием ближнего боя (DMG_SLASH/CLUB, инфликтор - оружие, не руки) - у головы для всех рядом,
+  стрелку дальше 600 - отдельно (net rem_headshot), не чаще 0.25 с на человека: `organism/sh_headshot.lua`.
+  rem_headshot_sound: 1 - каждое попадание (по умолчанию), 2 - только если умер за 0.5 с, 0 - выкл.
 - Тейкдауны, камера FC, лечение FC, бросок ножа (E + ПКМ): `lua/homigrad/takedowns`, `fccamera`, `fcheal`, `meleethrow`.
 - Совместимость с отдельным аддоном «Metal Gear Solid V: Gameplay SWEP» (MGSVSnake, weapon_mgsv_*; в репозиторий не кладём -
   модели/звуки MGSV чужие): `lua/homigrad/compat/sh_mgsv.lua` - `hg.MGSV.Active(ply)`; пока Снейк в руках, homigrad уступает
