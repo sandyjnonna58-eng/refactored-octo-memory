@@ -463,6 +463,7 @@ local brainFrontalColor = {
 
 local show_image_time = 0
 local show_some_images_time = 0
+local rem_prev_concussion = 0 -- для серии вспышек при ударе в голову (ниже)
 local lobotomy_mats = {
 	[1] = Material("overlays/photopsiaoverlay1.png"),
 	[2] = Material("overlays/photopsiaoverlay2.png"),
@@ -1220,12 +1221,19 @@ hook.Add("Post Post Processing", "ItHurts", function()
 		end
 	end
 	
-	if brain > 0.1 and not org.otrub then
+	-- вспышки "лоботомии": от повреждения мозга и от сотрясения (org.concussion 0..10, sv_concussion.lua) -
+	-- сотрясение только картинка, мозг не трогает
+	local flashBrain = math.min(math.max(brain, (org.concussion or 0) > 0.5 and (org.concussion or 0) / 7 or 0), 0.9)
+	-- сотрясение резко выросло (удар в голову) - серия вспышек сразу
+	local conc = org.concussion or 0
+	if conc > rem_prev_concussion + 2 then show_some_images_time = 250 end
+	rem_prev_concussion = conc
+	if flashBrain > 0.1 and not org.otrub then
 		if show_some_images_time > 0 then
 			brain_motionblur = true
 			DrawMotionBlur(0.1, 1., 0.1)
 			show_some_images_time = show_some_images_time - 1
-			if show_image_time <= 0 and math.random(10 * (1 - brain)) < 2 then
+			if show_image_time <= 0 and math.random(math.max(math.floor(10 * (1 - flashBrain)), 1)) < 2 then
 				show_image_time = 250 * (0.1 * 3) * math.Rand(0.1, 1) * (math.random(2) == 1 and 0.1 or 1)
 				lobotomy_index = math.random(#lobotomy_mats)
 			end
@@ -1242,7 +1250,7 @@ hook.Add("Post Post Processing", "ItHurts", function()
 			end
 		else
 			brain_motionblur = false
-			show_some_images_time = math.random(1200) < (brain * 15) and 250 or 0
+			show_some_images_time = math.random(1200) < (flashBrain * 15) and 250 or 0
 		end
 	else
 		brain_motionblur = false
