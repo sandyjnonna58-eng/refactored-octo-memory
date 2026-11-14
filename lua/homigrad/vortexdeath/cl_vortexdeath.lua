@@ -134,7 +134,7 @@ function DV.Draw(t, alpha, skipKey, holding)
 	end
 end
 
--- Экран после смерти ("Deceased.", autorun/client/cl_cdeath.lua) в том же стиле, под rem_deathost.mp3:
+-- Экран после смерти ("Deceased.", autorun/client/cl_cdeath.lua) в том же стиле, под звук смерти (rem_brutaldeath.mp3):
 -- вспышка - красный пиксельный шум с закрученными рукавами вокруг тёмного центра, за ~7 с уходит в черноту;
 -- надпись печатается красным пиксельным шрифтом по буквам. Фон и надпись раздельно: между ними cl_cdeath рисует силуэт тела.
 local DECEASED_TYPE_START, DECEASED_TYPE_SPEED = 0.25, 12 -- букв в секунду

@@ -37,17 +37,13 @@ local DEATH_CAUSES = {
 }
 local DEFAULT_CAUSE = DEATH_CAUSES.player
 
--- звук экрана смерти - всегда этот (экран в стиле вихря, vortexdeath/cl_vortexdeath.lua),
--- а если умер в последние моменты - свой
-local DEATH_SOUND = "rem_deathost.mp3"
+-- звук экрана смерти (экран в стиле вихря, vortexdeath/cl_vortexdeath.lua) выбирается в настройках
+-- (Gameplay -> "Death sound: heart stop"): 0 - brutal (по умолчанию), 1 - остановка сердца;
+-- если умер в последние моменты - всё равно свой. Старый звук rem_deathost.mp3 убран по просьбе.
+local DEATH_SOUND = "rem_brutaldeath.mp3"
+local HEARTSTOP_DEATH_SOUND = "rem_heartstop.ogg"
 local LAST_MOMENTS_DEATH_SOUND = "rem_oneandonly.mp3"
--- звук смерти выбирается в настройках (Gameplay -> "Death sound"): 0 - обычный, 1 - остановка сердца, 2 - brutal;
--- в последние моменты всё равно свой
-local CHOSEN_DEATH_SOUNDS = {
-    [1] = "rem_heartstop.ogg",
-    [2] = "rem_brutaldeath.mp3",
-}
-local cv_death_sound = CreateClientConVar("rem_deathsound", "0", true, false, "death sound: 0 - default, 1 - heart stop, 2 - brutal", 0, 2)
+local cv_death_sound = CreateClientConVar("rem_deathsound", "0", true, false, "death sound: 0 - brutal, 1 - heart stop", 0, 1)
 
 -- пока играет звук смерти, всё остальное затихает: игровые звуки (soundfade) и музыка (hg.RemAudio)
 local DEATH_SOUND_FADE = 1.5
@@ -359,7 +355,7 @@ end
 local function StartDeathSound(cause)
     deathSoundPending = false
     local lastMoments = deathLastMoments and deathCauseTime >= deathTime - 2
-    local snd = lastMoments and LAST_MOMENTS_DEATH_SOUND or (CHOSEN_DEATH_SOUNDS[cv_death_sound:GetInt()] or DEATH_SOUND)
+    local snd = lastMoments and LAST_MOMENTS_DEATH_SOUND or (cv_death_sound:GetInt() == 1 and HEARTSTOP_DEATH_SOUND or DEATH_SOUND)
     sound.PlayFile("sound/" .. snd, "noplay", function(station)
         if not IsValid(station) then return end
         if not isDead then station:Stop() return end
