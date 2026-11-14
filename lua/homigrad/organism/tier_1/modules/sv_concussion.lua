@@ -87,7 +87,10 @@ function hg.organism.PunchConcussion(ply, org, pos, strong)
 	local koChance = (org.concussion or 0) >= 7 and KO_CHANCE_REPEAT or KO_CHANCE
 	local ko = math.random() < koChance * (strong and 1.5 or 1)
 	if ko then
-		org.remKOEnd = now + math.Rand(4, 10)
+		org.remKOEnd = now + math.Rand(3, 8)
+		-- сознание почти в ноль: экран отключки Z-City (темнота, зерно, виньетка) строится от org.consciousness,
+		-- без этого нокаут был без визуала; потом оно само восстанавливается (~0.05/с, порог пробуждения 0.3)
+		org.consciousness = math.min(org.consciousness or 1, math.Rand(0, 0.1))
 	end
 
 	sound.Play("rem_concussion/concussion" .. math.random(4) .. ".mp3", pos or ply:EyePos(), 80, math.random(95, 105), 1)
