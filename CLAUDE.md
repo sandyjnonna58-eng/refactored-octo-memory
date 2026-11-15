@@ -183,6 +183,13 @@
   Angle(0,-45,0)); 7) гримаса боли - NW2 rem_grimace -> `fake/cl_reagdoll_face.lua` (флексы бровей/век/щёк/губ, не те, что
   трогает Z-City: рот при голосе и моргание в cl_utility.lua). Квары rem_reag_headshot/tumble/drown/writhe/crawl/fingers,
   клиент rem_reag_face.
+- Связка с отдельным аддоном «Artagdoll [WIP]» (чужой код/анимации/звуки - в репозиторий не кладём, ставится отдельно;
+  пользователь просил его реакции «из мода» - копировать код в открытый репозиторий нельзя, поэтому вызываем установленный
+  мод): `compat/sh_artagdoll.lua`. DoPlayerDeath -> через тик ply.RagdollDeath -> hg.Artag.Give: ActiveRagdollManager.Run(тело,
+  ply.DMS_LastDmgPos) + DMS_Health.new(тело, 100), тело.DMS_IsHeadshot по ply.remHSHit (ScalePlayerDamage мода пули Z-City
+  не видит), горел - Ignite; тело.remArtag - наши посмертные реакции (sv_reagdoll_extra) на нём молчат. ar_enabled_players
+  ставим 0 (через 6 с после InitPostEntity): его подмена PLAYER:CreateRagdoll дала бы второе тело. Живые в регдолле Z-City -
+  наши реакции. Выкл. - rem_artag 0. Тест: rem_test_artag (сервер, админ - ответ в чат).
 - Совместимость с отдельным аддоном «[V.A.C] Vehicles.Action.Chaos» (техника/самолёты, Мастерская; 1.2 ГБ с чужими моделями -
   в репозиторий не кладём): у V.A.C. свой модуль под Z-City (lua/vac/core/sh_compat_zcity.lua - глушит в своих сиденьях
   по имени хуки "jopa", "homigrad-view", "fakeCameraAngles", "allowweapons", "fake_enterveh" и т.п., раз в 10 с).

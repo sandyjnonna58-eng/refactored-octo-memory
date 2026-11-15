@@ -19,6 +19,7 @@ local HELP = {
 	"rem_drug_set heroin|meth|lsd 1, rem_panic_set 0..1, rem_depression_set 0..1, selfharm, zb_lastbattle <ник>",
 	"rem_test_vac                - состояние совместимости с V.A.C. (аддон найден, сидишь в его технике, чья камера)",
 	"rem_test_rvb                - то же для Realistic Vehicles Base (RVB)",
+	"rem_test_artag              - мод Artagdoll найден / связка включена (тела погибших игроков отдаются ему)",
 	"--- Звуки (у себя) ---",
 	"rem_test_deathsound [0|1]   - звук смерти (0 brutal, 1 остановка сердца)",
 	"rem_test_roundsound         - начало раунда Homicide",
@@ -69,6 +70,16 @@ if SERVER then
 		local bone = body:LookupBone("ValveBiped.Bip01_Head1")
 		return bone and body:GetBonePosition(bone) or t:EyePos()
 	end
+
+	-- связка с модом Artagdoll (compat/sh_artagdoll.lua): мод серверный - проверяем здесь
+	concommand.Add("rem_test_artag", function(ply)
+		if IsValid(ply) and not ply:IsAdmin() then return end
+		local function cv(n) local c = GetConVar(n) return c and c:GetString() or "-" end
+		local msg = "rem_test_artag: мод Artagdoll " .. (ActiveRagdollManager and "найден" or "НЕ найден (поставь аддон)") ..
+			"; rem_artag " .. cv("rem_artag") .. "; ar_enabled " .. cv("ar_enabled") ..
+			"; ar_enabled_players (должно быть 0) " .. cv("ar_enabled_players")
+		if IsValid(ply) then ply:ChatPrint(msg) else print(msg) end
+	end)
 
 	Cmd("rem_test_concussion", function(t, org)
 		if not hg.organism.PunchConcussion then return "нет sv_concussion" end
