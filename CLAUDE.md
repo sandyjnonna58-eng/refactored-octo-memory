@@ -193,6 +193,12 @@
   здоровье мода (DMS_Health.Active[тело], 200 от ActiveRagdoll.new) держим полным, DMS_IsHeadshot снимаем (PostEntityTakeDamage);
   встал - ar:Destroy(); умер в регдолле - ToDead: метка выстрела в голову, здоровье мода 30 с кровотечением. На теле с
   remArtag все наши реакции sv_reagdoll_extra молчат (гримаса - клиент, остаётся). Выкл. - rem_artag 0 / rem_artag_alive 0.
+  БАГИ (видео пользователя): 1) второе тело при смерти - мод при загрузке ВСЕГДА ставит свои PLAYER:CreateRagdoll (делает
+  prop_ragdoll + наблюдение) и GetRagdollEntity, а у Z-City CreateRagdoll ничего не делает; KeepZCityBodies возвращает
+  hg.ZC_CreateRagdoll / hg.ZC_GetRagdollEntity (запоминаются в fake/sv_tier_0.lua) - на InitPostEntity, раз в 5 с, в DoPlayerDeath.
+  2) электрошокер - тело в T-позе крутило и швыряло: трос шокера + силы мода + лёгкие кости (контроллер мода меняет массы/
+  инерцию); живого под шокером (org.tasered) и в припадке моду не отдаём (Pending до конца) и ставим на паузу; массы живого
+  запоминаются до Give и возвращаются через 0.3 с и в Take.
   Тест: rem_test_artag (сервер, админ - ответ в чат).
 - Совместимость с отдельным аддоном «[V.A.C] Vehicles.Action.Chaos» (техника/самолёты, Мастерская; 1.2 ГБ с чужими моделями -
   в репозиторий не кладём): у V.A.C. свой модуль под Z-City (lua/vac/core/sh_compat_zcity.lua - глушит в своих сиденьях

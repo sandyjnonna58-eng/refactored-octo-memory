@@ -8,6 +8,9 @@ end
 function PLAYER:CreateRagdoll()
 	return false
 end
+-- свои версии - чтобы вернуть, если чужой аддон их перепишет (Artagdoll: compat/sh_artagdoll.lua)
+hg.ZC_CreateRagdoll = PLAYER.CreateRagdoll
+hg.ZC_GetRagdollEntity = PLAYER.GetRagdollEntity
 
 local hook_Run = hook.Run
 hook.Add("OnEntityCreated", "bull_add", function(npc)

@@ -5,8 +5,11 @@
 --   тела           мод вешает себя на регдоллы движка (CreateEntityRagdoll у NPC, PLAYER:CreateRagdoll у игроков) -
 --                  у Z-City тело смерти своё (ply.RagdollDeath), его мод не видит. Отдаём его моду сами:
 --                  ActiveRagdollManager.Run(тело, точка урона) + DMS_Health.new (как мод делает со своими);
---   игроки         его подмена PLAYER:CreateRagdoll (ar_enabled_players 1) сделала бы второе тело поверх тела Z-City -
---                  выключаем её (ar_enabled_players 0), тела игрокам даём мы; NPC мод берёт сам (ar_enabled_npcs);
+--   игроки         мод при загрузке всегда подменяет PLAYER:CreateRagdoll / GetRagdollEntity (второе тело при смерти) -
+--                  возвращаем версии Z-City (hg.ZC_*) и держим; ar_enabled_players 0 - его PostPlayerDeath не трогает
+--                  игроков, тела им даём мы; NPC мод берёт сам (ar_enabled_npcs);
+--   шокер/припадок живого не отдаём моду (и ставим на паузу): трос шокера + силы мода крутили тело; массы костей,
+--                  которые меняет контроллер мода, живому возвращаем (Z-City тянет тело под свои массы);
 --   выстрел в голову  мод узнаёт его по ScalePlayerDamage, а пули Z-City идут мимо - метка из нашего HomigradDamage
 --                  (ply.remHSHit, sv_reagdoll_extra.lua) -> тело.DMS_IsHeadshot;
 --   живые         (rem_artag_alive 1) упал в регдолл Z-City (хук "Fake") - тело тоже моду. Чтобы не спорил с игроком
@@ -30,6 +33,34 @@ if SERVER then
 	local Alive = {} -- [тело] = игрок: живые тела у мода
 	-- кнопки, которыми игрок двигает тело в регдолле Z-City (руки, ноги, наклон, встать)
 	local CONTROL = {IN_ATTACK, IN_ATTACK2, IN_USE, IN_FORWARD, IN_BACK, IN_MOVELEFT, IN_MOVERIGHT, IN_JUMP, IN_DUCK, IN_SPEED, IN_RELOAD}
+	local Pending = {} -- [тело] = игрок: упал, но моду пока нельзя (шокер, припадок) - отдадим, когда пройдёт
+
+	-- телу сейчас нельзя к моду: бьёт электрошокер (org.tasered: трос к телу + тряска Z-City), идёт припадок
+	local function Busy(ply)
+		local org = IsValid(ply) and ply.organism
+		if not org then return false end
+		if org.tasered and org.tasered > CurTime() then return true end
+		if org.seizureActive then return true end
+		return false
+	end
+
+	-- массы костей: контроллер мода (active_ragdoll_controller) при создании ставит свои массы/инерцию части костей -
+	-- у живого Z-City тянет тело силами под свои массы, с лёгкими костями тело крутило и швыряло. Живому возвращаем
+	local function SaveMasses(rag)
+		local t = {}
+		for i = 0, rag:GetPhysicsObjectCount() - 1 do
+			local p = rag:GetPhysicsObjectNum(i)
+			if IsValid(p) then t[i] = {p:GetMass(), p:GetInertia()} end
+		end
+		return t
+	end
+	local function RestoreMasses(rag, t)
+		if not IsValid(rag) or not t then return end
+		for i, m in pairs(t) do
+			local p = rag:GetPhysicsObjectNum(i)
+			if IsValid(p) then p:SetMass(m[1]) p:SetInertia(m[2]) end
+		end
+	end
 
 	local function ModOn()
 		local cv = GetConVar("ar_enabled")
@@ -37,15 +68,40 @@ if SERVER then
 	end
 
 	-- его подмену тела игрока - выключить (мод сам возвращает движковую по смене ar_enabled_players)
-	local function NoEngineRagdolls()
-		if not M.Present() or not cvOn:GetBool() then return end
-		local cv = GetConVar("ar_enabled_players")
-		if cv and cv:GetBool() then
-			RunConsoleCommand("ar_enabled_players", "0")
-			print("[rem_artag] ar_enabled_players 0: тела игроков Artagdoll получает от Z-City (compat/sh_artagdoll.lua)")
+	-- Мод при загрузке ВСЕГДА (не только при ar_enabled_players 1) ставит свои PLAYER:CreateRagdoll / GetRagdollEntity:
+	-- его CreateRagdoll делает prop_ragdoll и переводит игрока в наблюдение за ним - при смерти второе тело поверх
+	-- тела Z-City, а GetRagdollEntity перестаёт отдавать тело Z-City (экран смерти, дефибриллятор). У Z-City
+	-- CreateRagdoll ничего не делает - возвращаем её версии (hg.ZC_*, fake/sv_tier_0.lua) и держим (проверка раз в 5 с).
+	local function KeepZCityBodies()
+		if not M.Present() then return end
+		local P = FindMetaTable("Player")
+		if hg.ZC_CreateRagdoll and P.CreateRagdoll ~= hg.ZC_CreateRagdoll then
+			P.CreateRagdoll = hg.ZC_CreateRagdoll
+			print("[rem_artag] PLAYER:CreateRagdoll Artagdoll -> Z-City (второе тело при смерти)")
+		end
+		if hg.ZC_GetRagdollEntity and P.GetRagdollEntity ~= hg.ZC_GetRagdollEntity then
+			P.GetRagdollEntity = hg.ZC_GetRagdollEntity
 		end
 	end
-	hook.Add("InitPostEntity", "rem_artag", function() timer.Simple(6, NoEngineRagdolls) end) -- мод ставит хуки через 5 с
+
+	local function NoEngineRagdolls()
+		if not M.Present() then return end
+		KeepZCityBodies()
+		if not cvOn:GetBool() then return end
+		local cv = GetConVar("ar_enabled_players")
+		if cv and cv:GetBool() then
+			RunConsoleCommand("ar_enabled_players", "0") -- и его PostPlayerDeath не трогает игроков
+			print("[rem_artag] ar_enabled_players 0: тела игроков Artagdoll получает от Z-City (compat/sh_artagdoll.lua)")
+			timer.Simple(0.5, KeepZCityBodies) -- его колбэк квара вернёт «старые» - а старыми могли быть движковые
+		end
+	end
+	hook.Add("InitPostEntity", "rem_artag", function()
+		timer.Simple(0, KeepZCityBodies)
+		timer.Simple(6, NoEngineRagdolls) -- мод ставит хуки через 5 с
+		timer.Create("rem_artag_keep", 5, 0, KeepZCityBodies)
+	end)
+	-- и сразу перед смертью (если мод перезагрузился между проверками)
+	hook.Add("DoPlayerDeath", "rem_artag_keep", function() KeepZCityBodies() end)
 	cvars.AddChangeCallback("rem_artag", function(_, _, new) if new == "1" then NoEngineRagdolls() end end, "rem_artag")
 
 	local function HealthData(rag) return DMS_Health and DMS_Health.Active and DMS_Health.Active[rag] end
@@ -71,7 +127,8 @@ if SERVER then
 		if not IsValid(rag) then return end
 		local ar = ActiveRagdoll and ActiveRagdoll.Get and ActiveRagdoll.Get(rag)
 		if ar and ar.Destroy then pcall(ar.Destroy, ar) end
-		rag.remArtag, rag.remArtagAlive, rag.remArtagPaused = nil, nil, nil
+		RestoreMasses(rag, rag.remArtagMasses)
+		rag.remArtag, rag.remArtagAlive, rag.remArtagPaused, rag.remArtagMasses = nil, nil, nil, nil
 	end
 
 	-- живое тело умерло: дальше посмертно, как у мода
@@ -104,6 +161,10 @@ if SERVER then
 		if alive then
 			rag.remArtagAlive = true
 			Alive[rag] = ply
+			-- контроллер мода появится через ~0.05 с и поменяет массы - вернуть после
+			local masses = SaveMasses(rag)
+			rag.remArtagMasses = masses
+			timer.Simple(0.3, function() if IsValid(rag) and rag.remArtagAlive then RestoreMasses(rag, masses) end end)
 		end
 		local ok, err = pcall(ActiveRagdollManager.Run, rag, IsValid(ply) and ply.DMS_LastDmgPos or nil)
 		if not ok then
@@ -119,9 +180,11 @@ if SERVER then
 
 	hook.Add("Fake", "rem_artag", function(ply, rag)
 		if not ModOn() or not cvAlive:GetBool() or not IsValid(ply) or not IsValid(rag) or ply:InVehicle() then return end
-		-- мод сам ставит контроллер через 0.05 с; тело должно уже стоять
+		-- мод сам ставит контроллер через 0.05 с; тело должно уже стоять. Шокер/припадок - позже (Think)
 		timer.Simple(0.1, function()
-			if IsValid(ply) and IsValid(rag) and ply:Alive() and ply.FakeRagdoll == rag then M.Give(rag, ply, true) end
+			if not (IsValid(ply) and IsValid(rag) and ply:Alive() and ply.FakeRagdoll == rag) then return end
+			if Busy(ply) then Pending[rag] = ply return end
+			M.Give(rag, ply, true)
 		end)
 	end)
 
@@ -132,10 +195,18 @@ if SERVER then
 
 	local nextThink = 0
 	hook.Add("Think", "rem_artag", function()
-		if not next(Alive) then return end
+		if not next(Alive) and not next(Pending) then return end
 		local now = CurTime()
 		if now < nextThink then return end
 		nextThink = now + 0.1
+		for rag, ply in pairs(Pending) do
+			if not (IsValid(rag) and IsValid(ply) and ply:Alive() and ply.FakeRagdoll == rag) or not ModOn() or not cvAlive:GetBool() then
+				Pending[rag] = nil
+			elseif not Busy(ply) then
+				Pending[rag] = nil
+				M.Give(rag, ply, true)
+			end
+		end
 		for rag, ply in pairs(Alive) do
 			if not IsValid(rag) then Alive[rag] = nil continue end
 			if not IsValid(ply) or not ModOn() or not cvAlive:GetBool() or (ply:Alive() and ply.FakeRagdoll ~= rag) then
@@ -146,8 +217,8 @@ if SERVER then
 			rag.DMS_IsHeadshot = nil
 			local d = HealthData(rag)
 			if d and not d.dead then d.currentHP = d.maxHP or d.currentHP d.isBleeding = false end
-			local ctrl = false
-			for _, k in ipairs(CONTROL) do if ply:KeyDown(k) then ctrl = true break end end
+			local ctrl = Busy(ply) -- шокер / припадок - тоже пауза
+			if not ctrl then for _, k in ipairs(CONTROL) do if ply:KeyDown(k) then ctrl = true break end end end
 			SetPaused(rag, ctrl)
 		end
 	end)
