@@ -12,6 +12,20 @@ end
 hg.ZC_CreateRagdoll = PLAYER.CreateRagdoll
 hg.ZC_GetRagdollEntity = PLAYER.GetRagdollEntity
 
+-- тело человека звучит как тело: у части моделей игроков в физике не "flesh" (пластик/дерево/металл по умолчанию) -
+-- удары регдолла о пол звучали как от предмета. Все физ. кости регдолла игрока (упал и тело смерти) - flesh
+local cvFlesh = CreateConVar("rem_ragdoll_flesh", "1", FCVAR_ARCHIVE, "Player ragdolls always use the flesh surface (human impact sounds)", 0, 1)
+hook.Add("Ragdoll_Create", "rem_ragdoll_flesh", function(ply, rag)
+	if not cvFlesh:GetBool() then return end
+	timer.Simple(0, function()
+		if not IsValid(rag) then return end
+		for i = 0, rag:GetPhysicsObjectCount() - 1 do
+			local p = rag:GetPhysicsObjectNum(i)
+			if IsValid(p) and p:GetMaterial() ~= "flesh" then p:SetMaterial("flesh") end
+		end
+	end)
+end)
+
 local hook_Run = hook.Run
 hook.Add("OnEntityCreated", "bull_add", function(npc)
 	timer.Simple(0, function()

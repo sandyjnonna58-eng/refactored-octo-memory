@@ -88,9 +88,22 @@ if SERVER then
 		end
 	end
 
+	-- голос мода (SoundManager: крики/стоны по поведению, если у мода есть озвучка) - не для живого: у живого голос
+	-- Z-City (фразы, крики боли). Оборачиваем его функцию проигрывания (сам код мода не трогаем)
+	local function MuteAliveVoice()
+		if not SoundManager or SoundManager.remWrapped or not SoundManager.Play then return end
+		local orig = SoundManager.Play
+		SoundManager.Play = function(self, ent, ...)
+			if IsValid(ent) and ent.remArtagAlive then return end
+			return orig(self, ent, ...)
+		end
+		SoundManager.remWrapped = true
+	end
+
 	local function NoEngineRagdolls()
 		if not M.Present() then return end
 		KeepZCityBodies()
+		MuteAliveVoice()
 		if not cvOn:GetBool() then return end
 		local cv = GetConVar("ar_enabled_players")
 		if cv and cv:GetBool() then

@@ -1554,6 +1554,12 @@ local bleedSurfaces = { -- https://developer.valvesoftware.com/wiki/Material_sur
 local function velocityDamage(ent, data)
 	local speed = (data.OurOldVelocity - data.TheirOldVelocity):Length()
 	if speed < 350 then return end
+	-- живое тело ведёт мод Artagdoll (compat/sh_artagdoll.lua): его рывки руками/ногами о землю - не падение.
+	-- Без этого «удары» конечностей ломали кости - крик и одышка на ровном месте. Урон - только если летит само тело
+	if ent.remArtagAlive and not ent.remArtagPaused then
+		local root = ent:GetPhysicsObjectNum(0)
+		if IsValid(root) and root:GetVelocity():Length() < 300 then return end
+	end
 	if data.HitEntity.Throwable then return end
 	
 	if !data.HitEntity:IsWorld() and data.HitEntity.lasttouched and data.HitEntity.lasttouched[ent] then
