@@ -112,6 +112,9 @@
   метка remUKGun). Поля навешиваются на таблицы оружия (PreRegisterSWEP + уже созданные).
   Уступка камеры Снейку - hg.CameraYielders.mgsv (там же; общая hg.CameraYield - compat/sh_00yield.lua). Монетки (ultrakill_toss_coin) кода не
   требуют: их урон - обычный TakeDamageInfo с позицией попадания.
+- ВЫКЛЮЧЕНЫ по просьбе (rem_reag_classic 0 по умолчанию; поверх реакций Artagdoll смотрелись плохо): все реакции ниже
+  (1-7) - StartHold, ReturnToWound, StartBalance, ApplyFlail, TryGrab, StartGuard, OnBlunt, ApplyFireShock сразу выходят.
+  Файл остаётся: учёт тел R, Think и помощники hg.Reag нужны sv_reagdoll_extra.lua; ток -> эпилепсия (EntityTakeDamage) работает.
 - Живые реакции регдолла (по мотивам мода ReAgdoll, который прислал пользователь; его код и ассеты не брали - свой код):
   `lua/homigrad/fake/sv_reagdoll.lua`. Учёт регдоллов: хук "Fake" (упал) и DoPlayerDeath (регдолл смерти; умер лёжа -
   переводится в мёртвого в Think). 1) хватается за свежую рану (org.wounds / arterialwounds, моложе 2 с; рука не раненая,

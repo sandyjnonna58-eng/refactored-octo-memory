@@ -23,6 +23,10 @@ local cvLock = CreateConVar("rem_reag_lock", "1", FCVAR_ARCHIVE, "E (lean/head) 
 local cvGuard = CreateConVar("rem_reag_guard", "1", FCVAR_ARCHIVE, "Cover the head when beaten with fists/kicks", 0, 1)
 local cvStand = CreateConVar("rem_reag_stand_time", "1", FCVAR_ARCHIVE, "Multiplier for how long a shot person tries to stay on feet", 0, 5)
 local cvGrab = CreateConVar("rem_reag_grab", "1", FCVAR_ARCHIVE, "Grab walls/ledges with a hand while falling", 0, 1)
+-- старые реакции по мотивам ReAgdoll (держание раны, стояние/шатание, махание в полёте, цепляние за край, блок, перекат
+-- в огне, судороги) - выключены по просьбе: поверх реакций по Artagdoll (sv_reagdoll_extra.lua) смотрелись плохо.
+-- Учёт тел, помощники и вызов hg.ReagExtra остаются - на них работают новые реакции. Ток -> припадок остаётся.
+local cvClassic = CreateConVar("rem_reag_classic", "0", FCVAR_ARCHIVE, "Old ReAgdoll-style reactions (wound hold, stagger, flail, ledge grab, guard, fire roll)", 0, 1)
 
 local DEATH_FADE = 9      -- столько секунд мёртвый ещё держится за рану (слабее и слабее)
 local DEATH_FLAIL = 1.2   -- после смерти ещё машет в полёте
@@ -188,6 +192,7 @@ end
 
 -- ================= 1) хватается за рану =================
 local function StartHold(st, rag, w, forced)
+	if not cvClassic:GetBool() then return end -- старые реакции выключены (rem_reag_classic)
 	if not forced and math.random(100) > cvHold:GetFloat() then return end
 	local org = st.org
 	local bone = WoundBoneName(rag, w) or ""
@@ -222,6 +227,7 @@ end
 
 -- отпустил руку (была у игрока, стала свободной) - если есть кровоточащая рана (до 2 мин), рука сама её зажимает
 local function ReturnToWound(st, rag, now, busyL, busyR)
+	if not cvClassic:GetBool() then return end -- старые реакции выключены (rem_reag_classic)
 	if not st.alive or not st.org then return end
 	for side, busy in pairs({L = busyL, R = busyR}) do
 		local was = st.prevBusy and st.prevBusy[side]
@@ -316,6 +322,7 @@ local function BalanceStrength(st)
 end
 
 local function StartBalance(st, rag, now, moveVel)
+	if not cvClassic:GetBool() then return end -- старые реакции выключены (rem_reag_classic)
 	if not cvStagger:GetBool() then return end
 	local pelvis, spine = Phys(rag, 0), Phys(rag, 1)
 	if not pelvis or not spine then return end
@@ -469,6 +476,7 @@ end
 
 -- ================= 3) машет в полёте =================
 local function ApplyFlail(st, rag, now, busyL, busyR, coverArms)
+	if not cvClassic:GetBool() then return end -- старые реакции выключены (rem_reag_classic)
 	local org = st.org
 	local t = now - st.flailStart
 	local strength = st.alive and 1 or math.Clamp(1 - (now - (st.deathT or now)) / DEATH_FLAIL, 0, 1)
@@ -496,6 +504,7 @@ local function Release(st, side)
 end
 
 local function TryGrab(rag, data)
+	if not cvClassic:GetBool() then return end -- старые реакции выключены (rem_reag_classic)
 	local st = R[rag]
 	if not st or not cvGrab:GetBool() or not st.alive or not st.org or st.org.otrub then return end
 	if (st.air or 0) < 0.15 and data.OurOldVelocity:Length() < 180 then return end -- не в полёте и не падает
@@ -559,6 +568,7 @@ local function BodyFrame(rag)
 end
 
 local function StartGuard(st, now, dur, block)
+	if not cvClassic:GetBool() then return end -- старые реакции выключены (rem_reag_classic)
 	if not cvGuard:GetBool() or not st.alive then return end
 	local untilT = now + (dur or math.Rand(1.2, 2))
 	if st.guard then st.guard.untilT = math.max(st.guard.untilT, untilT) return end
@@ -614,6 +624,7 @@ local function NearestPhys(rag, pos)
 end
 
 local function OnBlunt(rag, st, pos, hands, now)
+	if not cvClassic:GetBool() then return end -- старые реакции выключены (rem_reag_classic)
 	local headN = select(2, Phys(rag, 10))
 	local n = pos and NearestPhys(rag, pos)
 	local onHead = n and n == headN
@@ -637,6 +648,7 @@ end
 -- (org.seizureActive, система припадков Z-City; сам ток судорог не даёт - он только запускает припадок).
 local LIMBS = {2, 3, 4, 6, 8, 9, 11, 12, 10}
 local function ApplyFireShock(st, rag, now, dt, ply, ctrl)
+	if not cvClassic:GetBool() then return end -- старые реакции выключены (rem_reag_classic)
 	local org = st.org
 	local burning = rag:IsOnFire() or (IsValid(ply) and ply:IsOnFire()) or now < (st.burnUntil or 0)
 	if burning and cvFire:GetBool() and not (org and org.otrub) then
