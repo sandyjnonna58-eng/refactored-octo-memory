@@ -195,14 +195,39 @@ if SERVER then
 		return true
 	end
 
+	-- по просьбе: живое тело - моду только от настоящего урона (пуля, удар, нож, взрыв, огонь...). Просто упал
+	-- (сам, споткнулся, от падения/удара о предмет) - обычный регдолл Z-City: иначе держится за рану, которой нет
+	local HURT = DMG_BULLET + DMG_BUCKSHOT + DMG_SLASH + DMG_CLUB + DMG_BLAST + DMG_BURN + DMG_SHOCK + DMG_SONIC + DMG_DIRECT
+	local HURT_FRESH = 1.5 -- упал не позже стольких секунд после удара - от удара
+	local function RealHurt(dmg)
+		return dmg:IsDamageType(HURT) and not dmg:IsDamageType(DMG_FALL) and dmg:GetDamage() > 0
+	end
+
+	local function TryGive(ply, rag)
+		if not (IsValid(ply) and IsValid(rag) and ply:Alive() and ply.FakeRagdoll == rag) then return end
+		if rag.remArtag or Pending[rag] then return end
+		if Busy(ply) then Pending[rag] = ply return end
+		M.Give(rag, ply, true)
+	end
+
+	hook.Add("HomigradDamage", "rem_artag_hurt", function(ply, dmg, hitgroup, ent)
+		if not ModOn() or not cvAlive:GetBool() or not RealHurt(dmg) then return end
+		if IsValid(ply) and ply:IsRagdoll() then ply = hg.RagdollOwner and hg.RagdollOwner(ply) or nil end
+		if not IsValid(ply) or not ply:IsPlayer() or not ply:Alive() then return end
+		ply.remArtagHurtT = CurTime()
+		-- уже лежит в регдолле и получил удар - отдаём телу сейчас (контроллер мода - через 0.1 с)
+		local rag = ply.FakeRagdoll
+		if IsValid(rag) and not rag.remArtag then
+			timer.Simple(0.1, function() TryGive(ply, rag) end)
+		end
+	end)
+
 	hook.Add("Fake", "rem_artag", function(ply, rag)
 		if not ModOn() or not cvAlive:GetBool() or not IsValid(ply) or not IsValid(rag) or ply:InVehicle() then return end
+		-- упал без свежего удара - мод не нужен (включится, если ударят уже лёжа - HomigradDamage выше)
+		if CurTime() - (ply.remArtagHurtT or -100) > HURT_FRESH then return end
 		-- мод сам ставит контроллер через 0.05 с; тело должно уже стоять. Шокер/припадок - позже (Think)
-		timer.Simple(0.1, function()
-			if not (IsValid(ply) and IsValid(rag) and ply:Alive() and ply.FakeRagdoll == rag) then return end
-			if Busy(ply) then Pending[rag] = ply return end
-			M.Give(rag, ply, true)
-		end)
+		timer.Simple(0.1, function() TryGive(ply, rag) end)
 	end)
 
 	-- живой: мод не решает, что выстрел в голову смертелен (это делает Z-City) - метку снимаем после всех хуков урона

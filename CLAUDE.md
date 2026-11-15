@@ -205,6 +205,9 @@
   Крик/одышка при падении без урона: velocityDamage (sv_input) считал рывки конечностей мода о землю падением -> переломы ->
   крик (sv_phrases QueuePainScream из sv_bone); теперь на теле с remArtagAlive и без паузы урон - только если таз летит
   быстрее 300. Голос мода (SoundManager.Play) на живых заглушён обёрткой (MuteAliveVoice).
+  ПО ПРОСЬБЕ: живое тело - моду ТОЛЬКО от настоящего урона (HURT: пуля, дробь, нож, удар, взрыв, огонь, ток; без DMG_FALL,
+  физика/падение не в счёт): хук "Fake" отдаёт тело, если удар был не позже 1.5 с (ply.remArtagHurtT из HomigradDamage
+  "rem_artag_hurt"); ударили уже лёжа - тот же хук отдаёт сразу (TryGive). Просто упал - обычный регдолл Z-City.
 - Звуки регдолла «как от предмета»: у части моделей игроков физика не flesh - fake/sv_tier_0.lua хук Ragdoll_Create
   "rem_ragdoll_flesh" ставит всем физ. костям регдолла игрока SetMaterial("flesh"); выкл. rem_ragdoll_flesh 0.
   Тест: rem_test_artag (сервер, админ - ответ в чат).
