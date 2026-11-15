@@ -188,8 +188,12 @@
   мод): `compat/sh_artagdoll.lua`. DoPlayerDeath -> через тик ply.RagdollDeath -> hg.Artag.Give: ActiveRagdollManager.Run(тело,
   ply.DMS_LastDmgPos) + DMS_Health.new(тело, 100), тело.DMS_IsHeadshot по ply.remHSHit (ScalePlayerDamage мода пули Z-City
   не видит), горел - Ignite; тело.remArtag - наши посмертные реакции (sv_reagdoll_extra) на нём молчат. ar_enabled_players
-  ставим 0 (через 6 с после InitPostEntity): его подмена PLAYER:CreateRagdoll дала бы второе тело. Живые в регдолле Z-City -
-  наши реакции. Выкл. - rem_artag 0. Тест: rem_test_artag (сервер, админ - ответ в чат).
+  ставим 0 (через 6 с после InitPostEntity): его подмена PLAYER:CreateRagdoll дала бы второе тело. Живые (rem_artag_alive 1):
+  хук "Fake" -> через 0.1 с Give(тело, ply, true); пока жмёт кнопки управления - пауза (тело вне DMS.ActiveRagdolls, сила 0),
+  здоровье мода (DMS_Health.Active[тело], 200 от ActiveRagdoll.new) держим полным, DMS_IsHeadshot снимаем (PostEntityTakeDamage);
+  встал - ar:Destroy(); умер в регдолле - ToDead: метка выстрела в голову, здоровье мода 30 с кровотечением. На теле с
+  remArtag все наши реакции sv_reagdoll_extra молчат (гримаса - клиент, остаётся). Выкл. - rem_artag 0 / rem_artag_alive 0.
+  Тест: rem_test_artag (сервер, админ - ответ в чат).
 - Совместимость с отдельным аддоном «[V.A.C] Vehicles.Action.Chaos» (техника/самолёты, Мастерская; 1.2 ГБ с чужими моделями -
   в репозиторий не кладём): у V.A.C. свой модуль под Z-City (lua/vac/core/sh_compat_zcity.lua - глушит в своих сиденьях
   по имени хуки "jopa", "homigrad-view", "fakeCameraAngles", "allowweapons", "fake_enterveh" и т.п., раз в 10 с).

@@ -280,8 +280,8 @@ function hg.ReagExtra(st, rag, now, dt, ply, ctrl, busyL, busyR)
 	local org = st.org
 	local conscious = st.alive and not (org and org.otrub)
 
-	-- тело отдано моду Artagdoll (compat/sh_artagdoll.lua) - посмертные реакции его, наши не тянут то же тело
-	if not st.alive and rag.remArtag then return end
+	-- тело отдано моду Artagdoll (compat/sh_artagdoll.lua, и живое, и мёртвое) - реакции его, наши не тянут то же тело
+	if rag.remArtag then return end
 
 	if not st.alive then
 		if not st.hsChecked then

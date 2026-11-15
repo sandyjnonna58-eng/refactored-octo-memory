@@ -77,7 +77,7 @@ if SERVER then
 		local function cv(n) local c = GetConVar(n) return c and c:GetString() or "-" end
 		local msg = "rem_test_artag: мод Artagdoll " .. (ActiveRagdollManager and "найден" or "НЕ найден (поставь аддон)") ..
 			"; rem_artag " .. cv("rem_artag") .. "; ar_enabled " .. cv("ar_enabled") ..
-			"; ar_enabled_players (должно быть 0) " .. cv("ar_enabled_players")
+			"; ar_enabled_players (должно быть 0) " .. cv("ar_enabled_players") .. "; живые rem_artag_alive " .. cv("rem_artag_alive")
 		if IsValid(ply) then ply:ChatPrint(msg) else print(msg) end
 	end)
 
