@@ -4,7 +4,7 @@
 hook.Add("StartCommand", "rem_alcohol_walk", function(ply, cmd)
 	local bac = ply:GetNW2Float("rem_bac_eff", 0)
 	if bac < 0.5 or not ply:Alive() then return end
-	if hg.VAC and hg.VAC.Seated(ply) then return end -- в технике V.A.C. кнопки движения - управление (compat/sh_vac.lua)
+	if hg.InSpecialVehicle and hg.InSpecialVehicle(ply) then return end -- в технике V.A.C./RVB кнопки движения - управление (compat/sh_00yield.lua)
 	if cmd:GetForwardMove() == 0 and cmd:GetSideMove() == 0 then return end
 	local k = math.Clamp((bac - 0.5) / 2, 0, 1)
 	local heavy = math.Clamp((bac - 1.8) / 1.2, 0, 1)

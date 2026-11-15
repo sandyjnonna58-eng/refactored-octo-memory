@@ -3,7 +3,7 @@
 local function WD(ply, kind) return ply:GetNW2Float("rem_wd_" .. kind, 0) end
 
 hook.Add("CreateMove", "rem_addiction_tremor", function(cmd)
-	if hg.VAC and hg.VAC.Seated(LocalPlayer()) then return end -- в технике V.A.C. cmd - руль и прицел (compat/sh_vac.lua)
+	if hg.InSpecialVehicle and hg.InSpecialVehicle(LocalPlayer()) then return end -- в технике V.A.C./RVB cmd - руль и прицел (compat/sh_00yield.lua)
 	local ply = LocalPlayer()
 	if not IsValid(ply) or not ply:Alive() then return end
 	local amp = WD(ply, "alcohol") * 0.3 + WD(ply, "nicotine") * 0.07

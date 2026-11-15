@@ -16,6 +16,7 @@ local HELP = {
 	"rem_decap_test / rem_halve_test - отрезать голову / разрубить того, на кого смотришь",
 	"rem_drug_set heroin|meth|lsd 1, rem_panic_set 0..1, rem_depression_set 0..1, selfharm, zb_lastbattle <ник>",
 	"rem_test_vac                - состояние совместимости с V.A.C. (аддон найден, сидишь в его технике, чья камера)",
+	"rem_test_rvb                - то же для Realistic Vehicles Base (RVB)",
 	"--- Звуки (у себя) ---",
 	"rem_test_deathsound [0|1]   - звук смерти (0 brutal, 1 остановка сердца)",
 	"rem_test_roundsound         - начало раунда Homicide",
@@ -112,6 +113,14 @@ else
 		print("rem_test_vac: V.A.C. найден; в его технике: " .. tostring(hg.VAC.Seated(ply)) ..
 			"; камера у V.A.C.: " .. tostring(hg.VAC.HasView()) ..
 			"; hg.CameraYield: " .. tostring(hg.CameraYield and hg.CameraYield(ply)))
+	end)
+
+	concommand.Add("rem_test_rvb", function()
+		local ply = LocalPlayer()
+		if not (hg.RVB and hg.RVB.Present()) then print("rem_test_rvb: аддон RVB не найден") return end
+		print("rem_test_rvb: RVB найден; в его машине: " .. tostring(hg.RVB.Seated(ply)) ..
+			"; без регдолла/мыши Z-City: " .. tostring(hg.InSpecialVehicle(ply)) ..
+			"; камера уступлена: " .. tostring(hg.CameraYield(ply)))
 	end)
 
 	local chans = {}

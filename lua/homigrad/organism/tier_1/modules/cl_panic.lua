@@ -138,7 +138,7 @@ end)
 
 -- прицел гуляет; при рефлекторном выстреле - рывок к тому, кто появился
 hook.Add("CreateMove", "rem_panic_aim", function(cmd)
-	if hg.VAC and hg.VAC.Seated(LocalPlayer()) then return end -- в технике V.A.C. cmd - руль и прицел (compat/sh_vac.lua)
+	if hg.InSpecialVehicle and hg.InSpecialVehicle(LocalPlayer()) then return end -- в технике V.A.C./RVB cmd - руль и прицел (compat/sh_00yield.lua)
 	local k = level
 	if k < 0.02 then return end
 	local ply = LocalPlayer()

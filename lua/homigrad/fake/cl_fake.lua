@@ -29,6 +29,8 @@ end)
 
 local diff = Angle()
 hook.Add("InputMouseApply", "fakeCameraAngles", function(cmd, x, y, angle)
+	-- в технике V.A.C./RVB мышь - её (руль, турель, обзор): compat/sh_00yield.lua
+	if hg.InSpecialVehicle and hg.InSpecialVehicle(lply) then return end
 	local tbl = {}
 	local cc = GetCoolCameraBool()
 	if cc then

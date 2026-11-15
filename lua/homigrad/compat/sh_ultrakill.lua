@@ -26,9 +26,12 @@ function hg.UK.Weapon(ply)
 	return IsUKClass(w:GetClass(), w.Base)
 end
 
--- общая уступка камеры чужим аддонам (cl_camera.lua): сейчас только Снейк (sh_mgsv.lua); оружию ULTRAKILL камеру
+hg.CameraYielders = hg.CameraYielders or {} -- (списки из sh_00yield.lua - на случай другого порядка загрузки)
+hg.NoFakeVehicles = hg.NoFakeVehicles or {}
+hg.VehicleDamageBlockers = hg.VehicleDamageBlockers or {}
+-- уступка камеры (hg.CameraYield, compat/sh_00yield.lua): Снейк (sh_mgsv.lua); оружию ULTRAKILL камеру
 -- больше не отдаём - его держит аватар
-function hg.CameraYield(ply)
+hg.CameraYielders.mgsv = function(ply)
 	return hg.MGSV and hg.MGSV.Owns and hg.MGSV.Owns(ply) or false
 end
 

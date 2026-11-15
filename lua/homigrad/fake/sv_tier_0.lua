@@ -1359,13 +1359,16 @@ hook.Add("CanPlayerEnterVehicle","fake_enterveh",function(ply, veh)
 	if hg.RemoveDeadBodies(veh) then return false end
 	
 	local parent = veh:GetParent()
-	if IsValid(parent) and parent:GetVelocity():LengthSqr() > 256 * 256 and !ply.switchingseat then return false end
+	-- ply.RVB_Switching - смена места в машине RVB (compat/sh_rvb.lua)
+	if IsValid(parent) and parent:GetVelocity():LengthSqr() > 256 * 256 and !ply.switchingseat and !ply.RVB_Switching then return false end
 	
 	return true//not IsValid(ply.FakeRagdoll)// or IsValid(ply.wasveh)
 end)
 local hg_no_fake_in_cars = CreateConVar("hg_no_fake_in_cars","0",FCVAR_ARCHIVE + FCVAR_REPLICATED, "disables fake in cars", 0, 1)
 hook.Add("PlayerEnteredVehicle","allowweapons",function(ply,veh,role)
 	if hg_no_fake_in_cars:GetBool() then return end
+	-- техника со своими сиденьями/камерой (V.A.C., RVB - compat/sh_00yield.lua): без регдолла, оружие решает она
+	if hg.NoFakeInCar and hg.NoFakeInCar(veh) then return end
 	ply:SetEyeAngles(angle_zero)
 	//local veh2 = veh:GetParent()
 

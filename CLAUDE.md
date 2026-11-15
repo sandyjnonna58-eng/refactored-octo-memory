@@ -110,7 +110,7 @@
   поза невидимой вьюмодели (зеркало + моды SCK) минус покой -> кисть аватара и кости weapon_* модели в руке (поправки осей - FIX). В рэгдолл с этим
   оружием нельзя - при падении убирается (поддержку рэгдолла убрали по просьбе). Вьюмодель и руки не рисуются (PreDrawViewModel,
   метка remUKGun). Поля навешиваются на таблицы оружия (PreRegisterSWEP + уже созданные).
-  `hg.CameraYield(ply)` (там же, её зовёт `cl_camera.lua`) теперь только для Снейка. Монетки (ultrakill_toss_coin) кода не
+  Уступка камеры Снейку - hg.CameraYielders.mgsv (там же; общая hg.CameraYield - compat/sh_00yield.lua). Монетки (ultrakill_toss_coin) кода не
   требуют: их урон - обычный TakeDamageInfo с позицией попадания.
 - Живые реакции регдолла (по мотивам мода ReAgdoll, который прислал пользователь; его код и ассеты не брали - свой код):
   `lua/homigrad/fake/sv_reagdoll.lua`. Учёт регдоллов: хук "Fake" (упал) и DoPlayerDeath (регдолл смерти; умер лёжа -
@@ -155,13 +155,21 @@
   рану до 2 мин, не на этой же руке). WASD - стояние не ведёт тело по горизонтали, в огне не катаем сами (Moving); E -
   спину/голову не выпрямляем, руки E не занимают (rem_reag_lock 1). Старый вариант - реакции уступают любой кнопке
   целиком (Controlling, rem_reag_yield 1, по умолчанию 0).
-- Совместимость с отдельным аддоном «[V.A.C] Vehicles.Action.Chaos» (техника/самолёты, Мастерская; 1.2 ГБ с чужими моделями -
+- Уступки чужим аддонам - `lua/homigrad/compat/sh_00yield.lua` (грузится первым): списки hg.CameraYielders (камера,
+  hg.CameraYield в cl_camera.lua), hg.NoFakeVehicles (hg.NoFakeInCar(veh): без регдолла в машине - sv_tier_0 "allowweapons",
+  мышь - cl_fake "fakeCameraAngles"; hg.InSpecialVehicle(ply) - наши хуки cmd молчат), hg.VehicleDamageBlockers
+  (sv_input "homigrad-damage" выходит раньше организма). Компат-файл регистрирует сюда свою проверку, не переопределяет функции.
+- Совместимость с «Realistic Vehicles Base (RVB)» (Мастерская, 247 МБ моделей - в репозиторий не кладём): `compat/sh_rvb.lua`.
+  Своего модуля под Z-City у RVB нет: в его сиденьях (RVB.IsRVB родителя / seat.RVBParent) без регдолла, камера - его
+  CalcVehicleView "RVB_Camera", мышь его; смена места на ходу - флаг ply.RVB_Switching в "fake_enterveh"; бронированный
+  экипаж (rvb_armored_crew_protect, не IsLightVehicle, не RVBCrewKill) - урон гасится до организма. Тест: rem_test_rvb.
+- Совместимость с отдельным аддоном «[V.A.C] Vehicles.Action.Chaos»- Совместимость с отдельным аддоном «[V.A.C] Vehicles.Action.Chaos» (техника/самолёты, Мастерская; 1.2 ГБ с чужими моделями -
   в репозиторий не кладём): у V.A.C. свой модуль под Z-City (lua/vac/core/sh_compat_zcity.lua - глушит в своих сиденьях
   по имени хуки "jopa", "homigrad-view", "fakeCameraAngles", "allowweapons", "fake_enterveh" и т.п., раз в 10 с).
   Наше - `lua/homigrad/compat/sh_vac.lua`: hg.VAC.Seated(ply) / HasView(); hg.CameraYield уступает камеру, пока вид у
   V.A.C. (cl_cdeath.lua переставляет хуки камеры - обёртка V.A.C. слетает); наши CreateMove (качание прицела: алкоголь,
   наркотики, тошнота, паника, ломка) и StartCommand пьяной походки в его технике молчат. Тест: rem_test_vac.
-  Новый свой хук на мышь/cmd/камеру - проверять hg.VAC.Seated.
+  Новый свой хук на мышь/cmd/камеру - проверять hg.InSpecialVehicle(ply).
 - Оружие из паков Мастерской «Sandstorm SWEPs» (44 ствола weapon_rem_sand_* по моделям паков, генератор tools/sandstorm,
   compat/sh_sandstorm.lua) делали - убрано из сборки по просьбе. Если вернут: модели паков w_*.mdl в пространстве кисти
   R_Hand, WorldAng = RX * R^-1 * RX и ещё -90 к рысканию (проверено в игре на SG 552); смотреть историю git.

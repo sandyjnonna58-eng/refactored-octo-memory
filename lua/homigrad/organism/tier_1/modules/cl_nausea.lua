@@ -36,7 +36,7 @@ hook.Add("RenderScreenspaceEffects", "rem_nausea", function()
 end)
 
 hook.Add("CreateMove", "rem_nausea_sway", function(cmd)
-	if hg.VAC and hg.VAC.Seated(LocalPlayer()) then return end -- в технике V.A.C. cmd - руль и прицел (compat/sh_vac.lua)
+	if hg.InSpecialVehicle and hg.InSpecialVehicle(LocalPlayer()) then return end -- в технике V.A.C./RVB cmd - руль и прицел (compat/sh_00yield.lua)
 	if shown < 0.45 then return end
 	local k = (shown - 0.45) / 0.55
 	local t = CurTime()

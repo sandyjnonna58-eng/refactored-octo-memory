@@ -5,9 +5,13 @@
 -- Z-City ("jopa", "homigrad-view"), и до следующей обёртки камера в самолёте/танке снова наша. Здесь - то, чего V.A.C.
 -- про эту сборку не знает:
 --   камера   hg.CameraYield (её зовёт cl_camera.lua прямо внутри своей камеры) уступает, пока вид у V.A.C.;
---   наши хуки управления (качание прицела от алкоголя/наркотиков/тошноты/паники/ломки, пьяная походка) в его
---            сиденье молчат: они крутят cmd - в самолёте это руль и прицел турели (hg.VAC.Seated).
+--   сиденья  hg.NoFakeInCar (sh_00yield.lua): наши хуки управления (качание прицела от алкоголя/наркотиков/тошноты/
+--            паники/ломки, пьяная походка) в его технике молчат - они крутят cmd, а в самолёте это руль и прицел
+--            турели (hg.InSpecialVehicle); регдолл/мышь Z-City - тоже, даже если обёртка V.A.C. слетела.
 -- Без V.A.C. ничего не делает.
+hg.CameraYielders = hg.CameraYielders or {} -- (списки из sh_00yield.lua - на случай другого порядка загрузки)
+hg.NoFakeVehicles = hg.NoFakeVehicles or {}
+hg.VehicleDamageBlockers = hg.VehicleDamageBlockers or {}
 hg.VAC = hg.VAC or {}
 local M = hg.VAC
 
@@ -35,10 +39,13 @@ if CLIENT then
 		return M.Seated(LocalPlayer())
 	end
 
-	-- цепочкой к уже заданной (Снейк из sh_ultrakill.lua): компат-файлы грузятся по алфавиту, этот - позже
-	local prev = hg.CameraYield
-	function hg.CameraYield(ply)
-		if ply == LocalPlayer() and M.HasView() then return true end
-		return prev and prev(ply) or false
+	hg.CameraYielders.vac = function(ply)
+		return ply == LocalPlayer() and M.HasView()
 	end
+end
+
+-- сиденье/часть техники V.A.C.
+hg.NoFakeVehicles.vac = function(veh)
+	local z = Z()
+	return z and z.IsVAC and z.IsVAC(veh) or false
 end
