@@ -5,10 +5,12 @@
 --                                (sv_tier_0 "allowweapons"), не трогает мышь (cl_fake "fakeCameraAngles");
 --   hg.InSpecialVehicle(ply)   - игрок сидит в такой технике (наши хуки cmd/мыши молчат: там это руль и прицел);
 --   hg.VehicleDamageBlock(ent, dmg) - урон по сидящему гасит сама техника (бронированный экипаж RVB):
---                                sv_input "homigrad-damage" выходит с true раньше организма.
+--                                sv_input "homigrad-damage" выходит с true раньше организма;
+--   hg.VehicleDamageAdjust(ent, dmg) - поправить урон по сидящему до организма (точка попадания на настоящем теле).
 hg.CameraYielders = hg.CameraYielders or {}
 hg.NoFakeVehicles = hg.NoFakeVehicles or {}
 hg.VehicleDamageBlockers = hg.VehicleDamageBlockers or {}
+hg.VehicleDamageAdjusters = hg.VehicleDamageAdjusters or {}
 
 function hg.CameraYield(ply)
 	for _, f in pairs(hg.CameraYielders) do
@@ -27,6 +29,10 @@ end
 
 function hg.InSpecialVehicle(ply)
 	return IsValid(ply) and ply:IsPlayer() and ply:InVehicle() and hg.NoFakeInCar(ply:GetVehicle()) or false
+end
+
+function hg.VehicleDamageAdjust(ent, dmg)
+	for _, f in pairs(hg.VehicleDamageAdjusters) do f(ent, dmg) end
 end
 
 function hg.VehicleDamageBlock(ent, dmg)

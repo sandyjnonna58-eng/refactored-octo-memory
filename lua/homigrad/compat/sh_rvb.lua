@@ -11,10 +11,16 @@
 --   броня экипажа      RVB гасит весь урон по сидящим в бронетехнике (rvb_armored_crew_protect) своим EntityTakeDamage,
 --                      но организм Z-City считает урон в своём - мог успеть первым; повторяем ту же проверку
 --                      (hg.VehicleDamageBlock) до организма.
+--   стационарное оружие   «[RVB] Realistic Animated Emplacement Weapons» (rvb_emp_*, та же база rvb_base - всё выше
+--                      работает и для него; камера наводчика - его CalcView "REmp_GunnerView"). Стрелок сидит
+--                      невидимым в сиденье, пули по нарисованному телу аддон сам переносит на игрока (ply.REmpOwnHit) с
+--                      точкой попадания на нарисованном теле - организм Z-City ищет органы по этой точке и мог
+--                      промахнуться: переносим её на голову/грудь настоящего тела (hg.VehicleDamageAdjust).
 -- Без RVB ничего не делает.
 hg.CameraYielders = hg.CameraYielders or {} -- (списки из sh_00yield.lua - на случай другого порядка загрузки)
 hg.NoFakeVehicles = hg.NoFakeVehicles or {}
 hg.VehicleDamageBlockers = hg.VehicleDamageBlockers or {}
+hg.VehicleDamageAdjusters = hg.VehicleDamageAdjusters or {}
 hg.RVB = hg.RVB or {}
 local M = hg.RVB
 
@@ -53,5 +59,31 @@ if SERVER then
 		if not veh.IsLightVehicle or veh:IsLightVehicle() then return false end
 		if veh.RVBCrewKill then return false end
 		return true
+	end
+
+	-- попадание по нарисованному стрелку стационарного оружия -> точка на настоящем теле в сиденье
+	hg.VehicleDamageAdjusters.rvb_emp = function(ent, dmg)
+		if not Present() or not IsValid(ent) or not ent:IsPlayer() or not ent.REmpOwnHit then return end
+		local veh = RVB.GetPlayerVehicle and RVB.GetPlayerVehicle(ent)
+		if not (veh and veh.IsEmplacement) then return end
+		local pos = dmg:GetDamagePosition()
+		-- голова - если попали в последнюю точку тела (REmp GunnerPoints: от таза до глаз)
+		local head = false
+		local pts = veh.GunnerPoints and veh:GunnerPoints()
+		if pts and #pts > 0 then
+			local best, bestK = math.huge, 1
+			for k, q in ipairs(pts) do
+				local d = q:DistToSqr(pos)
+				if d < best then best, bestK = d, k end
+			end
+			head = bestK == #pts
+		end
+		local bone = ent:LookupBone(head and "ValveBiped.Bip01_Head1" or "ValveBiped.Bip01_Spine2")
+		local bp = bone and ent:GetBonePosition(bone)
+		if not bp then return end
+		local dir = dmg:GetDamageForce():GetNormalized()
+		if dir:IsZero() then dir = (bp - pos):GetNormalized() end
+		-- чуть снаружи тела по ходу пули: Z-City трассирует от точки вдоль направления удара
+		dmg:SetDamagePosition(bp - dir * 8)
 	end
 end

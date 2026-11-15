@@ -580,6 +580,7 @@ hook.Add("EntityTakeDamage", "homigrad-damage", function(ent, dmgInfo)
 	if hg.TryExtinguisherBulletBlock and hg.TryExtinguisherBulletBlock(ent, dmgInfo) then return true end
 	-- урон по сидящему гасит сама техника (бронированный экипаж RVB - compat/sh_rvb.lua)
 	if hg.VehicleDamageBlock and hg.VehicleDamageBlock(ent, dmgInfo) then return true end
+	if hg.VehicleDamageAdjust then hg.VehicleDamageAdjust(ent, dmgInfo) end
 
 	-- Glass damage to ragdoll...
 	if IsValid(ent) and string.find(ent:GetClass(),"break") and 

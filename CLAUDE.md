@@ -158,11 +158,14 @@
 - Уступки чужим аддонам - `lua/homigrad/compat/sh_00yield.lua` (грузится первым): списки hg.CameraYielders (камера,
   hg.CameraYield в cl_camera.lua), hg.NoFakeVehicles (hg.NoFakeInCar(veh): без регдолла в машине - sv_tier_0 "allowweapons",
   мышь - cl_fake "fakeCameraAngles"; hg.InSpecialVehicle(ply) - наши хуки cmd молчат), hg.VehicleDamageBlockers
-  (sv_input "homigrad-damage" выходит раньше организма). Компат-файл регистрирует сюда свою проверку, не переопределяет функции.
+  (sv_input "homigrad-damage" выходит раньше организма), hg.VehicleDamageAdjusters (поправка урона до организма). Компат-файл регистрирует сюда свою проверку, не переопределяет функции.
 - Совместимость с «Realistic Vehicles Base (RVB)» (Мастерская, 247 МБ моделей - в репозиторий не кладём): `compat/sh_rvb.lua`.
   Своего модуля под Z-City у RVB нет: в его сиденьях (RVB.IsRVB родителя / seat.RVBParent) без регдолла, камера - его
   CalcVehicleView "RVB_Camera", мышь его; смена места на ходу - флаг ply.RVB_Switching в "fake_enterveh"; бронированный
   экипаж (rvb_armored_crew_protect, не IsLightVehicle, не RVBCrewKill) - урон гасится до организма. Тест: rem_test_rvb.
+  Стационарное оружие «[RVB] Realistic Animated Emplacement Weapons» (rvb_emp_*, база rvb_base) покрыто тем же; камера
+  наводчика - его CalcView "REmp_GunnerView"; его попадания по нарисованному стрелку (ply.REmpOwnHit) - точка урона
+  переносится на голову/Spine2 настоящего тела (hg.VehicleDamageAdjusters.rvb_emp, зовёт sv_input до организма).
 - Совместимость с отдельным аддоном «[V.A.C] Vehicles.Action.Chaos»- Совместимость с отдельным аддоном «[V.A.C] Vehicles.Action.Chaos» (техника/самолёты, Мастерская; 1.2 ГБ с чужими моделями -
   в репозиторий не кладём): у V.A.C. свой модуль под Z-City (lua/vac/core/sh_compat_zcity.lua - глушит в своих сиденьях
   по имени хуки "jopa", "homigrad-view", "fakeCameraAngles", "allowweapons", "fake_enterveh" и т.п., раз в 10 с).
