@@ -881,6 +881,10 @@ hook.Add("Think", "rem_reagdoll", function()
 		local ctrl = Controlling(st, now)
 		if ctrl and st.bal then st.bal = nil Dbg("player took control", tostring(rag)) end
 
+		-- дополнительные реакции (выстрел в голову, кувырок, вода, корчи, ползание) - sv_reagdoll_extra.lua;
+		-- через hg, не local: у этой функции и так много upvalue (лимит LuaJIT 60)
+		if hg.ReagExtra then hg.ReagExtra(st, rag, now, dt, ply, ctrl, busyL, busyR) end
+
 		-- горит - катается, припадок - судороги
 		if st.alive then ApplyFireShock(st, rag, now, dt, ply, ctrl) end
 		if not ctrl then
@@ -900,3 +904,7 @@ hook.Add("Think", "rem_reagdoll", function()
 		UpdateGrabs(st, rag, now, busyL or ctrl, busyR or ctrl)
 	end
 end)
+
+-- помощники для sv_reagdoll_extra.lua (тот же учёт регдоллов R, те же Shadow/Align/BodyFrame)
+hg.Reag = {R = R, ARM = ARM, Phys = Phys, Floppy = Floppy, Shadow = Shadow, Align = Align, BodyFrame = BodyFrame,
+	Str = Str, Release = Release, Dbg = Dbg, Moving = Moving}

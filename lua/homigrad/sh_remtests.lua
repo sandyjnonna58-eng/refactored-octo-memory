@@ -13,6 +13,8 @@ local HELP = {
 	"rem_test_fire [ник]         - поджечь на 5 с (регдолл катается)",
 	"rem_test_clear [ник]        - сбросить сотрясение, нокаут, оглушение",
 	"rem_reag_debug 1            - отладка реакций регдолла в консоль сервера",
+	"rem_reag_headshot_kind decerebrate|stiffen|limp|drop - какой будет реакция на смертельный выстрел в голову (пусто - случайно)",
+	"  (реакции Artagdoll: кувырок - бросить тело взрывом/машиной; вода; корчи - боль > 50% лёжа; ползком - на животе + W)",
 	"rem_decap_test / rem_halve_test - отрезать голову / разрубить того, на кого смотришь",
 	"rem_drug_set heroin|meth|lsd 1, rem_panic_set 0..1, rem_depression_set 0..1, selfharm, zb_lastbattle <ник>",
 	"rem_test_vac                - состояние совместимости с V.A.C. (аддон найден, сидишь в его технике, чья камера)",
