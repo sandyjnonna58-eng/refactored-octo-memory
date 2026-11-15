@@ -52,6 +52,7 @@ end)
 
 -- прицел: героин - медленно плывёт, мет - мелко дрожит, кислота - покачивает
 hook.Add("CreateMove", "rem_drugs_aim", function(cmd)
+	if hg.VAC and hg.VAC.Seated(LocalPlayer()) then return end -- в технике V.A.C. cmd - руль и прицел (compat/sh_vac.lua)
 	local ply = LocalPlayer()
 	if not IsValid(ply) or not ply:Alive() then return end
 	local h, m, l = L(ply, "rem_heroin"), L(ply, "rem_meth"), L(ply, "rem_lsd")

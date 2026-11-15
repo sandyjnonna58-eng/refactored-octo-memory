@@ -15,6 +15,7 @@ local HELP = {
 	"rem_reag_debug 1            - отладка реакций регдолла в консоль сервера",
 	"rem_decap_test / rem_halve_test - отрезать голову / разрубить того, на кого смотришь",
 	"rem_drug_set heroin|meth|lsd 1, rem_panic_set 0..1, rem_depression_set 0..1, selfharm, zb_lastbattle <ник>",
+	"rem_test_vac                - состояние совместимости с V.A.C. (аддон найден, сидишь в его технике, чья камера)",
 	"--- Звуки (у себя) ---",
 	"rem_test_deathsound [0|1]   - звук смерти (0 brutal, 1 остановка сердца)",
 	"rem_test_roundsound         - начало раунда Homicide",
@@ -105,6 +106,14 @@ if SERVER then
 		org.disorientation = 0
 	end)
 else
+	concommand.Add("rem_test_vac", function()
+		local ply = LocalPlayer()
+		if not (hg.VAC and hg.VAC.Present()) then print("rem_test_vac: аддон V.A.C. не найден (VAC.ZCity нет)") return end
+		print("rem_test_vac: V.A.C. найден; в его технике: " .. tostring(hg.VAC.Seated(ply)) ..
+			"; камера у V.A.C.: " .. tostring(hg.VAC.HasView()) ..
+			"; hg.CameraYield: " .. tostring(hg.CameraYield and hg.CameraYield(ply)))
+	end)
+
 	local chans = {}
 	local function Play(path)
 		sound.PlayFile("sound/" .. path, "noplay", function(ch)

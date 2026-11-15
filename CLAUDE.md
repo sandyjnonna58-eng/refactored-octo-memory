@@ -155,6 +155,13 @@
   рану до 2 мин, не на этой же руке). WASD - стояние не ведёт тело по горизонтали, в огне не катаем сами (Moving); E -
   спину/голову не выпрямляем, руки E не занимают (rem_reag_lock 1). Старый вариант - реакции уступают любой кнопке
   целиком (Controlling, rem_reag_yield 1, по умолчанию 0).
+- Совместимость с отдельным аддоном «[V.A.C] Vehicles.Action.Chaos» (техника/самолёты, Мастерская; 1.2 ГБ с чужими моделями -
+  в репозиторий не кладём): у V.A.C. свой модуль под Z-City (lua/vac/core/sh_compat_zcity.lua - глушит в своих сиденьях
+  по имени хуки "jopa", "homigrad-view", "fakeCameraAngles", "allowweapons", "fake_enterveh" и т.п., раз в 10 с).
+  Наше - `lua/homigrad/compat/sh_vac.lua`: hg.VAC.Seated(ply) / HasView(); hg.CameraYield уступает камеру, пока вид у
+  V.A.C. (cl_cdeath.lua переставляет хуки камеры - обёртка V.A.C. слетает); наши CreateMove (качание прицела: алкоголь,
+  наркотики, тошнота, паника, ломка) и StartCommand пьяной походки в его технике молчат. Тест: rem_test_vac.
+  Новый свой хук на мышь/cmd/камеру - проверять hg.VAC.Seated.
 - Оружие из паков Мастерской «Sandstorm SWEPs» (44 ствола weapon_rem_sand_* по моделям паков, генератор tools/sandstorm,
   compat/sh_sandstorm.lua) делали - убрано из сборки по просьбе. Если вернут: модели паков w_*.mdl в пространстве кисти
   R_Hand, WorldAng = RX * R^-1 * RX и ещё -90 к рысканию (проверено в игре на SG 552); смотреть историю git.

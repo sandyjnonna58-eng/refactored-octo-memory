@@ -54,6 +54,7 @@ end
 
 -- взгляд сам уплывает, сильно пьяного - сильно
 hook.Add("CreateMove", "rem_alcohol_aim", function(cmd)
+	if hg.VAC and hg.VAC.Seated(LocalPlayer()) then return end -- в технике V.A.C. cmd - руль и прицел (compat/sh_vac.lua)
 	local k, heavy = Level()
 	if k <= 0.05 then return end
 	local t = CurTime()
