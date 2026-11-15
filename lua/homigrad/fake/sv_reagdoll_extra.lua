@@ -18,6 +18,8 @@ local cvDrown = CreateConVar("rem_reag_drown", "1", FCVAR_ARCHIVE, "Conscious ra
 local cvWrithe = CreateConVar("rem_reag_writhe", "1", FCVAR_ARCHIVE, "Conscious ragdoll in strong pain writhes on the ground", 0, 1)
 local cvCrawl = CreateConVar("rem_reag_crawl", "1", FCVAR_ARCHIVE, "Lying on the stomach, W crawls forward on the arms", 0, 1)
 local cvFingers = CreateConVar("rem_reag_fingers", "1", FCVAR_ARCHIVE, "Dead bodies' fingers curl naturally", 0, 1)
+-- по просьбе: мёртвое тело - как у Z-City, без наших посмертных реакций (выстрел в голову, кувырок, пальцы)
+local cvDead = CreateConVar("rem_reag_dead", "0", FCVAR_ARCHIVE, "Our reactions also on dead bodies (headshot posture, tumble, fingers)", 0, 1)
 
 local cvHSKind = CreateConVar("rem_reag_headshot_kind", "", FCVAR_ARCHIVE, "Test: force the headshot reaction (drop / limp / stiffen / decerebrate), empty = random")
 local HS_WINDOW = 0.7 -- смерть не позже стольких секунд после попадания в голову
@@ -280,7 +282,9 @@ function hg.ReagExtra(st, rag, now, dt, ply, ctrl, busyL, busyR)
 	local org = st.org
 	local conscious = st.alive and not (org and org.otrub)
 
-	-- тело отдано моду Artagdoll (compat/sh_artagdoll.lua, и живое, и мёртвое) - реакции его, наши не тянут то же тело
+	-- мёртвое тело - как у Z-City (rem_reag_dead 0)
+	if not st.alive and not cvDead:GetBool() then return end
+	-- тело отдано моду Artagdoll (compat/sh_artagdoll.lua) - реакции его, наши не тянут то же тело
 	if rag.remArtag then return end
 
 	if not st.alive then

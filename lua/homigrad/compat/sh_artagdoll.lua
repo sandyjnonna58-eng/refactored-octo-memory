@@ -21,6 +21,8 @@
 --                  с кровотечением (доживает своё и умирает по-модовски).
 --   наши реакции   на таком теле (тело.remArtag) наши (sv_reagdoll_extra: выстрел в голову, кувырок, вода, корчи,
 --                  ползком, пальцы) молчат - иначе два набора тянут одно тело. Гримаса на лице - наша, остаётся.
+-- Мёртвые тела по умолчанию моду НЕ отдаём (rem_artag_dead 0, по просьбе: умер - тело как у Z-City, не двигается);
+-- живое тело при смерти снимается с мода (Take). rem_artag_dead 1 - старое поведение (доживает и обмякает).
 -- Выкл. связки - rem_artag 0 (тогда тела игроков мод не трогает), только живые - rem_artag_alive 0. Без мода ничего не делает.
 hg.Artag = hg.Artag or {}
 local M = hg.Artag
@@ -30,6 +32,8 @@ function M.Present() return ActiveRagdollManager ~= nil and ActiveRagdollManager
 if SERVER then
 	local cvOn = CreateConVar("rem_artag", "1", FCVAR_ARCHIVE, "Give Z-City death ragdolls to the Artagdoll addon (if installed)", 0, 1)
 	local cvAlive = CreateConVar("rem_artag_alive", "1", FCVAR_ARCHIVE, "Also give living players' Z-City ragdolls to Artagdoll (paused while the player controls the body)", 0, 1)
+	-- по просьбе: мёртвое тело - обычный регдолл Z-City (не «доживает», не двигается); 1 - мод и на телах погибших
+	local cvDead = CreateConVar("rem_artag_dead", "0", FCVAR_ARCHIVE, "Artagdoll also on dead bodies (they keep moving for a while after death)", 0, 1)
 	local Alive = {} -- [тело] = игрок: живые тела у мода
 	-- кнопки, которыми игрок двигает тело в регдолле Z-City (руки, ноги, наклон, встать)
 	local CONTROL = {IN_ATTACK, IN_ATTACK2, IN_USE, IN_FORWARD, IN_BACK, IN_MOVELEFT, IN_MOVERIGHT, IN_JUMP, IN_DUCK, IN_SPEED, IN_RELOAD}
@@ -229,7 +233,11 @@ if SERVER then
 		timer.Simple(0, function()
 			if not IsValid(ply) then return end
 			local rag = IsValid(ply.RagdollDeath) and ply.RagdollDeath or ply:GetNWEntity("RagdollDeath")
-			if IsValid(rag) then M.Give(rag, ply) end
+			-- умер лёжа в регдолле, тело было у мода как живое: без rem_artag_dead - снять мод (тело как у Z-City)
+			for body in pairs(Alive) do
+				if Alive[body] == ply and (not cvDead:GetBool() or body ~= rag) then Take(body) end
+			end
+			if IsValid(rag) and cvDead:GetBool() then M.Give(rag, ply) end
 		end)
 	end)
 end
