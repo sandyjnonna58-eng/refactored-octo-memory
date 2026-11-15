@@ -166,7 +166,21 @@
   Стационарное оружие «[RVB] Realistic Animated Emplacement Weapons» (rvb_emp_*, база rvb_base) покрыто тем же; камера
   наводчика - его CalcView "REmp_GunnerView"; его попадания по нарисованному стрелку (ply.REmpOwnHit) - точка урона
   переносится на голову/Spine2 настоящего тела (hg.VehicleDamageAdjusters.rvb_emp, зовёт sv_input до организма).
-- Совместимость с отдельным аддоном «[V.A.C] Vehicles.Action.Chaos»- Совместимость с отдельным аддоном «[V.A.C] Vehicles.Action.Chaos» (техника/самолёты, Мастерская; 1.2 ГБ с чужими моделями -
+- Ещё реакции регдолла по мотивам мода Artagdoll [WIP] (прислал пользователь; его код, анимации AREAnims, .phy и звуки
+  headshot*.wav не брали): `lua/homigrad/fake/sv_reagdoll_extra.lua` - hg.ReagExtra(st, rag, now, dt, ply, ctrl, busyL, busyR),
+  зовётся из Think sv_reagdoll.lua (через hg - у Think много upvalue); помощники оттуда - hg.Reag (R, ARM, Phys, Shadow,
+  Align, BodyFrame, Str, Release, Dbg, Moving). 1) смертельный выстрел в голову (HomigradDamage hitgroup HEAD пуля/дробь ->
+  ply.remHSHit, смерть за 0.7 с): st.hs - drop 30% / limp 25% / stiffen 25% (0.4..0.8 с, конечности вытянуты) /
+  decerebrate 20% (2.5..4.5 с: руки вдоль тела с пронацией, кисти согнуты, ноги и стопы вытянуты, голова назад, дрожь);
+  пока st.hs - st.holds и st.bal сбрасываются каждый тик (не держится за рану, не оседает); тест - rem_reag_headshot_kind;
+  2) кувырок: по земле быстрее 380 - вращение вокруг up x направление (как шар), в сознании поджимается; 3) вода: голова в
+  CONTENTS_WATER - руки вверх по очереди, ноги бьют; 4) корчи: org.pain >= 60 лёжа, без кнопок движения - колени то к
+  груди, то прямо, ворочается; 5) ползком: на животе (перед тела вниз) + W, руки свободны - руки гребут по очереди, тело
+  рывками вперёд по макушке; 6) пальцы мёртвого полусогнуты (ManipulateBoneAngles Finger*, знак как у хвата Z-City
+  Angle(0,-45,0)); 7) гримаса боли - NW2 rem_grimace -> `fake/cl_reagdoll_face.lua` (флексы бровей/век/щёк/губ, не те, что
+  трогает Z-City: рот при голосе и моргание в cl_utility.lua). Квары rem_reag_headshot/tumble/drown/writhe/crawl/fingers,
+  клиент rem_reag_face.
+- Совместимость с отдельным аддоном «[V.A.C] Vehicles.Action.Chaos» (техника/самолёты, Мастерская; 1.2 ГБ с чужими моделями -
   в репозиторий не кладём): у V.A.C. свой модуль под Z-City (lua/vac/core/sh_compat_zcity.lua - глушит в своих сиденьях
   по имени хуки "jopa", "homigrad-view", "fakeCameraAngles", "allowweapons", "fake_enterveh" и т.п., раз в 10 с).
   Наше - `lua/homigrad/compat/sh_vac.lua`: hg.VAC.Seated(ply) / HasView(); hg.CameraYield уступает камеру, пока вид у
