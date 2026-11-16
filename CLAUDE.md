@@ -264,6 +264,11 @@
   V.A.C. (cl_cdeath.lua переставляет хуки камеры - обёртка V.A.C. слетает); наши CreateMove (качание прицела: алкоголь,
   наркотики, тошнота, паника, ломка) и StartCommand пьяной походки в его технике молчат. Тест: rem_test_vac.
   Новый свой хук на мышь/cmd/камеру - проверять hg.InSpecialVehicle(ply).
+  Жалоба «на некоторых картах из любой техники сразу выкидывает» - не найдено по коду; отладка `compat/sv_vehexit_debug.lua`:
+  rem_debug_vehexit 1 - в консоль сервера посадка (карта, сиденье, родитель, hg.NoFakeInCar, InfMap) и высадка: через
+  сколько секунд, ExitVehicle() из Lua со стеком (PLAYER.ExitVehicle обёрнут, повторно через 5 с после InitPostEntity)
+  или движком. Кандидаты: сварка регдолла Z-City с машиной (sv_tier_0 "removeOwO", forcelimit 10000) рвётся -> ExitVehicle
+  (через ~1 с после посадки, hg.fallfromveh); hg.FakeUp с ragdoll.welds; InfMap (смена чанка); режим карты.
 - Оружие из паков Мастерской «Sandstorm SWEPs» (44 ствола weapon_rem_sand_* по моделям паков, генератор tools/sandstorm,
   compat/sh_sandstorm.lua) делали - убрано из сборки по просьбе. Если вернут: модели паков w_*.mdl в пространстве кисти
   R_Hand, WorldAng = RX * R^-1 * RX и ещё -90 к рысканию (проверено в игре на SG 552); смотреть историю git.

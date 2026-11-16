@@ -20,6 +20,7 @@ local HELP = {
 	"rem_drug_set heroin|meth|lsd 1, rem_panic_set 0..1, rem_depression_set 0..1, selfharm, zb_lastbattle <ник>",
 	"rem_test_vac                - состояние совместимости с V.A.C. (аддон найден, сидишь в его технике, чья камера)",
 	"rem_test_rvb                - то же для Realistic Vehicles Base (RVB)",
+	"rem_debug_vehexit 1         - сервер: кто и когда высадил из техники (карта, сиденье, стек вызова) - в консоль сервера",
 	"rem_test_artag              - мод Artagdoll найден / связка включена (тела погибших игроков отдаются ему)",
 	"rem_test_pose decorticate|cower [ник] - поза Artagdoll (уронит в регдолл): decorticate - без сознания при тяжёлой",
 	"                              травме мозга (руки к груди, ноги вытянуты; 4 с), cower - сжался от боли на грани (5 с)",
