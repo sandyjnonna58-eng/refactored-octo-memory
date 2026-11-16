@@ -251,6 +251,8 @@ function SWEP:Shoot(override)
 			--чзх добавить возможность тазерить мощнее при нажатии лкм
 			local i = 1
 			local max = math.Round(time * 80)
+			-- поза конечностей относительно груди в начале разряда (см. ниже: без этого тело раскручивало)
+			local remRel, remRelRag
 			timer.Create("Tasering"..ent:EntIndex(), 0.01, max,function()
 				i = i + 1
 				
@@ -273,29 +275,31 @@ function SWEP:Shoot(override)
 
 					local pelvispos = pelvis:GetPos() - pelvis:GetAngles():Right() * -100
 
-					local ang = spine2:GetAngles()
-					ang:Add(AngleRand(-5, 5))
-					ang:RotateAroundAxis(ang:Up(), 180)
+					-- Раньше: всем конечностям цель «грудь, развёрнутая на 180° вокруг своей оси» каждые 0.01 с. Цель
+					-- считается от самой груди - недостижима: конечности тянут, грудь едет за ними, цель уходит -
+					-- тело раскручивало (сильнее при высоком пульсе: сила x пульс/70). Теперь как при настоящем разряде:
+					-- мышцы сводит - тело деревенеет в позе начала разряда (поза конечностей относительно груди
+					-- запоминается в первый тик) и мелко дрожит; сила от пульса - в пределах 0.5..1.5.
+					local sa = spine2:GetAngles()
+					if remRelRag ~= ragdoll then
+						remRelRag, remRel = ragdoll, {}
+						for _, n in ipairs({2, 3, 4, 5, 6, 7, 8, 9, 11, 12}) do
+							local p = ragdoll:GetPhysicsObjectNum(hg.realPhysNum and hg.realPhysNum(ragdoll, n) or n)
+							if IsValid(p) then
+								local _, a = WorldToLocal(vector_origin, p:GetAngles(), vector_origin, sa)
+								remRel[n] = a
+							end
+						end
+					end
 
-					local mul = 1000 * ragdoll.organism.pulse / 70
+					local mul = 1000 * math.Clamp((ragdoll.organism.pulse or 70) / 70, 0.5, 1.5)
 					local damp = 50
-					
-					--hg.ShadowControl(ragdoll, 0, 0.001, ang, mul, damp, vector_origin, 0, 0)
-					--hg.ShadowControl(ragdoll, 1, 0.001, ang, mul, damp, vector_origin, 0, 0)
-					
-					hg.ShadowControl(ragdoll, 3, 0.001, ang, mul, damp, vector_origin, 0, 0)
-					hg.ShadowControl(ragdoll, 4, 0.001, ang, mul, damp, vector_origin, 0, 0)
-					hg.ShadowControl(ragdoll, 5, 0.001, ang, mul, damp, vector_origin, 0, 0)
 
-					hg.ShadowControl(ragdoll, 2, 0.001, ang, mul, damp, vector_origin, 0, 0)
-					hg.ShadowControl(ragdoll, 6, 0.001, ang, mul, damp, vector_origin, 0, 0)
-					hg.ShadowControl(ragdoll, 7, 0.001, ang, mul, damp, vector_origin, 0, 0)
-					
-					hg.ShadowControl(ragdoll, 8, 0.001, ang, mul, damp, vector_origin, 0, 0)
-					hg.ShadowControl(ragdoll, 9, 0.001, ang, mul, damp, vector_origin, 0, 0)
-
-					hg.ShadowControl(ragdoll, 11, 0.001, ang, mul, damp, vector_origin, 0, 0)
-					hg.ShadowControl(ragdoll, 12, 0.001, ang, mul, damp, vector_origin, 0, 0)
+					for n, a in pairs(remRel) do
+						local _, ang = LocalToWorld(vector_origin, a, vector_origin, sa)
+						ang:Add(AngleRand(-5, 5)) -- дрожь
+						hg.ShadowControl(ragdoll, n, 0.001, ang, mul, damp, vector_origin, 0, 0)
+					end
 				end
 
                 if ent:IsPlayer() then

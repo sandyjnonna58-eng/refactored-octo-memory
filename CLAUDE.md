@@ -220,7 +220,10 @@
   Классические реакции sv_reagdoll и так выключены (rem_reag_classic 0).
   Крик/одышка при падении без урона: velocityDamage (sv_input) считал рывки конечностей мода о землю падением -> переломы ->
   крик (sv_phrases QueuePainScream из sv_bone); теперь на теле с remArtagAlive и без паузы урон - только если таз летит
-  быстрее 300. Голос мода (SoundManager.Play) на живых заглушён обёрткой (MuteAliveVoice).
+  быстрее 300. Голос мода (SoundManager.Play, sound/SFX/<пол>/<реакция> установленного мода): сначала глушили на живых
+  целиком, по просьбе («крики пропали») вернули - звучит, пока мод ведёт тело после урона; молчит на паузе и в позах
+  (MuteAliveVoice, StopVoice в SetPaused/Take), rem_artag_voice 0 - глушить. Крики Z-City (sv_phrases QueuePainScream)
+  - только от пуль >= 8, взрывов, переломов, 42%, и только стоя: лёжа HomigradDamage получает регдолл - так у Z-City всегда.
   ПО ПРОСЬБЕ: живое тело - моду ТОЛЬКО от настоящего урона (HURT: пуля, дробь, нож, удар, взрыв, огонь, ток; без DMG_FALL,
   физика/падение не в счёт): хук "Fake" отдаёт тело, если удар был не позже 1.5 с (ply.remArtagHurtT из HomigradDamage
   "rem_artag_hurt"); ударили уже лёжа - тот же хук отдаёт сразу (TryGive). Просто упал - обычный регдолл Z-City.
@@ -230,7 +233,9 @@
   models/AREAnims/model_anim.mdl БЕЗ его поведений, массы назад через 0.3 с, в конце сила в 0 за 0.8 с и Destroy;
   тело было у мода - на время позы Take, потом Pending): decorticate (анимация мода "Decerebrate", но по кадрам это
   декортикационная поза - руки согнуты к груди, ноги вытянуты; сила 4, 0.5x) - без сознания при тяжёлой травме
-  мозга (brain >= 0.15, brainHemorrhage >= 0.1, concussion >= 7 или выстрел в голову < 5 с; после обычного нокаута - нет),
+  мозга (brainHemorrhage >= 0.1, concussion >= 7 или выстрел в голову < 5 с; после обычного нокаута - нет; при org.brain у
+  Z-City СВОЯ поза - organism/sv_brainfuckv2.lua, decorticate/decerebrate при brain >= 0.12/0.45, 85%: наша уступает ей,
+  а Busy() по org.brainfuckv2Posture ставит мод на паузу),
   3..6 с, шанс rem_artag_decorticate_chance (50) при отключке и при новом ударе лёжа без сознания, откат 10 с, очнулся -
   конец; Cower (сила 2.5) - на грани: не otrub, consciousness < 0.55 и pain >= 70, до 8 с, откат 15 с; кнопки / отключился /
   полегчало - конец. Выкл. rem_artag_poses 0. Тест: rem_test_pose decorticate|cower|headclutch|guard [ник].
@@ -245,6 +250,10 @@
   crawling (тело само ползёт) - ar.CrawlChanceRolled/WantsToCrawl; оба уже начались - DMS:Switch(ar, "injured");
   drowning («киношное») - в воде пауза. Не используются: DeathPose1-4, NewHeadshot/StuntWall как реакция на смертельный
   выстрел (мёртвым мод не даём), HeadshotCurl, Seizure, neckshot (у мода «scrapped»). HeadshotLeft/Right - в headclutch.
+- Электрошокер раскручивал тело - баг самого Z-City (weapon_taser.lua): каждые 0.01 с конечностям цель «грудь, развёрнутая
+  на 180°» - цель от самой груди, недостижима, тело крутило (сила x пульс/70 - у нас пульс выше). Теперь поза конечностей
+  относительно груди запоминается в первый тик разряда, держится с дрожью ±5°, сила x пульс/70 в 0.5..1.5 - тело
+  деревенеет и трясётся. Та же формула в sv_brainfuckv2 driveTaser - не используется (нет позы с taser = true).
 - Звуки регдолла «как от предмета»: у части моделей игроков физика не flesh - fake/sv_tier_0.lua хук Ragdoll_Create
   "rem_ragdoll_flesh" ставит всем физ. костям регдолла игрока SetMaterial("flesh"); выкл. rem_ragdoll_flesh 0.
   Тест: rem_test_artag (сервер, админ - ответ в чат).

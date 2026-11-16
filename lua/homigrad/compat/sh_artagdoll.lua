@@ -45,6 +45,9 @@ if SERVER then
 		if not org then return false end
 		if org.tasered and org.tasered > CurTime() then return true end
 		if org.seizureActive then return true end
+		-- своя поза Z-City при повреждении мозга (organism/sv_brainfuckv2.lua: декортикационная/децеребрационная при
+		-- org.brain >= 0.12) - тело ведёт она, мод не тянет его в другую сторону
+		if org.brainfuckv2Posture then return true end
 		return false
 	end
 
@@ -95,16 +98,22 @@ if SERVER then
 		end
 	end
 
-	-- голос мода (SoundManager: крики/стоны по поведению, если у мода есть озвучка) - не для живого: у живого голос
-	-- Z-City (фразы, крики боли). Оборачиваем его функцию проигрывания (сам код мода не трогаем)
+	-- голос мода (SoundManager: крики/стоны по поведению - sound/SFX/<пол>/<реакция>, если они есть в установленном моде).
+	-- Раньше на живых глушили целиком (кричал при простом падении). Теперь мод получает живое тело только после
+	-- настоящего урона - голос вернули (по просьбе: «крики пропали»); молчит на паузе (жмёт кнопки, шокер, вода) и в
+	-- наших позах. rem_artag_voice 0 - глушить, как раньше. Оборачиваем его функцию (сам код мода не трогаем)
+	local cvVoice = CreateConVar("rem_artag_voice", "1", FCVAR_ARCHIVE, "Artagdoll pain voice on living players' bodies (only while the mod drives the body after real damage)", 0, 1)
 	local function MuteAliveVoice()
 		if not SoundManager or SoundManager.remWrapped or not SoundManager.Play then return end
 		local orig = SoundManager.Play
 		SoundManager.Play = function(self, ent, ...)
-			if IsValid(ent) and ent.remArtagAlive then return end
+			if IsValid(ent) and ent.remArtagAlive and (not cvVoice:GetBool() or ent.remArtagPaused or ent.remArtagPose) then return end
 			return orig(self, ent, ...)
 		end
 		SoundManager.remWrapped = true
+	end
+	local function StopVoice(rag)
+		if SoundManager and SoundManager.Stop and IsValid(rag) then pcall(SoundManager.Stop, SoundManager, rag, 0.25) end
 	end
 
 	local function NoEngineRagdolls()
@@ -140,6 +149,7 @@ if SERVER then
 		if paused then
 			if DMS and DMS.ActiveRagdolls then DMS.ActiveRagdolls[idx] = nil end
 			ar:SetStrength(0)
+			StopVoice(rag)
 		else
 			if DMS and DMS.ActiveRagdolls then DMS.ActiveRagdolls[idx] = ar end
 			ar:SetStrength(ActiveRagdollManager.Config and ActiveRagdollManager.Config.DefaultStrength or 2.5)
@@ -149,6 +159,7 @@ if SERVER then
 	local function Take(rag)
 		Alive[rag] = nil
 		if not IsValid(rag) then return end
+		StopVoice(rag)
 		local ar = ActiveRagdoll and ActiveRagdoll.Get and ActiveRagdoll.Get(rag)
 		if ar and ar.Destroy then pcall(ar.Destroy, ar) end
 		RestoreMasses(rag, rag.remArtagMasses)
@@ -314,8 +325,9 @@ if SERVER then
 		end)
 	end)
 	-- ПОЗЫ без сознания / на грани (по просьбе, только реалистичные; анимации самого мода, models/AREAnims/model_anim.mdl):
-	--   decorticate  без сознания при ТЯЖЁЛОЙ травме мозга (повреждение мозга, кровоизлияние, сотрясение >= 7, пережитый
-	--                выстрел в голову; после обычного нокаута кулаком такого в жизни нет). Анимация мода зовётся
+	--   decorticate  без сознания при ТЯЖЁЛОЙ травме мозга (кровоизлияние, сотрясение >= 7, пережитый выстрел в голову;
+	--                после обычного нокаута кулаком такого в жизни нет; при повреждении мозга org.brain у Z-City своя поза -
+	--                organism/sv_brainfuckv2.lua, тогда наша не включается и уступает ей). Анимация мода зовётся
 	--                Decerebrate, но по кадрам это ДЕКОРТИКАЦИОННАЯ поза: руки согнуты и прижаты к груди, кисти у плеч,
 	--                ноги вытянуты, стопы оттянуты (децеребрационная - руки вытянуты вдоль тела; обе бывают при тяжёлой
 	--                травме мозга). 3..6 с, потом обмякает. Шанс rem_artag_decorticate_chance при отключке и при новом
@@ -340,8 +352,10 @@ if SERVER then
 	local POSE_FADE = 0.8 -- у позы без своего fade
 	local Posed = {} -- [тело] = игрок
 
+	-- повреждение мозга (org.brain) не берём: при нём у Z-City своя поза (sv_brainfuckv2) - наша для остального
 	local function BrainSevere(ply, org)
-		if (org.brain or 0) >= 0.15 or (org.brainHemorrhage or 0) >= 0.1 or (org.concussion or 0) >= 7 then return true end
+		if org.brainfuckv2Posture then return false end
+		if (org.brainHemorrhage or 0) >= 0.1 or (org.concussion or 0) >= 7 then return true end
 		local hs = ply.remHSHit
 		return hs and CurTime() - hs.t < 5 or false
 	end
@@ -478,7 +492,7 @@ if SERVER then
 			elseif not stop and st.kind == "headclutch" then
 				if Uncon(ply) then st.untilT = math.min(st.untilT, now) end
 			elseif not stop and st.kind == "decorticate" then
-				if not org.otrub then st.untilT = math.min(st.untilT, now) end -- очнулся
+				if not org.otrub or org.brainfuckv2Posture then st.untilT = math.min(st.untilT, now) end -- очнулся / поза Z-City
 			end
 			local d = not stop and HealthData(rag)
 			if d and not d.dead then d.currentHP = d.maxHP or d.currentHP d.isBleeding = false end -- здоровье мода не наше
