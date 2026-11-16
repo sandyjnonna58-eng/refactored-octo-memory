@@ -91,15 +91,22 @@ local remFibrillationLoading
 local remFibrillationStopping
 local remHeartStopLoading
 
+-- остановка сердца: в сознании - rem_heartstop.wav, без сознания (почти всегда так) - rem_heartstopuncon.wav.
+-- Раньше без сознания молчало: рассчитывали на net "rem_deathstate_sound", а сервер его не шлёт.
+-- Через BASS и SetExempt - отключка (soundfade) и музыка его не глушат. Вихрь / последние моменты не повторяют
+-- его, если он прозвучал недавно (UpdateRemDyingHeart).
+hg.remHeartStopSoundT = hg.remHeartStopSoundT or -math.huge
 local function PlayRemHeartStopSound(uncon)
 	if remHeartStopLoading then return end
-	-- без сознания остановка сердца = умирание, там этот звук уже идёт по кругу
-	if uncon then return end
+	if CurTime() - hg.remHeartStopSoundT < 10 then return end
+	hg.remHeartStopSoundT = CurTime()
 
 	remHeartStopLoading = true
 	sound.PlayFile("sound/" .. (uncon and "rem_heartstopuncon.wav" or "rem_heartstop.wav"), "noblock noplay", function(station)
 		remHeartStopLoading = nil
 		if not IsValid(station) then return end
+		if not LocalPlayer():Alive() then station:Stop() return end
+		if hg.RemAudio then hg.RemAudio.SetExempt(station) end
 		station:SetVolume(1)
 		station:Play()
 	end)
@@ -144,6 +151,9 @@ local function UpdateRemDyingHeart(active)
 	remDyingScreenStart = remDyingScreenStart or CurTime()
 	if remDyingHeartPlayed or CurTime() - remDyingScreenStart < REM_DYING_HEART_AT then return end
 	remDyingHeartPlayed = true
+	-- сердце только что остановилось и звук уже прозвучал (PlayRemHeartStopSound) - не повторяем
+	if CurTime() - (hg.remHeartStopSoundT or -math.huge) < 10 then return end
+	hg.remHeartStopSoundT = CurTime()
 
 	sound.PlayFile("sound/rem_heartstopuncon.wav", "noplay noblock", function(station)
 		if not IsValid(station) then return end

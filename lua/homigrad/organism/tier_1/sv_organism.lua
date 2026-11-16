@@ -195,6 +195,9 @@ local hg_unreliable_nets = ConVarExists("hg_unreliable_nets") and GetConVar("hg_
 util.AddNetworkString("organism_send")
 util.AddNetworkString("organism_sendply")
 util.AddNetworkString("rem_deathstate_sound")
+-- звуки остановки сердца (cl_main.lua PlayRemHeartStopSound): в сознании / без сознания
+resource.AddSingleFile("sound/rem_heartstop.wav")
+resource.AddSingleFile("sound/rem_heartstopuncon.wav")
 local CurTime = CurTime
 local nullTbl = {}
 local hg_developer = ConVarExists("hg_developer") and GetConVar("hg_developer") or CreateConVar("hg_developer", 0, FCVAR_SERVER_CAN_EXECUTE, "Toggle developer mode (enables damage traces)", 0, 1)

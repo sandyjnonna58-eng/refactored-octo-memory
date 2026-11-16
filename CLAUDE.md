@@ -70,6 +70,11 @@
   organism - что отказало по последней записи: кровь, сердце, мозг, кислород), "Last recorded mental state" (раз в 0.5 с
   пока жив и в сознании: Berserk/Hysterical/Euphoric/Agonized/Terrified/Panicked/Enraged/Hopeless/Miserable/Fading/
   Suffering/Uneasy/Calm). Предпросмотр у себя: rem_test_vortex [скорость].
+- Звук остановки сердца (cl_main.lua PlayRemHeartStopSound, хук RemCardiacSounds - по переходу org.heartstop в true):
+  без сознания (почти всегда) - sound/rem_heartstopuncon.wav, в сознании - rem_heartstop.wav; BASS + RemAudio.SetExempt
+  (отключка/музыка не глушат), не чаще раза в 10 с (hg.remHeartStopSoundT - его же проверяет удар сердца на 3-й секунде
+  вихря/последних моментов, чтобы не повторять). Раньше без сознания молчало: ждали net rem_deathstate_sound, который
+  сервер не шлёт. Тест: rem_test_heartstop [ник] (сервер, остановит сердце), rem_test_heartstopsound [0|1].
 - Начало раунда Homicide: звук `sound/rem_homicide.mp3` (10.5 с, доигрывает сам), экран роли закрывается на 7-й секунде
   (HMCD_ScreenDuration в `gamemodes/zcity/gamemode/modes/homicide/cl_homicide.lua`; rem_newroundcommence.mp3 остался только в радио).
   Прибытие полиции и SWAT - трек `sound/rem_hmcd_police.mp3` (60 с) у всех на клиенте вместо сирены/вертолёта (sv_homicide.lua

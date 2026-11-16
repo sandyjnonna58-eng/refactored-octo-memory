@@ -1,7 +1,7 @@
 -- Команды проверки недавних механик (админ). Цель: часть ника последним аргументом, иначе тот, на кого смотришь
 -- (игрок или его регдолл), иначе ты сам. Список - rem_tests.
 -- Звуки (только у себя, без прав): rem_test_deathsound [0|1], rem_test_roundsound, rem_test_police,
--- rem_test_headshotsound, rem_test_concsound, rem_test_stopsounds.
+-- rem_test_headshotsound, rem_test_concsound, rem_test_heartstopsound, rem_test_stopsounds.
 
 local HELP = {
 	"--- Проверка механик (сервер, админ; [ник] - цель, без него - на кого смотришь или ты) ---",
@@ -12,6 +12,7 @@ local HELP = {
 	"rem_test_epilepsy [ник]     - эпилептический припадок 20 с (как от тока)",
 	"rem_test_fire [ник]         - поджечь на 5 с (регдолл катается)",
 	"rem_test_clear [ник]        - сбросить сотрясение, нокаут, оглушение",
+	"rem_test_heartstop [ник]    - остановить сердце (звук остановки; умрёт, если не завести дефибриллятором)",
 	"rem_reag_debug 1            - отладка реакций регдолла в консоль сервера",
 	"rem_reag_headshot_kind decerebrate|stiffen|limp|drop - какой будет реакция на смертельный выстрел в голову (пусто - случайно)",
 	"  (реакции Artagdoll: кувырок - бросить тело взрывом/машиной; вода; корчи - боль > 50% лёжа; ползком - на животе + W)",
@@ -26,6 +27,7 @@ local HELP = {
 	"rem_test_police             - прибытие полиции / SWAT",
 	"rem_test_headshotsound      - хедшот",
 	"rem_test_concsound          - случайный звук сотрясения",
+	"rem_test_heartstopsound [0|1] - звук остановки сердца (1 - без сознания, по умолчанию; 0 - в сознании)",
 	"rem_test_stopsounds         - остановить тестовые звуки",
 	"rem_fadingmusic_test 0..1   - музыка при уходе сознания",
 	"rem_test_vortex [скорость]  - предпросмотр: вихрь смерти (84 с / скорость, по умолч. 4), последняя вспышка,",
@@ -115,6 +117,11 @@ if SERVER then
 		body:Ignite(5)
 	end)
 
+	Cmd("rem_test_heartstop", function(t, org)
+		org.heartstop = true
+		return org.otrub and "без сознания - rem_heartstopuncon.wav" or "в сознании - rem_heartstop.wav"
+	end)
+
 	Cmd("rem_test_clear", function(t, org)
 		org.concussion = 0
 		org.remKOEnd = nil
@@ -153,6 +160,9 @@ else
 	concommand.Add("rem_test_roundsound", function() Play("rem_homicide.mp3") end)
 	concommand.Add("rem_test_police", function() Play("rem_hmcd_police.mp3") end)
 	concommand.Add("rem_test_headshotsound", function() Play("rem_headshot.ogg") end)
+	concommand.Add("rem_test_heartstopsound", function(_, _, args)
+		Play(tonumber(args[1]) == 0 and "rem_heartstop.wav" or "rem_heartstopuncon.wav")
+	end)
 	concommand.Add("rem_test_concsound", function() Play("rem_concussion/concussion" .. math.random(4) .. ".mp3") end)
 	concommand.Add("rem_test_stopsounds", function()
 		for _, ch in ipairs(chans) do if IsValid(ch) then ch:Stop() end end
