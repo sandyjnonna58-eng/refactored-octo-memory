@@ -37,7 +37,7 @@ if SERVER then
 	local Alive = {} -- [тело] = игрок: живые тела у мода
 	-- кнопки, которыми игрок двигает тело в регдолле Z-City (руки, ноги, наклон, встать)
 	local CONTROL = {IN_ATTACK, IN_ATTACK2, IN_USE, IN_FORWARD, IN_BACK, IN_MOVELEFT, IN_MOVERIGHT, IN_JUMP, IN_DUCK, IN_SPEED, IN_RELOAD}
-	local Pending = {} -- [тело] = игрок: упал, но моду пока нельзя (шокер, припадок) - отдадим, когда пройдёт
+	local Pending = {} -- [тело] = игрок: упал, но моду пока нельзя (шокер, припадок, без сознания) - отдадим, когда пройдёт
 
 	-- телу сейчас нельзя к моду: бьёт электрошокер (org.tasered: трос к телу + тряска Z-City), идёт припадок
 	local function Busy(ply)
@@ -46,6 +46,13 @@ if SERVER then
 		if org.tasered and org.tasered > CurTime() then return true end
 		if org.seizureActive then return true end
 		return false
+	end
+
+	-- без сознания мод не работает (по просьбе): тело забираем у мода целиком - обмякает, как обычный регдолл Z-City;
+	-- очнулся и всё ещё лежит - отдаём обратно
+	local function Uncon(ply)
+		local org = IsValid(ply) and ply.organism
+		return org and (org.otrub or (org.remKOEnd and org.remKOEnd > CurTime())) and true or false
 	end
 
 	-- массы костей: контроллер мода (active_ragdoll_controller) при создании ставит свои массы/инерцию части костей -
@@ -206,7 +213,7 @@ if SERVER then
 	local function TryGive(ply, rag)
 		if not (IsValid(ply) and IsValid(rag) and ply:Alive() and ply.FakeRagdoll == rag) then return end
 		if rag.remArtag or Pending[rag] then return end
-		if Busy(ply) then Pending[rag] = ply return end
+		if Busy(ply) or Uncon(ply) then Pending[rag] = ply return end
 		M.Give(rag, ply, true)
 	end
 
@@ -244,7 +251,7 @@ if SERVER then
 		for rag, ply in pairs(Pending) do
 			if not (IsValid(rag) and IsValid(ply) and ply:Alive() and ply.FakeRagdoll == rag) or not ModOn() or not cvAlive:GetBool() then
 				Pending[rag] = nil
-			elseif not Busy(ply) then
+			elseif not Busy(ply) and not Uncon(ply) then
 				Pending[rag] = nil
 				M.Give(rag, ply, true)
 			end
@@ -256,6 +263,11 @@ if SERVER then
 				continue
 			end
 			if not ply:Alive() then continue end -- умер: DoPlayerDeath переведёт в посмертное
+			if Uncon(ply) then
+				Take(rag) -- отключился: мод снимаем, очнётся лёжа - Pending вернёт
+				Pending[rag] = ply
+				continue
+			end
 			rag.DMS_IsHeadshot = nil
 			local d = HealthData(rag)
 			if d and not d.dead then d.currentHP = d.maxHP or d.currentHP d.isBleeding = false end
