@@ -906,7 +906,11 @@ hook.Add( "OnEntityCreated", "VechicleChairs", function( ent )
 				(ent:GetParent():GetModel() == "models/vehicles/buggy_elite.mdl") or 
 				(ent:GetParent():GetModel() == "models/vehicle.mdl")
 			) and ent:GetParent().DriverSeat == ent
-			
+			-- чужие сиденья, прикреплённые к технике аддона (V.A.C., Glide и т.п.), не трогаем: аддон сам их ставит,
+			-- а SetPos(GetPos()) у прикреплённого сиденья удваивал координату - на картах далеко от центра (gm_flatgrass,
+			-- земля на -12800) сиденье улетало за край карты, движок его удалял («Crazy origin») и выкидывал игрока
+			if IsValid(ent:GetParent()) and not UwU then return end
+
 			ent:SetModel("models/props_junk/PopCan01a.mdl")
 			ent:SetAngles(ent:LocalToWorldAngles(UwU and Angle(0, -1, 0) or Angle(0,90,0)))
 			ent:SetPos(ent:GetPos() + vector_up * 3 + ent:GetAngles():Forward() * 5)
