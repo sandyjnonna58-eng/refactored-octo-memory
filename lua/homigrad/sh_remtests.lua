@@ -28,6 +28,8 @@ local HELP = {
 	"rem_test_concsound          - случайный звук сотрясения",
 	"rem_test_stopsounds         - остановить тестовые звуки",
 	"rem_fadingmusic_test 0..1   - музыка при уходе сознания",
+	"rem_test_vortex [скорость]  - предпросмотр: вихрь смерти (84 с / скорость, по умолч. 4), последняя вспышка,",
+	"                              экран Deceased со сводкой (время, причина, настроение); ещё раз - стоп",
 }
 
 concommand.Add("rem_tests", function(ply)
