@@ -803,16 +803,8 @@ local function CinematicDeathBackground()
         local causeColor = deathRandomColor
         local flash = realish and 0 or (1 - fadeProgress)
         local vortex = not realish and DeathScreenEnabled() and hg and hg.VortexDeath and hg.VortexDeath.DrawDeceasedBackground
-        -- в стиле вихря сначала последняя вспышка (белое с лучами, ~1 с), экран Deceased начинается после неё
-        local burst = vortex and hg.VortexDeath.BurstTime or 0
-        local vt = math.max(0, stageElapsed - burst)
         if vortex then
-            flash = 1 - math.Clamp(vt / math.max(fadeDuration - burst, 0.1), 0, 1)
-            if stageElapsed < burst then
-                hg.VortexDeath.DrawDeathBurst(stageElapsed, overlayAlpha)
-                return
-            end
-            hg.VortexDeath.DrawDeceasedBackground(vt, overlayAlpha, flash)
+            hg.VortexDeath.DrawDeceasedBackground(stageElapsed, overlayAlpha, flash)
         else
             surface.SetDrawColor(math.floor(causeColor.r * flash), math.floor(causeColor.g * flash), math.floor(causeColor.b * flash), overlayAlpha)
             surface.DrawRect(0, 0, sw, sh)
@@ -857,7 +849,7 @@ local function CinematicDeathBackground()
         if vortex then
             local text, desc = GetDeathText()
             local info = hg.VortexDeath.DeathSummary and hg.VortexDeath.DeathSummary(GetDeathCause() and deathCauseKey or nil)
-            hg.VortexDeath.DrawDeceasedText(vt, overlayAlpha, flash, text, desc, CanSkipDeathScreen() and jumpKeyName or nil, info)
+            hg.VortexDeath.DrawDeceasedText(stageElapsed, overlayAlpha, flash, text, desc, CanSkipDeathScreen() and jumpKeyName or nil, info)
             return
         end
 

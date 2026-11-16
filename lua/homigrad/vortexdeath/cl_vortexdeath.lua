@@ -1,9 +1,7 @@
--- Экран умирания "вихрь" (таймер смерти, sv_vortexdeath.lua) под песню rem_death_cfyt.ogg - как в Fading Vitality
--- (разобран по кадрам видео пользователя): чёрный экран, по одному проступают красные "!!!", ниже "Give up"; экран
--- заливает тёмно-красным, с краёв поднимается яркий красный пиксельный шум. Тёмное «солнце» (тёмно-красное глухое ядро,
--- вокруг тёмные рукава) разрезано по вертикали: половины стоят у краёв экрана и равномерно съезжаются к середине до
--- самого конца таймера, между ними - полоса ядра посветлее (в ней рукава сжаты по ширине). Ядро сжимается, рукава из
--- закрученных становятся прямыми лучами. Ничего не вращается.
+-- Экран умирания "вихрь" (таймер смерти, sv_vortexdeath.lua) под песню rem_death_cfyt.ogg:
+-- чёрный экран, по одному проступают красные "!!!", ниже "Give up"; потом из темноты поднимается красный
+-- пиксельный шум, тёмные спиральные рукава вокруг тёмного центра; ничего не вращается - краснота наползает с краёв
+-- экрана к центру: темнота сначала больше экрана и сжимается, а рукава распрямляются в лучи до самого конца таймера.
 -- Пока он идёт, остальная музыка затихает (hg.RemAudio); зажатый прыжок - "Give up": время смерти (и песня) идёт быстрее.
 hg.VortexDeath = hg.VortexDeath or {}
 local DV = hg.VortexDeath
@@ -12,32 +10,24 @@ local SONG = "sound/rem_death_cfyt.ogg"
 DV.GiveUpSpeed = 4 -- во сколько раз быстрее идёт время, пока зажат "Give up" (так же в sv_vortexdeath.lua)
 local FADE_IN, FADE_OUT = 0.6, 1.5
 
--- времена в секундах таймера (84 с); доли подобраны по видео (там вихрь ~26 с - растянуто на весь таймер)
-local BASE_START, BASE_TIME, BASE_R = 1.2, 0.8, 81 -- с первым "!" экран заливает тёмно-красным (81, 0, 0)
-local RAMP_START, RAMP_TIME = 4, 12 -- когда начинает проступать яркий шум и за сколько доходит до максимума
-local GROW_TIME = 78                 -- за сколько половины съезжаются, ядро сжимается, рукава распрямляются
--- тёмное ядро: полуось по горизонтали в долях высоты экрана, сначала почти во весь экран, к концу небольшое
-local CORE_START, CORE_END, CORE_EASE = 0.8, 0.3, 1
+local RAMP_START, RAMP_TIME = 4, 12 -- когда начинает проступать красный и за сколько доходит до максимума
+local GROW_TIME = 78                 -- за сколько тёмный центр сжимается, а рукава распрямляются (почти весь таймер, 84 с)
+-- тёмный центр (полуось по горизонтали, в долях высоты экрана): в начале больше экрана - красный только по краям,
+-- к концу - небольшое пятно посередине, как в Fading Vitality
+local CORE_START, CORE_END = 1.25, 0.45
+local CORE_EASE = 6  -- сжатие сначала быстрое, потом еле заметное (больше - резче в начале)
 local CORE_ASPECT = 0.6 -- эллипс: высота / ширина
-local CORE_TEX_R = 0.22 -- радиус заметной части пятна в vortex_core.png (в долях ширины текстуры)
-local CORE_R, CORE_A = 80, 0.92 -- ядро: тёмно-красное почти глухое, шум чуть просвечивает
-local GAP_START, GAP_END = 0.95, -0.03 -- ширина полосы между половинами в долях ширины экрана (сходится к ~95% таймера)
-local GAP_A_START, GAP_A_END = 0.92, 0.6 -- полоса к концу светлее половин
-local MID_A = 0.5 -- рукава, сжатые в полосе
-local ARMS_A = 0.9
-local SIZE_START, SIZE_END = 3.2, 2.7 -- высота текстуры рукавов относительно полуоси ядра
-local RAYS_FROM, RAYS_TIME = 0.45, 0.45 -- когда закрученные рукава переходят в прямые лучи (доля роста)
+local CORE_LAYERS = 3   -- сколько раз накладывать пятно (гуще середина, край остаётся мягким)
+local CORE_TEX_R = 0.22 -- радиус заметной части пятна в vortex_centre.png (в долях ширины текстуры)
 local MARKS_DOT = {0.4, 0.9, 1.4}    -- когда появляются точки
 local MARKS_BANG = {1.2, 2.6, 4.0}   -- когда точка становится "!"
 local GIVEUP_TIME = 7
-local SWIRL_ANGLE = 0 -- для экрана Deceased: вихрь не крутится
+local SWIRL_ANGLE, RAYS_ANGLE = 0, 0 -- вихрь не крутится (как в оригинале): только медленно растёт
 local NOISE_FPS = 0 -- шум стоит неподвижно (0 - один кадр; >0 - мерцает с этой частотой)
 
 local matSwirl = Material("rem_death/vortex_swirl.png", "smooth")
 local matRays = Material("rem_death/vortex_rays.png", "smooth")
-local matCentre = Material("rem_death/vortex_centre.png", "smooth") -- чёрное (экран Deceased)
-local matCore = Material("rem_death/vortex_core.png", "smooth")     -- то же белым и плотнее - красится (tools/vortex/make.py)
-local matGap = Material("rem_death/vortex_gap.png", "smooth")       -- вертикальный профиль ядра для полосы
+local matCentre = Material("rem_death/vortex_centre.png", "smooth")
 local matNoise = {}
 for i = 1, 4 do
 	matNoise[i] = Material("rem_death/vortex_static" .. i .. ".png") -- без smooth: крупные пиксели
@@ -45,7 +35,6 @@ end
 
 local function CreateFonts()
 	local sh = ScrH()
-	surface.CreateFont("DeathVortex_Bang", {font = "VT323", size = math.floor(sh * 0.1), weight = 400, antialias = false, extended = true})
 	surface.CreateFont("DeathVortex_Info", {font = "VT323", size = math.floor(sh * 0.036), weight = 400, antialias = false, extended = true})
 	surface.CreateFont("DeathVortex_Marks", {font = "VT323", size = math.floor(sh * 0.17), weight = 400, antialias = false, extended = true})
 	surface.CreateFont("DeathVortex_GiveUp", {font = "VT323", size = math.floor(sh * 0.075), weight = 400, antialias = false, extended = true})
@@ -78,58 +67,49 @@ local function DrawSpun(mat, cx, cy, w, h, ang, a, zoom)
 	surface.DrawPoly(poly)
 end
 
--- половины текстуры: левая у cx - gap/2, правая у cx + gap/2; mid - полоса между ними (вся текстура, сжатая по ширине)
-local function DrawSplit(mat, cx, cy, w, h, r, g, b, a, gap, mid)
-	if a <= 0 then return end
-	surface.SetMaterial(mat)
-	surface.SetDrawColor(r, g, b, a)
-	surface.DrawTexturedRectUV(cx - gap / 2 - w / 2, cy - h / 2, w / 2, h, 0, 0, 0.5, 1)
-	surface.DrawTexturedRectUV(cx + gap / 2, cy - h / 2, w / 2, h, 0.5, 0, 1, 1)
-	if mid and gap >= 1 then
-		surface.SetDrawColor(r, g, b, a * mid)
-		surface.DrawTexturedRect(cx - gap / 2, cy - h / 2, gap, h)
-	end
-end
-
 -- t - секунды с начала звука; alpha 0..255 - общая прозрачность (затухание в конце); skipKey - подпись клавиши,
 -- holding - клавиша зажата (надпись ярче)
 function DV.Draw(t, alpha, skipKey, holding)
 	local sw, sh = ScrW(), ScrH()
 	local mul = alpha / 255
 	local k = smooth((t - RAMP_START) / RAMP_TIME)
-	local base = smooth((t - BASE_START) / BASE_TIME)
 
-	surface.SetDrawColor(math.floor(BASE_R * base), 0, 0, alpha)
+	surface.SetDrawColor(math.floor(150 * k), 0, 0, alpha)
 	surface.DrawRect(0, 0, sw, sh)
 
 	if k > 0 then
-		-- яркий красный шум
+		-- красный шум
 		surface.SetMaterial(matNoise[NOISE_FPS > 0 and math.floor(t * NOISE_FPS) % 4 + 1 or 1])
 		surface.SetDrawColor(math.floor(255 * (0.75 + 0.25 * k)), 25, 25, math.floor(255 * k * mul))
 		surface.DrawTexturedRect(0, 0, sw, sh)
 
+		-- рост: равномерно весь таймер
 		local g = math.Clamp((t - RAMP_START) / GROW_TIME, 0, 1)
+
+		-- темнота сначала больше экрана (красный виден только по краям и углам) и сжимается к центру - первые ~20 с
+		-- быстро, потом еле заметно (как в видео); красный наползает с краёв; a - полуось тёмного эллипса по горизонтали в пикселях
 		local e = (1 - math.exp(-CORE_EASE * g)) / (1 - math.exp(-CORE_EASE))
-		local a = sh * Lerp(e, CORE_START, CORE_END) -- полуось ядра в пикселях
-		local gap = math.max(0, sw * Lerp(g, GAP_START, GAP_END))
-		local cx, cy = sw / 2, sh / 2
+		local a = sh * Lerp(e, CORE_START, CORE_END)
 
-		-- рукава (под ядром): закрученные -> прямые лучи
-		local size = a * Lerp(g, SIZE_START, SIZE_END)
-		local aw = size / 0.72
-		local rays = smooth((g - RAYS_FROM) / RAYS_TIME)
-		local armsA = math.min(1, k * 3) * ARMS_A * mul
-		if rays < 1 then DrawSplit(matSwirl, cx, cy, aw, size, 255, 255, 255, 242 * (1 - rays) * armsA, gap, MID_A) end
-		if rays > 0 then DrawSplit(matRays, cx, cy, aw, size, 255, 255, 255, 230 * rays * armsA, gap, MID_A) end
+		-- рукава держатся вокруг края темноты и сжимаются вместе с ней: в начале почти целиком за экраном,
+		-- к концу - короткие лучи вокруг маленького тёмного центра
+		local size = a * Lerp(g, 3.4, 2.7)
+		local rays = smooth((g - 0.15) / 0.5)
+		local armsAlpha = math.min(1, k * 3) * mul
+		-- текстура целиком (zoom 1): прямоугольник теперь бывает меньше экрана, а у полной текстуры края прозрачные -
+		-- не видно обрезанных кончиков лучей; масштаб тот же, что у середины 72% при ширине size
+		local aw, ah = size / 0.72, size
+		if rays < 1 then DrawSpun(matSwirl, sw / 2, sh / 2, aw, ah, SWIRL_ANGLE, 242 * (1 - rays) * armsAlpha, 1) end
+		if rays > 0 then DrawSpun(matRays, sw / 2, sh / 2, aw, ah, RAYS_ANGLE, 230 * rays * armsAlpha, 1) end
 
-		-- ядро: половины глухие, полоса между ними к концу светлее
+		-- тёмный центр: заметная часть пятна (из Base44, зернистый край) - ~0.22 ширины текстуры от середины,
+		-- поэтому ширина = a / CORE_TEX_R; рисуем несколько раз, чтобы внутри было глухо-чёрно, а мягкий край - у границы
 		local cw = a / CORE_TEX_R
 		local ch = cw * CORE_ASPECT
-		DrawSplit(matCore, cx, cy, cw, ch, CORE_R, 0, 0, 255 * CORE_A * k * mul, gap)
-		if gap >= 1 then
-			surface.SetMaterial(matGap)
-			surface.SetDrawColor(CORE_R, 0, 0, 255 * Lerp(g, GAP_A_START, GAP_A_END) * k * mul)
-			surface.DrawTexturedRect(cx - gap / 2, cy - ch / 2, gap, ch)
+		surface.SetMaterial(matCentre)
+		surface.SetDrawColor(255, 255, 255, math.floor(255 * mul))
+		for _ = 1, CORE_LAYERS do
+			surface.DrawTexturedRect(sw / 2 - cw / 2, sh / 2 - ch / 2, cw, ch)
 		end
 	end
 
@@ -138,7 +118,7 @@ function DV.Draw(t, alpha, skipKey, holding)
 	for i = 1, 3 do
 		marks[i] = t >= MARKS_BANG[i] and "!" or (t >= MARKS_DOT[i] and "." or " ")
 	end
-	draw.SimpleText(table.concat(marks, " "), "DeathVortex_Bang", sw / 2, sh * 0.5, Color(225, 20, 20, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+	draw.SimpleText(table.concat(marks, " "), "DeathVortex_Marks", sw / 2, sh * 0.5, Color(225, 20, 20, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
 	if t >= GIVEUP_TIME then
 		local a = math.floor(255 * math.min(1, (t - GIVEUP_TIME) / 1.5) * mul)
@@ -228,34 +208,6 @@ function DV.DrawDeceasedText(t, alpha, flash, text, desc, skipKey, info)
 
 	if skipKey then
 		draw.SimpleText("[" .. skipKey .. "] skip", "DeathVortex_Key", sw / 2, sh * 0.92, Color(Lerp(k, 170, 15), Lerp(k, 20, 0), Lerp(k, 20, 0), math.floor(alpha * 0.7)), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-	end
-end
-
--- Последняя вспышка в момент смерти (как в видео: после вихря белый экран с чёрными пиксельными лучами в центр,
--- за ~1 с гаснет через серое в черноту, потом "Deceased"). Лучи - rem_fx/hit_burst.png (та же картинка, что у вспышки
--- удара, screenfx/cl_screenfx.lua), вокруг центра серая дымка (ядро вихря чёрным), края светлые. Зовёт cl_cdeath.lua
--- в начале экрана смерти.
-DV.BurstTime = 1.1
-local matBurst = Material("rem_fx/hit_burst.png", "smooth")
-local BURST_ASPECT = 1370 / 768
-function DV.DrawDeathBurst(t, alpha)
-	if t >= DV.BurstTime then return end
-	local sw, sh = ScrW(), ScrH()
-	local f = math.Clamp(t / DV.BurstTime, 0, 1)
-	local v = math.floor(240 * (1 - f) ^ 0.8) -- белое -> серое -> чёрное
-	surface.SetDrawColor(v, v, v, alpha)
-	surface.DrawRect(0, 0, sw, sh)
-	-- серая дымка вокруг центра
-	local cw = sw * 1.4
-	surface.SetMaterial(matCore)
-	surface.SetDrawColor(0, 0, 0, math.floor(alpha * 0.4 * (1 - f)))
-	surface.DrawTexturedRect(sw / 2 - cw / 2, sh / 2 - cw * 0.3, cw, cw * 0.6)
-	if not matBurst:IsError() then
-		local w = math.max(sw, sh * BURST_ASPECT) * Lerp(f, 1.08, 0.96) -- лучи чуть стягиваются к центру
-		local h = w / BURST_ASPECT
-		surface.SetMaterial(matBurst)
-		surface.SetDrawColor(255, 255, 255, math.floor(alpha * math.min(1, (1 - f) * 1.6)))
-		surface.DrawTexturedRect(sw / 2 - w / 2, sh / 2 - h / 2, w, h)
 	end
 end
 
@@ -436,7 +388,7 @@ hook.Add("PlayerBindPress", "rem_vortexdeath", function(ply, bind, pressed)
 	if DV.Active() and string.find(bind, "+jump", 1, true) then return true end
 end)
 
--- Предпросмотр (rem_test_vortex [скорость], у себя, без урона): вихрь целиком (84 с / скорость), последняя вспышка,
+-- Предпросмотр (rem_test_vortex [скорость], у себя, без урона): вихрь целиком (84 с / скорость), потом
 -- экран Deceased со сводкой. Повторный вызов или rem_test_vortex 0 - остановить.
 local preview
 concommand.Add("rem_test_vortex", function(_, _, args)
@@ -454,8 +406,6 @@ hook.Add("DrawOverlay", "rem_test_vortex", function()
 		return
 	end
 	pt = pt - vortexLen
-	if pt < DV.BurstTime then DV.DrawDeathBurst(pt, 255) return end
-	pt = pt - DV.BurstTime
 	if pt > 9 then preview = nil return end
 	local flash = 1 - math.Clamp(pt / 6, 0, 1)
 	DV.DrawDeceasedBackground(pt, 255, flash)

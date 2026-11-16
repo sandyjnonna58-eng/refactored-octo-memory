@@ -59,14 +59,10 @@
 - Таймер смерти «вихрь» (84 с, ничего не вращается, медленно растёт): `lua/homigrad/vortexdeath/`. Запускается (sv_organism.lua,
   `dying`) только без сознания и если: сердце стоит, крови < death_blood (2500) или мозг теряет клетки (повреждение само
   растёт >= death_brain_rate 0.15%/с уже death_brain_hold 2 с; скачки от попаданий не в счёт); тогда же incapacitated. Позвоночник/трахея и т.п. - только incapacitated, без таймера.
-  Вид вихря (cl_vortexdeath.lua DV.Draw) - по кадрам видео Fading Vitality: с первым "!" экран тёмно-красный (81,0,0),
-  с краёв яркий шум; тёмное «солнце» РАЗРЕЗАНО по вертикали - половины от краёв экрана равномерно съезжаются к центру
-  (GAP 0.95 -> 0 ширины за таймер), между ними полоса ядра посветлее (vortex_gap.png) с рукавами, сжатыми по ширине;
-  ядро не чёрное, а тёмно-красное почти глухое (vortex_core.png - белая плотная копия vortex_centre, красится
-  SetDrawColor; обе делает tools/vortex/make.py). Модель в PIL сверяли с кадрами (параметры вверху файла).
-  Смерть (cl_cdeath.lua, путь вихря): сначала последняя вспышка DV.DrawDeathBurst (~1.1 с: белое -> чёрное, чёрные
-  пиксельные лучи rem_fx/hit_burst.png, серая дымка в центре), потом экран Deceased (его время сдвинуто на вспышку);
-  под надписью сводка DV.DeathSummary: "Time of death" (от zb.ROUND_START), "Cause of death" (причина сервера; для
+  Вид вихря (cl_vortexdeath.lua DV.Draw) - прежний: краснота наползает с краёв, тёмный центр (vortex_centre) сжимается,
+  рукава распрямляются в лучи. Вариант «как в видео» (разрезанное солнце, тёмно-красное ядро) и последнюю белую вспышку
+  перед Deceased делали (коммит 76cbb67) - убраны по просьбе (выглядело плохо).
+  Экран Deceased (cl_cdeath.lua, путь вихря): под надписью сводка DV.DeathSummary: "Time of death" (от zb.ROUND_START), "Cause of death" (причина сервера; для
   organism - что отказало по последней записи: кровь, сердце, мозг, кислород), "Last recorded mental state" (раз в 0.5 с
   пока жив и в сознании: Berserk/Hysterical/Euphoric/Agonized/Terrified/Panicked/Enraged/Hopeless/Miserable/Fading/
   Suffering/Uneasy/Calm). Предпросмотр у себя: rem_test_vortex [скорость].
