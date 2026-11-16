@@ -213,7 +213,7 @@ if SERVER then
 	local function TryGive(ply, rag)
 		if not (IsValid(ply) and IsValid(rag) and ply:Alive() and ply.FakeRagdoll == rag) then return end
 		if rag.remArtag or Pending[rag] then return end
-		if Busy(ply) or Uncon(ply) then Pending[rag] = ply return end
+		if Busy(ply) or Uncon(ply) or rag.remArtagPose then Pending[rag] = ply return end
 		M.Give(rag, ply, true)
 	end
 
@@ -251,7 +251,7 @@ if SERVER then
 		for rag, ply in pairs(Pending) do
 			if not (IsValid(rag) and IsValid(ply) and ply:Alive() and ply.FakeRagdoll == rag) or not ModOn() or not cvAlive:GetBool() then
 				Pending[rag] = nil
-			elseif not Busy(ply) and not Uncon(ply) then
+			elseif not Busy(ply) and not Uncon(ply) and not rag.remArtagPose then
 				Pending[rag] = nil
 				M.Give(rag, ply, true)
 			end
@@ -289,5 +289,151 @@ if SERVER then
 			end
 			if IsValid(rag) and cvDead:GetBool() then M.Give(rag, ply) end
 		end)
+	end)
+	-- ПОЗЫ без сознания / на грани (по просьбе, только реалистичные; анимации самого мода, models/AREAnims/model_anim.mdl):
+	--   decerebrate  без сознания при ТЯЖЁЛОЙ травме мозга (повреждение мозга, кровоизлияние, сотрясение >= 7, пережитый
+	--                выстрел в голову; после обычного нокаута кулаком такого в жизни нет): руки и ноги вытянуты, кисти
+	--                вывернуты, голова назад - 3..6 с, потом обмякает. Шанс rem_artag_decerebrate_chance при отключке и
+	--                при новом ударе лёжа без сознания, не чаще раза в 10 с;
+	--   cower        на грани отключки: в сознании, но сознание < 0.55 и боль >= 70 (~58%) - сжимается (колени к груди,
+	--                руки к голове), пока так, до 8 с, потом откат 15 с; жмёт кнопки / отключился / полегчало - конец.
+	-- Только поза: контроллер мода (ActiveRagdoll.new + PlayAnimation) без его поведений (DMS:Setup не зовём - не держится
+	-- за рану и т.п.); массы костей возвращаем через 0.3 с; в конце сила плавно в 0 и ar:Destroy(). Голос мода молчит
+	-- (remArtagAlive). Если тело было у мода (живое после урона) - на время позы снимаем, потом Pending вернёт.
+	local cvPoses = CreateConVar("rem_artag_poses", "1", FCVAR_ARCHIVE, "Realistic Artagdoll poses: decerebrate when unconscious with a severe brain injury, cower on the edge of passing out", 0, 1)
+	local cvDecChance = CreateConVar("rem_artag_decerebrate_chance", "50", FCVAR_ARCHIVE, "Chance (%) of the decerebrate posture when unconscious with a severe brain injury", 0, 100)
+	local ANIM_MODEL = "models/AREAnims/model_anim.mdl"
+	local POSE = {
+		decerebrate = {anim = "Decerebrate", rate = 0.5, str = 4, min = 3, max = 6, cooldown = 10},
+		cower = {anim = "Cower", rate = 0.5, str = 2.5, min = 8, max = 8, cooldown = 15},
+	}
+	local POSE_FADE = 0.8
+	local Posed = {} -- [тело] = игрок
+
+	local function BrainSevere(ply, org)
+		if (org.brain or 0) >= 0.15 or (org.brainHemorrhage or 0) >= 0.1 or (org.concussion or 0) >= 7 then return true end
+		local hs = ply.remHSHit
+		return hs and CurTime() - hs.t < 5 or false
+	end
+
+	local function OnEdge(org)
+		return not org.otrub and (org.consciousness or 1) < 0.55 and (org.pain or 0) >= 70
+	end
+
+	local function Controlling(ply)
+		for _, k in ipairs(CONTROL) do if ply:KeyDown(k) then return true end end
+		return false
+	end
+
+	local function EndPose(rag)
+		local st = rag.remArtagPose
+		Posed[rag] = nil
+		if not IsValid(rag) or not st then return end
+		local ar = ActiveRagdoll and ActiveRagdoll.Get and ActiveRagdoll.Get(rag)
+		if ar and ar.Destroy then pcall(ar.Destroy, ar) end
+		RestoreMasses(rag, st.masses)
+		rag.remArtagPose, rag.remArtagAlive = nil, nil
+		-- до позы тело было у мода (урон) - вернётся, когда можно (Pending)
+		local ply = st.ply
+		if st.wasGiven and IsValid(ply) and ply:Alive() and ply.FakeRagdoll == rag then Pending[rag] = ply end
+	end
+
+	function M.Pose(rag, ply, kind, dur, forced) -- forced - тест: держать всё время dur, без проверки условий
+		local def = POSE[kind]
+		if not def or not ModOn() or not IsValid(rag) or rag:GetClass() ~= "prop_ragdoll" then return false end
+		if not (ActiveRagdoll and ActiveRagdoll.new) or rag:GetPhysicsObjectCount() < 2 then return false end
+		local now = CurTime()
+		if rag.remArtagPose then
+			if rag.remArtagPose.kind == kind then rag.remArtagPose.untilT = math.max(rag.remArtagPose.untilT, now + (dur or def.min)) return true end
+			EndPose(rag)
+		end
+		-- было у мода (или ждало возврата после отключки) - после позы вернём
+		local wasGiven = (rag.remArtag or Pending[rag]) and true or false
+		if wasGiven then Take(rag) end
+		Pending[rag] = nil
+		local masses = SaveMasses(rag)
+		local ok, ar = pcall(ActiveRagdoll.new, rag, ANIM_MODEL, nil)
+		if not ok or not ar then RestoreMasses(rag, masses) return false end
+		local cfg = ActiveRagdollManager.Config
+		if cfg and cfg.BoneList then ar:ApplyBoneList(cfg.BoneList) end
+		ar:SetStrength(def.str)
+		ar:PlayAnimation(def.anim, def.rate, ANIM_MODEL)
+		rag.remArtagPose = {kind = kind, ply = ply, untilT = now + (dur or math.Rand(def.min, def.max)), masses = masses, wasGiven = wasGiven, forced = forced}
+		rag.remArtagAlive = true -- голос мода молчит, рывки позы - не падение (sv_input velocityDamage)
+		Posed[rag] = ply
+		timer.Simple(0.3, function() if IsValid(rag) and rag.remArtagPose then RestoreMasses(rag, masses) end end)
+		ply["remPoseNext_" .. kind] = now + (rag.remArtagPose.untilT - now) + def.cooldown
+		return true
+	end
+
+	local function TryDecerebrate(ply, rag, org)
+		if not cvPoses:GetBool() or rag.remArtagPose or CurTime() < (ply.remPoseNext_decerebrate or 0) then return end
+		if not BrainSevere(ply, org) then return end
+		if math.random(100) > cvDecChance:GetFloat() then
+			ply.remPoseNext_decerebrate = CurTime() + 10 -- не повезло - следующий бросок не раньше
+			return
+		end
+		M.Pose(rag, ply, "decerebrate")
+	end
+
+	-- новый удар лёжа без сознания - ещё бросок
+	hook.Add("HomigradDamage", "rem_artag_pose", function(ply, dmg)
+		if not cvPoses:GetBool() or not ModOn() then return end
+		if IsValid(ply) and ply:IsRagdoll() then ply = hg.RagdollOwner and hg.RagdollOwner(ply) or nil end
+		if not IsValid(ply) or not ply:IsPlayer() or not ply:Alive() or not RealHurt(dmg) then return end
+		local rag, org = ply.FakeRagdoll, ply.organism
+		if not IsValid(rag) or not org or not org.otrub then return end
+		timer.Simple(0.15, function()
+			if IsValid(ply) and ply:Alive() and ply.FakeRagdoll == rag and ply.organism and ply.organism.otrub then TryDecerebrate(ply, rag, ply.organism) end
+		end)
+	end)
+
+	-- умер в позе - снять сразу (раньше, чем тело смерти получит мод при rem_artag_dead 1)
+	hook.Add("DoPlayerDeath", "rem_artag_pose", function(ply)
+		for body, p in pairs(Posed) do if p == ply then EndPose(body) end end
+	end)
+
+	local nextPoseThink = 0
+	hook.Add("Think", "rem_artag_pose", function()
+		local now = CurTime()
+		if now < nextPoseThink then return end
+		nextPoseThink = now + 0.1
+		-- идущие позы: конец по времени / встал / умер / условие ушло; в конце сила плавно в 0
+		for rag, ply in pairs(Posed) do
+			local st = IsValid(rag) and rag.remArtagPose
+			if not st then Posed[rag] = nil continue end
+			local org = IsValid(ply) and ply.organism
+			local stop = not org or not ply:Alive() or ply.FakeRagdoll ~= rag or not ModOn() or not cvPoses:GetBool()
+			if st.forced then -- тест
+			elseif not stop and st.kind == "cower" then
+				if not OnEdge(org) or Controlling(ply) or Busy(ply) then st.untilT = math.min(st.untilT, now) end
+			elseif not stop and st.kind == "decerebrate" then
+				if not org.otrub then st.untilT = math.min(st.untilT, now) end -- очнулся
+			end
+			local d = not stop and HealthData(rag)
+			if d and not d.dead then d.currentHP = d.maxHP or d.currentHP d.isBleeding = false end -- здоровье мода не наше
+			if stop or now >= st.untilT + POSE_FADE then
+				EndPose(rag)
+			elseif now >= st.untilT then
+				local ar = ActiveRagdoll.Get(rag)
+				if ar then ar:SetStrength(POSE[st.kind].str * (1 - (now - st.untilT) / POSE_FADE)) end
+			end
+		end
+		if not cvPoses:GetBool() or not ModOn() or now < (M.nextPoseScan or 0) then return end
+		M.nextPoseScan = now + 0.25
+		-- новые: отключился с тяжёлой травмой мозга / на грани отключки от боли
+		for _, ply in player.Iterator() do
+			local rag, org = ply.FakeRagdoll, ply.organism
+			if not ply:Alive() or not IsValid(rag) or not org or rag.remArtagPose then
+				ply.remPoseOtrub = org and org.otrub or false
+				continue
+			end
+			local otrub = org.otrub and true or false
+			if otrub and not ply.remPoseOtrub then TryDecerebrate(ply, rag, org) end
+			ply.remPoseOtrub = otrub
+			if not otrub and OnEdge(org) and now >= (ply.remPoseNext_cower or 0) and not Controlling(ply) and not Busy(ply) then
+				M.Pose(rag, ply, "cower")
+			end
+		end
 	end)
 end

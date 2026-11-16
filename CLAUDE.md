@@ -226,6 +226,13 @@
   "rem_artag_hurt"); ударили уже лёжа - тот же хук отдаёт сразу (TryGive). Просто упал - обычный регдолл Z-City.
   ПО ПРОСЬБЕ: без сознания (org.otrub или нокаут org.remKOEnd) мод не работает - Uncon(ply): Think снимает мод (Take, массы
   назад, тело обмякает) и кладёт тело в Pending; очнулся, всё ещё лежит - мод возвращается. Упал уже без сознания - сразу Pending.
+  ПОЗЫ (по просьбе, только реалистичные из мода; M.Pose - контроллер мода ActiveRagdoll.new + PlayAnimation из
+  models/AREAnims/model_anim.mdl БЕЗ его поведений, массы назад через 0.3 с, в конце сила в 0 за 0.8 с и Destroy;
+  тело было у мода - на время позы Take, потом Pending): Decerebrate (сила 4, 0.5x) - без сознания при тяжёлой травме
+  мозга (brain >= 0.15, brainHemorrhage >= 0.1, concussion >= 7 или выстрел в голову < 5 с; после обычного нокаута - нет),
+  3..6 с, шанс rem_artag_decerebrate_chance (50) при отключке и при новом ударе лёжа без сознания, откат 10 с, очнулся -
+  конец; Cower (сила 2.5) - на грани: не otrub, consciousness < 0.55 и pain >= 70, до 8 с, откат 15 с; кнопки / отключился /
+  полегчало - конец. Dying 1-6 мода не берём (нереалистично). Выкл. rem_artag_poses 0. Тест: rem_test_pose decerebrate|cower [ник].
 - Звуки регдолла «как от предмета»: у части моделей игроков физика не flesh - fake/sv_tier_0.lua хук Ragdoll_Create
   "rem_ragdoll_flesh" ставит всем физ. костям регдолла игрока SetMaterial("flesh"); выкл. rem_ragdoll_flesh 0.
   Тест: rem_test_artag (сервер, админ - ответ в чат).
