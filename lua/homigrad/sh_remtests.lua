@@ -23,6 +23,7 @@ local HELP = {
 	"rem_test_artag              - мод Artagdoll найден / связка включена (тела погибших игроков отдаются ему)",
 	"rem_test_pose decorticate|cower [ник] - поза Artagdoll (уронит в регдолл): decorticate - без сознания при тяжёлой",
 	"                              травме мозга (руки к груди, ноги вытянуты; 4 с), cower - сжался от боли на грани (5 с)",
+	"rem_test_pose headclutch|guard [ник] - держится за голову после удара (~1.4 с) / закрывается лёжа от ударов (5 с)",
 	"rem_artag_realism 0         - вернуть на живых нереалистичное мода (сам кувыркается, сам ползёт, «киношно» тонет)",
 	"--- Звуки (у себя) ---",
 	"rem_test_deathsound [0|1]   - звук смерти (0 brutal, 1 остановка сердца)",
@@ -91,14 +92,15 @@ if SERVER then
 	-- поза Artagdoll (compat/sh_artagdoll.lua M.Pose): первый аргумент - вид, дальше ник
 	concommand.Add("rem_test_pose", function(ply, _, args)
 		if not IsValid(ply) or not ply:IsAdmin() then return end
-		local kind = args[1] == "cower" and "cower" or "decorticate" -- и старое имя decerebrate
+		local KINDS = {cower = true, guard = true, headclutch = true}
+		local kind = KINDS[args[1]] and args[1] or "decorticate" -- и старое имя decerebrate
 		local t = Target(ply, {select(2, unpack(args))})
 		if not IsValid(t) or not t:Alive() then return end
 		if not (hg.Artag and hg.Artag.Present() and hg.Artag.Pose) then ply:ChatPrint("rem_test_pose: мод Artagdoll не найден") return end
 		if not IsValid(t.FakeRagdoll) then hg.Fake(t, nil, nil, true) end
 		timer.Simple(0.3, function()
 			if not IsValid(t) or not IsValid(t.FakeRagdoll) then return end
-			local ok = hg.Artag.Pose(t.FakeRagdoll, t, kind, kind == "cower" and 5 or 4, true)
+			local ok = hg.Artag.Pose(t.FakeRagdoll, t, kind, kind == "headclutch" and 1.35 or (kind == "decorticate" and 4 or 5), true)
 			if IsValid(ply) then ply:ChatPrint("rem_test_pose " .. kind .. " -> " .. t:Nick() .. (ok and "" or ": не вышло (мод выключен?)")) end
 		end)
 	end)

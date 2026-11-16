@@ -332,8 +332,12 @@ if SERVER then
 	local POSE = {
 		decorticate = {anim = "Decerebrate", rate = 0.5, str = 4, min = 3, max = 6, cooldown = 10}, -- так зовётся у мода
 		cower = {anim = "Cower", rate = 0.5, str = 2.5, min = 8, max = 8, cooldown = 15},
+		-- от ударов (по просьбе; кулаки, пинки, дубинки - DMG_CLUB): держится за голову - анимации мода HeadshotLeft /
+		-- HeadshotRight (обе руки к голове и обратно, 31 кадр; 0.65x - один раз за ~1.4 с); закрывается лёжа - Cower
+		headclutch = {anims = {"HeadshotLeft", "HeadshotRight"}, rate = 0.65, str = 3, min = 1.35, max = 1.35, cooldown = 4, fade = 0.3},
+		guard = {anim = "Cower", rate = 0.5, str = 3, min = 2, max = 3.5, cooldown = 0, fade = 0.6},
 	}
-	local POSE_FADE = 0.8
+	local POSE_FADE = 0.8 -- у позы без своего fade
 	local Posed = {} -- [тело] = игрок
 
 	local function BrainSevere(ply, org)
@@ -383,7 +387,7 @@ if SERVER then
 		local cfg = ActiveRagdollManager.Config
 		if cfg and cfg.BoneList then ar:ApplyBoneList(cfg.BoneList) end
 		ar:SetStrength(def.str)
-		ar:PlayAnimation(def.anim, def.rate, ANIM_MODEL)
+		ar:PlayAnimation(def.anims and def.anims[math.random(#def.anims)] or def.anim, def.rate, ANIM_MODEL)
 		rag.remArtagPose = {kind = kind, ply = ply, untilT = now + (dur or math.Rand(def.min, def.max)), masses = masses, wasGiven = wasGiven, forced = forced}
 		rag.remArtagAlive = true -- голос мода молчит, рывки позы - не падение (sv_input velocityDamage)
 		Posed[rag] = ply
@@ -403,14 +407,49 @@ if SERVER then
 	end
 
 	-- новый удар лёжа без сознания - ещё бросок
-	hook.Add("HomigradDamage", "rem_artag_pose", function(ply, dmg)
+	-- удар пришёлся в голову: hitgroup или точка ближе 14 к Head1 (как sh_headshot.lua)
+	local function HeadHit(ply, dmg, hitgroup)
+		if hitgroup == HITGROUP_HEAD then return true end
+		local body = IsValid(ply.FakeRagdoll) and ply.FakeRagdoll or ply
+		local b = body:LookupBone("ValveBiped.Bip01_Head1")
+		local hp = b and body:GetBonePosition(b)
+		return hp and hp:DistToSqr(dmg:GetDamagePosition()) < 14 * 14 or false
+	end
+
+	-- ОТ УДАРОВ (по просьбе): кулаки, пинки, дубинки (DMG_CLUB), человек в сознании.
+	--   headclutch  стоял, получил по голове и упал от удара (через 0.3 с лежит в регдолле) - хватается обеими руками за
+	--               голову ~1.4 с и отпускает (так делают после сильного удара по голове); не чаще раза в 4 с;
+	--   guard       бьют уже лежащего - руки к голове, колени к груди; каждый удар продлевает (2..3.5 с от последнего);
+	--               перестали бить / жмёт кнопки / отключился - отпускает.
+	local cvGuard = CreateConVar("rem_artag_guard", "1", FCVAR_ARCHIVE, "Cover up (hands to head, knees to chest) when beaten while lying (Artagdoll Cower)", 0, 1)
+	local cvClutch = CreateConVar("rem_artag_headclutch", "1", FCVAR_ARCHIVE, "Clutch the head after a strong blow to the head knocks you down (Artagdoll HeadshotLeft/Right)", 0, 1)
+
+	hook.Add("HomigradDamage", "rem_artag_pose", function(ply, dmg, hitgroup)
 		if not cvPoses:GetBool() or not ModOn() then return end
 		if IsValid(ply) and ply:IsRagdoll() then ply = hg.RagdollOwner and hg.RagdollOwner(ply) or nil end
 		if not IsValid(ply) or not ply:IsPlayer() or not ply:Alive() or not RealHurt(dmg) then return end
 		local rag, org = ply.FakeRagdoll, ply.organism
-		if not IsValid(rag) or not org or not org.otrub then return end
-		timer.Simple(0.15, function()
-			if IsValid(ply) and ply:Alive() and ply.FakeRagdoll == rag and ply.organism and ply.organism.otrub then TryDecorticate(ply, rag, ply.organism) end
+		if not org then return end
+		-- без сознания: новый удар - ещё бросок декортикационной позы
+		if IsValid(rag) and org.otrub then
+			timer.Simple(0.15, function()
+				if IsValid(ply) and ply:Alive() and ply.FakeRagdoll == rag and ply.organism and ply.organism.otrub then TryDecorticate(ply, rag, ply.organism) end
+			end)
+			return
+		end
+		if not dmg:IsDamageType(DMG_CLUB) then return end
+		local lying = IsValid(rag)
+		local head = HeadHit(ply, dmg, hitgroup)
+		-- нокаут/отключка ставятся тем же уроном чуть позже (sv_concussion) - решаем через 0.3 с
+		timer.Simple(0.3, function()
+			if not IsValid(ply) or not ply:Alive() or not ModOn() then return end
+			local body = ply.FakeRagdoll
+			if not IsValid(body) or Uncon(ply) or Busy(ply) then return end
+			if lying then
+				if cvGuard:GetBool() and not Controlling(ply) then M.Pose(body, ply, "guard", math.Rand(2, 3.5)) end
+			elseif head and cvClutch:GetBool() and CurTime() >= (ply.remPoseNext_headclutch or 0) then
+				M.Pose(body, ply, "headclutch")
+			end
 		end)
 	end)
 
@@ -433,16 +472,22 @@ if SERVER then
 			if st.forced then -- тест
 			elseif not stop and st.kind == "cower" then
 				if not OnEdge(org) or Controlling(ply) or Busy(ply) then st.untilT = math.min(st.untilT, now) end
+			elseif not stop and st.kind == "guard" then
+				-- перестали бить (время), жмёт кнопки, отключился (обмякает) - конец
+				if Controlling(ply) or Busy(ply) or Uncon(ply) then st.untilT = math.min(st.untilT, now) end
+			elseif not stop and st.kind == "headclutch" then
+				if Uncon(ply) then st.untilT = math.min(st.untilT, now) end
 			elseif not stop and st.kind == "decorticate" then
 				if not org.otrub then st.untilT = math.min(st.untilT, now) end -- очнулся
 			end
 			local d = not stop and HealthData(rag)
 			if d and not d.dead then d.currentHP = d.maxHP or d.currentHP d.isBleeding = false end -- здоровье мода не наше
-			if stop or now >= st.untilT + POSE_FADE then
+			local fade = POSE[st.kind].fade or POSE_FADE
+			if stop or now >= st.untilT + fade then
 				EndPose(rag)
 			elseif now >= st.untilT then
 				local ar = ActiveRagdoll.Get(rag)
-				if ar then ar:SetStrength(POSE[st.kind].str * (1 - (now - st.untilT) / POSE_FADE)) end
+				if ar then ar:SetStrength(POSE[st.kind].str * (1 - (now - st.untilT) / fade)) end
 			end
 		end
 		if not cvPoses:GetBool() or not ModOn() or now < (M.nextPoseScan or 0) then return end

@@ -233,14 +233,18 @@
   мозга (brain >= 0.15, brainHemorrhage >= 0.1, concussion >= 7 или выстрел в голову < 5 с; после обычного нокаута - нет),
   3..6 с, шанс rem_artag_decorticate_chance (50) при отключке и при новом ударе лёжа без сознания, откат 10 с, очнулся -
   конец; Cower (сила 2.5) - на грани: не otrub, consciousness < 0.55 и pain >= 70, до 8 с, откат 15 с; кнопки / отключился /
-  полегчало - конец. Выкл. rem_artag_poses 0. Тест: rem_test_pose decorticate|cower [ник].
+  полегчало - конец. Выкл. rem_artag_poses 0. Тест: rem_test_pose decorticate|cower|headclutch|guard [ник].
+  ОТ УДАРОВ (по просьбе; DMG_CLUB - кулаки, пинки, дубинки; в сознании; решается через 0.3 с - нокаут ставится позже):
+  headclutch - стоял, удар в голову (hitgroup HEAD или ближе 14 к Head1), упал от него - HeadshotLeft/Right мода 0.65x
+  (~1.4 с, руки к голове и обратно), откат 4 с, rem_artag_headclutch; guard - бьют уже лежащего - Cower (сила 3), каждый
+  удар продлевает 2..3.5 с, кнопки/шокер/отключка - конец, rem_artag_guard. У поз своё затухание POSE[kind].fade.
   ТОЛЬКО РЕАЛИЗМ (rem_artag_realism 1): все 27 анимаций мода просмотрены покадрово (tools/mdlanim: свой декодер MDL +
   листы скелетов). На живых остаются woundgrab, stumble (StumbleV2/Cower/Balance), wallstunt (StuntWall), holdenv,
   falling (Falling/Falling2), injured (Dying1-6 - корчи лёжа в сознании), burning (Police.mdl idleonfire). Убраны на живых
   (Unreal(rag) в Think, по-телесно, NPC мода не трогаем): tumble (мод сам крутит тело моментом 5000) - ar.Bravery = 1e6;
   crawling (тело само ползёт) - ar.CrawlChanceRolled/WantsToCrawl; оба уже начались - DMS:Switch(ar, "injured");
   drowning («киношное») - в воде пауза. Не используются: DeathPose1-4, NewHeadshot/StuntWall как реакция на смертельный
-  выстрел (мёртвым мод не даём), HeadshotLeft/Right (держится за голову) и HeadshotCurl, Seizure, neckshot (у мода «scrapped»).
+  выстрел (мёртвым мод не даём), HeadshotCurl, Seizure, neckshot (у мода «scrapped»). HeadshotLeft/Right - в headclutch.
 - Звуки регдолла «как от предмета»: у части моделей игроков физика не flesh - fake/sv_tier_0.lua хук Ragdoll_Create
   "rem_ragdoll_flesh" ставит всем физ. костям регдолла игрока SetMaterial("flesh"); выкл. rem_ragdoll_flesh 0.
   Тест: rem_test_artag (сервер, админ - ответ в чат).
