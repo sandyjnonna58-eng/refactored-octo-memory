@@ -21,8 +21,9 @@ local HELP = {
 	"rem_test_vac                - состояние совместимости с V.A.C. (аддон найден, сидишь в его технике, чья камера)",
 	"rem_test_rvb                - то же для Realistic Vehicles Base (RVB)",
 	"rem_test_artag              - мод Artagdoll найден / связка включена (тела погибших игроков отдаются ему)",
-	"rem_test_pose decerebrate|cower [ник] - поза Artagdoll (уронит в регдолл): decerebrate - как без сознания при тяжёлой",
-	"                              травме мозга (4 с), cower - сжался от боли на грани отключки (5 с); нужен мод Artagdoll",
+	"rem_test_pose decorticate|cower [ник] - поза Artagdoll (уронит в регдолл): decorticate - без сознания при тяжёлой",
+	"                              травме мозга (руки к груди, ноги вытянуты; 4 с), cower - сжался от боли на грани (5 с)",
+	"rem_artag_realism 0         - вернуть на живых нереалистичное мода (сам кувыркается, сам ползёт, «киношно» тонет)",
 	"--- Звуки (у себя) ---",
 	"rem_test_deathsound [0|1]   - звук смерти (0 brutal, 1 остановка сердца)",
 	"rem_test_roundsound         - начало раунда Homicide",
@@ -90,7 +91,7 @@ if SERVER then
 	-- поза Artagdoll (compat/sh_artagdoll.lua M.Pose): первый аргумент - вид, дальше ник
 	concommand.Add("rem_test_pose", function(ply, _, args)
 		if not IsValid(ply) or not ply:IsAdmin() then return end
-		local kind = args[1] == "cower" and "cower" or "decerebrate"
+		local kind = args[1] == "cower" and "cower" or "decorticate" -- и старое имя decerebrate
 		local t = Target(ply, {select(2, unpack(args))})
 		if not IsValid(t) or not t:Alive() then return end
 		if not (hg.Artag and hg.Artag.Present() and hg.Artag.Pose) then ply:ChatPrint("rem_test_pose: мод Artagdoll не найден") return end

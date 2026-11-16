@@ -242,6 +242,28 @@ if SERVER then
 		if IsValid(target) and target.remArtagAlive then target.DMS_IsHeadshot = nil end
 	end)
 
+	-- ТОЛЬКО РЕАЛИЗМ (по просьбе; все 27 анимаций мода просмотрены покадрово): на живом теле остаются поведения,
+	-- которые так и выглядят в жизни - держится за рану (woundgrab), шатается и ловит равновесие (stumble: StumbleV2,
+	-- Cower, Balance), упирается руками в стену (wallstunt), хватается за край в полёте (holdenv), размахивает руками в
+	-- падении (falling - так и бывает при падении с высоты), корчится от боли лёжа (injured: Dying1-6), бьётся и сбивает
+	-- пламя (burning). Убраны на живых: tumble - мод сам закручивает тело моментом (5000) и поджимает - в жизни тело
+	-- катится пассивно (ar.Bravery огромная - порог кувырка не достигается; уже начался - назад в injured);
+	-- crawling - тело само ползёт (5% лёжа на животе), а ползёт игрок - не даём; drowning - «киношное» утопание (руки
+	-- вверх, ноги бьют; в жизни тонущий почти неподвижен, руки давят на воду) - в воде мод на паузе, тело Z-City.
+	-- Мёртвые тела мод не получает (rem_artag_dead 0), его выстрел в голову на живых снят. Выкл. - rem_artag_realism 0.
+	local cvReal = CreateConVar("rem_artag_realism", "1", FCVAR_ARCHIVE, "Only realistic Artagdoll behaviours on living players (no self-spinning tumble, no self-crawling, no movie drowning)", 0, 1)
+	local function Unreal(rag)
+		if rag:WaterLevel() >= 1 then return true end -- утопание мода - пауза, пока в воде
+		local ar = ActiveRagdoll and ActiveRagdoll.Get and ActiveRagdoll.Get(rag)
+		if not ar then return false end
+		if ar.PersonalityInitialized then ar.Bravery = 1e6 end -- порог кувырка = ar_TumbleSpeed * Bravery
+		ar.TumbleLockTime = nil
+		ar.CrawlChanceRolled, ar.WantsToCrawl = true, false -- сам не ползёт
+		local cur = ar.CurrentBehavior
+		if (cur == "tumble" or cur == "crawling") and DMS and DMS.Switch then DMS:Switch(ar, "injured") end
+		return false
+	end
+
 	local nextThink = 0
 	hook.Add("Think", "rem_artag", function()
 		if not next(Alive) and not next(Pending) then return end
@@ -273,6 +295,7 @@ if SERVER then
 			if d and not d.dead then d.currentHP = d.maxHP or d.currentHP d.isBleeding = false end
 			local ctrl = Busy(ply) -- шокер / припадок - тоже пауза
 			if not ctrl then for _, k in ipairs(CONTROL) do if ply:KeyDown(k) then ctrl = true break end end end
+			if not ctrl and cvReal:GetBool() then ctrl = Unreal(rag) end
 			SetPaused(rag, ctrl)
 		end
 	end)
@@ -291,20 +314,23 @@ if SERVER then
 		end)
 	end)
 	-- ПОЗЫ без сознания / на грани (по просьбе, только реалистичные; анимации самого мода, models/AREAnims/model_anim.mdl):
-	--   decerebrate  без сознания при ТЯЖЁЛОЙ травме мозга (повреждение мозга, кровоизлияние, сотрясение >= 7, пережитый
-	--                выстрел в голову; после обычного нокаута кулаком такого в жизни нет): руки и ноги вытянуты, кисти
-	--                вывернуты, голова назад - 3..6 с, потом обмякает. Шанс rem_artag_decerebrate_chance при отключке и
-	--                при новом ударе лёжа без сознания, не чаще раза в 10 с;
-	--   cower        на грани отключки: в сознании, но сознание < 0.55 и боль >= 70 (~58%) - сжимается (колени к груди,
-	--                руки к голове), пока так, до 8 с, потом откат 15 с; жмёт кнопки / отключился / полегчало - конец.
+	--   decorticate  без сознания при ТЯЖЁЛОЙ травме мозга (повреждение мозга, кровоизлияние, сотрясение >= 7, пережитый
+	--                выстрел в голову; после обычного нокаута кулаком такого в жизни нет). Анимация мода зовётся
+	--                Decerebrate, но по кадрам это ДЕКОРТИКАЦИОННАЯ поза: руки согнуты и прижаты к груди, кисти у плеч,
+	--                ноги вытянуты, стопы оттянуты (децеребрационная - руки вытянуты вдоль тела; обе бывают при тяжёлой
+	--                травме мозга). 3..6 с, потом обмякает. Шанс rem_artag_decorticate_chance при отключке и при новом
+	--                ударе лёжа без сознания, не чаще раза в 10 с;
+	--   cower        на грани отключки: в сознании, но сознание < 0.55 и боль >= 70 (~58%) - сжимается (по кадрам: бёдра
+	--                к животу, спина согнута, кисти у лица/головы), пока так, до 8 с, потом откат 15 с; жмёт кнопки /
+	--                отключился / полегчало - конец.
 	-- Только поза: контроллер мода (ActiveRagdoll.new + PlayAnimation) без его поведений (DMS:Setup не зовём - не держится
 	-- за рану и т.п.); массы костей возвращаем через 0.3 с; в конце сила плавно в 0 и ar:Destroy(). Голос мода молчит
 	-- (remArtagAlive). Если тело было у мода (живое после урона) - на время позы снимаем, потом Pending вернёт.
-	local cvPoses = CreateConVar("rem_artag_poses", "1", FCVAR_ARCHIVE, "Realistic Artagdoll poses: decerebrate when unconscious with a severe brain injury, cower on the edge of passing out", 0, 1)
-	local cvDecChance = CreateConVar("rem_artag_decerebrate_chance", "50", FCVAR_ARCHIVE, "Chance (%) of the decerebrate posture when unconscious with a severe brain injury", 0, 100)
+	local cvPoses = CreateConVar("rem_artag_poses", "1", FCVAR_ARCHIVE, "Realistic Artagdoll poses: decorticate when unconscious with a severe brain injury, cower on the edge of passing out", 0, 1)
+	local cvDecChance = CreateConVar("rem_artag_decorticate_chance", "50", FCVAR_ARCHIVE, "Chance (%) of the decorticate posture when unconscious with a severe brain injury", 0, 100)
 	local ANIM_MODEL = "models/AREAnims/model_anim.mdl"
 	local POSE = {
-		decerebrate = {anim = "Decerebrate", rate = 0.5, str = 4, min = 3, max = 6, cooldown = 10},
+		decorticate = {anim = "Decerebrate", rate = 0.5, str = 4, min = 3, max = 6, cooldown = 10}, -- так зовётся у мода
 		cower = {anim = "Cower", rate = 0.5, str = 2.5, min = 8, max = 8, cooldown = 15},
 	}
 	local POSE_FADE = 0.8
@@ -366,14 +392,14 @@ if SERVER then
 		return true
 	end
 
-	local function TryDecerebrate(ply, rag, org)
-		if not cvPoses:GetBool() or rag.remArtagPose or CurTime() < (ply.remPoseNext_decerebrate or 0) then return end
+	local function TryDecorticate(ply, rag, org)
+		if not cvPoses:GetBool() or rag.remArtagPose or CurTime() < (ply.remPoseNext_decorticate or 0) then return end
 		if not BrainSevere(ply, org) then return end
 		if math.random(100) > cvDecChance:GetFloat() then
-			ply.remPoseNext_decerebrate = CurTime() + 10 -- не повезло - следующий бросок не раньше
+			ply.remPoseNext_decorticate = CurTime() + 10 -- не повезло - следующий бросок не раньше
 			return
 		end
-		M.Pose(rag, ply, "decerebrate")
+		M.Pose(rag, ply, "decorticate")
 	end
 
 	-- новый удар лёжа без сознания - ещё бросок
@@ -384,7 +410,7 @@ if SERVER then
 		local rag, org = ply.FakeRagdoll, ply.organism
 		if not IsValid(rag) or not org or not org.otrub then return end
 		timer.Simple(0.15, function()
-			if IsValid(ply) and ply:Alive() and ply.FakeRagdoll == rag and ply.organism and ply.organism.otrub then TryDecerebrate(ply, rag, ply.organism) end
+			if IsValid(ply) and ply:Alive() and ply.FakeRagdoll == rag and ply.organism and ply.organism.otrub then TryDecorticate(ply, rag, ply.organism) end
 		end)
 	end)
 
@@ -407,7 +433,7 @@ if SERVER then
 			if st.forced then -- тест
 			elseif not stop and st.kind == "cower" then
 				if not OnEdge(org) or Controlling(ply) or Busy(ply) then st.untilT = math.min(st.untilT, now) end
-			elseif not stop and st.kind == "decerebrate" then
+			elseif not stop and st.kind == "decorticate" then
 				if not org.otrub then st.untilT = math.min(st.untilT, now) end -- очнулся
 			end
 			local d = not stop and HealthData(rag)
@@ -429,7 +455,7 @@ if SERVER then
 				continue
 			end
 			local otrub = org.otrub and true or false
-			if otrub and not ply.remPoseOtrub then TryDecerebrate(ply, rag, org) end
+			if otrub and not ply.remPoseOtrub then TryDecorticate(ply, rag, org) end
 			ply.remPoseOtrub = otrub
 			if not otrub and OnEdge(org) and now >= (ply.remPoseNext_cower or 0) and not Controlling(ply) and not Busy(ply) then
 				M.Pose(rag, ply, "cower")
