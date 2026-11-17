@@ -25,6 +25,19 @@ local cvHSKind = CreateConVar("rem_reag_headshot_kind", "", FCVAR_ARCHIVE, "Test
 local HS_WINDOW = 0.7 -- смерть не позже стольких секунд после попадания в голову
 local up = Vector(0, 0, 1)
 
+-- Сломан позвоночник (Z-City: sv_bone spine1/2/3, пороги hg.organism.fake_spine*) - парализованное не двигаем.
+-- Баг (скрин пользователя): упал, сломал позвоночник - кувырок/корчи тянули ноги к груди и крутили корпус, тело
+-- выворачивало ногами за голову. 0 - цел, 1 - ноги (поясница), 2 - ниже груди, 3 - шея: всё.
+function hg.SpineCut(org)
+	if not org then return 0 end
+	local O = hg.organism or {}
+	if O.FractureTolerant and O.FractureTolerant(org) then return 0 end
+	if (org.spine3 or 0) >= (O.fake_spine3 or 0.5) then return 3 end
+	if (org.spine2 or 0) >= (O.fake_spine2 or 1) then return 2 end
+	if (org.spine1 or 0) >= (O.fake_spine1 or 1) then return 1 end
+	return 0
+end
+
 -- попадание пулей/дробью в голову: запоминаем время и направление
 hook.Add("HomigradDamage", "rem_reag_extra", function(ply, dmg, hitgroup, ent)
 	if hitgroup ~= HITGROUP_HEAD or not dmg:IsDamageType(DMG_BULLET + DMG_BUCKSHOT) then return end
@@ -153,12 +166,15 @@ local function ApplyTumble(st, rag, now, dt, conscious, ctrl)
 	local d = vh / speed
 	local axis = up:Cross(d)
 	local w = math.min(speed / 9 * 57, 700) * math.Clamp((tb.untilT - now) / 0.6, 0, 1)
+	-- сломанный позвоночник: корпус не докручиваем - таз и грудь крутило в разные стороны, тело выворачивало
+	if hg.SpineCut(st.org) >= 1 then w = 0 end
 	for _, p in ipairs({pelvis, spine}) do
 		local want = p:WorldToLocalVector(axis * w)
 		p:AddAngleVelocity((want - p:GetAngleVelocity()) * 0.08)
 	end
-	-- в сознании поджимается: руки к голове, колени к груди
-	if conscious and not ctrl then
+	-- в сознании поджимается: руки к голове, колени к груди (что парализовано - не поджимает)
+	local cut = hg.SpineCut(st.org)
+	if conscious and not ctrl and cut < 3 then
 		local f, r, u, _, sp, head = H.BodyFrame(rag)
 		if f then
 			local k = H.Str(st)
@@ -171,7 +187,7 @@ local function ApplyTumble(st, rag, now, dt, conscious, ctrl)
 			end
 			local pz = pelvis:GetPos()
 			for _, L in ipairs({{calf = 9, amp = "rlegamputated", sg = 1}, {calf = 12, amp = "llegamputated", sg = -1}}) do
-				if not (st.org and st.org[L.amp]) then H.Shadow(rag, L.calf, pz + f * 12 + r * (4 * L.sg), 30 * k, 12 * k) end
+				if cut == 0 and not (st.org and st.org[L.amp]) then H.Shadow(rag, L.calf, pz + f * 12 + r * (4 * L.sg), 30 * k, 12 * k) end
 			end
 		end
 	end
@@ -206,6 +222,7 @@ local function ApplyDrown(st, rag, now, busyL, busyR)
 	end
 	-- голову к поверхности, ноги бьют
 	head:AddVelocity(up * 90 * k * FrameTime() * 10)
+	if hg.SpineCut(st.org) >= 1 then return true end -- ноги парализованы
 	for i, n in ipairs({8, 11}) do
 		local p = H.Phys(rag, n)
 		if p then p:AddAngleVelocity(Vector(0, math.sin(now * 9 + i * math.pi) * 380 * k, 0) * 0.15) end
@@ -218,6 +235,8 @@ local function ApplyWrithe(st, rag, now, dt)
 	local org = st.org
 	local pain = org and org.pain or 0
 	if pain < 60 then st.writhe = nil return end
+	local cut = hg.SpineCut(org)
+	if cut >= 2 then st.writhe = nil return end -- ниже груди не чувствует - не корчится
 	local H = hg.Reag
 	local f, r, u, pelvis, spine = H.BodyFrame(rag)
 	if not f then return end
@@ -230,7 +249,7 @@ local function ApplyWrithe(st, rag, now, dt)
 	w.phase = w.phase + dt * (0.8 + pain / 150)
 	-- колени: то подтягивает, то выпрямляет (по очереди)
 	for i, L in ipairs({{calf = 9, amp = "rlegamputated", sg = 1}, {calf = 12, amp = "llegamputated", sg = -1}}) do
-		if not (org and org[L.amp]) then
+		if cut == 0 and not (org and org[L.amp]) then
 			local bend = (math.sin(w.phase + i * 1.7) + 1) * 0.5
 			H.Shadow(rag, L.calf, pz + f * (4 + bend * 12) - u * (16 - bend * 10) + r * (5 * L.sg), 18 * k, 10 * k)
 		end
@@ -302,6 +321,7 @@ function hg.ReagExtra(st, rag, now, dt, ply, ctrl, busyL, busyR)
 
 	if cvTumble:GetBool() then ApplyTumble(st, rag, now, dt, conscious, ctrl) end
 	if not conscious or ctrl then return end
+	if hg.SpineCut(org) >= 3 then return end -- сломана шея: не двигается совсем
 
 	if cvDrown:GetBool() and ApplyDrown(st, rag, now, busyL, busyR) then return end
 	if st.air == 0 and not st.bal and not st.guard and not st.tumble then

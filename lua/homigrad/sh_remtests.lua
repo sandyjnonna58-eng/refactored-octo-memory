@@ -13,6 +13,7 @@ local HELP = {
 	"rem_test_fire [ник]         - поджечь на 5 с (регдолл катается)",
 	"rem_test_clear [ник]        - сбросить сотрясение, нокаут, оглушение",
 	"rem_test_heartstop [ник]    - остановить сердце (звук остановки; умрёт, если не завести дефибриллятором)",
+	"rem_test_spine [ник]        - сломать поясницу и уронить: ноги парализованы, реакции/Artagdoll их не крутят",
 	"rem_reag_debug 1            - отладка реакций регдолла в консоль сервера",
 	"rem_reag_headshot_kind decerebrate|stiffen|limp|drop - какой будет реакция на смертельный выстрел в голову (пусто - случайно)",
 	"  (реакции Artagdoll: кувырок - бросить тело взрывом/машиной; вода; корчи - боль > 50% лёжа; ползком - на животе + W)",
@@ -142,6 +143,13 @@ if SERVER then
 	Cmd("rem_test_heartstop", function(t, org)
 		org.heartstop = true
 		return org.otrub and "без сознания - rem_heartstopuncon.wav" or "в сознании - rem_heartstop.wav"
+	end)
+
+	-- сломать поясничный отдел и уронить: ноги должны лежать без движения (кувырок/корчи/Artagdoll их не тянут)
+	Cmd("rem_test_spine", function(t, org)
+		org.spine1 = math.max(org.spine1 or 0, 1)
+		if not IsValid(t.FakeRagdoll) and hg.Fake then hg.Fake(t, nil, true, true) end
+		return "позвоночник сломан, SpineCut = " .. tostring(hg.SpineCut and hg.SpineCut(org) or "?") .. " (снять - Reset organism)"
 	end)
 
 	Cmd("rem_test_clear", function(t, org)

@@ -48,6 +48,8 @@ if SERVER then
 		-- своя поза Z-City при повреждении мозга (organism/sv_brainfuckv2.lua: декортикационная/децеребрационная при
 		-- org.brain >= 0.12) - тело ведёт она, мод не тянет его в другую сторону
 		if org.brainfuckv2Posture then return true end
+		-- сломан позвоночник (Z-City spine1/2/3): мод водил бы парализованные ноги/корпус - тело выворачивало
+		if hg.SpineCut and hg.SpineCut(org) > 0 then return true end
 		return false
 	end
 
