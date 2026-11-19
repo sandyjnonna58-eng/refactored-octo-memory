@@ -261,17 +261,17 @@ local function ThinkArrhythmiaSound(org)
  end
 end
 
--- "плохое сердце" - то же, что показывает осмотр: сбитый ритм (плитки аритмии / тахикардии желудочков, fib > 15),
--- повреждение, ишемия, перегрузка, пульс на мониторе < 45 или > 190, давление далеко от нормы (sh_cardio.lua: сист. < 82
--- или > 190); org.pulse < 40 - старое условие (кровоток почти встал)
+-- звук плохого сердца - только в ТЯЖЁЛОМ состоянии (по просьбе; у простой аритмии свой фон arrhythmia.mp3):
+-- желудочковая тахикардия (fib > 50; у фибрилляции и остановки свои звуки), сердце разбито (>= 0.6), сильная ишемия
+-- (<= 0.45), перегрузка (>= 0.75), пульс < 40 или > 210, давление сист. < 70 или > 210 (sh_cardio.lua), кровоток почти
+-- встал (org.pulse < 40)
 local function IsHeartCritical(org)
  local hr = org.heartbeat or 70
  local fib = org.fib or (org.arrhythmia or 0) * 100
- local cardio = hg.Cardio and hg.Cardio.Levels and hg.Cardio.Levels(org, hg.remCritLevels)
- hg.remCritLevels = cardio
- return (org.heart or 0) >= 0.4 or fib > 15 or (org.myocardialOxygen or 1) <= 0.5
-  or (org.heartStrain or 0) >= 0.7 or hr < 45 or hr > 190 or (org.pulse or 70) < 40
-  or cardio and (cardio.low >= 0.5 or cardio.high >= 0.5) or false
+ local sys = org.systolic or 120
+ return (org.heart or 0) >= 0.6 or fib > 50 or (org.myocardialOxygen or 1) <= 0.45
+  or (org.heartStrain or 0) >= 0.75 or hr < 40 or hr > 210 or (org.pulse or 70) < 40
+  or sys < 70 or sys > 210
 end
 
 local remLastEcgBeat

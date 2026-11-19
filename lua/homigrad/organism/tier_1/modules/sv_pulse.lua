@@ -212,27 +212,33 @@ module[2] = function(owner, org, timeValue)
 	org.heartbeat = math.Approach(org.heartbeat, heartbeat, heartbeat > org.heartbeat and timeValue * 5 or timeValue * 3)
 	
 	local ischemia = Clamp(1 - (org.myocardialOxygen or 1), 0, 1)
-	-- шкала фибрилляции
+	-- шкала фибрилляции. Боль аритмию не вызывает (по просьбе): из пульса для шкалы вычитается то, что добавили боль
+	-- и болевой шок (org.shock - от попаданий, sv_input.lua), шок 3+ - только физиологический (shockScore без доли боли),
+	-- высокое давление - без той части тонуса сосудов, что дал болевой шок
 	local o2pct = istable(org.o2) and (org.o2[1] or 30) / (org.o2.range or 30) * 100 or 100
 	local sys = org.systolic or 120
 	local hr = org.heartbeat or 70
+	local painHR = Clamp(org.pain or 0, 40, 80) - 40 + Clamp(org.shock or 0, 0, 40)
+	local hrFib = hr - painHR
 	local alive = org.alive and not org.heartstop
-	local strongStart = alive and (hr > fib_hr_start or sys < fib_sys_start or o2pct < fib_o2_start or org.temperature < fib_temp_start)
-	local strongRise = alive and (hr > fib_hr_start or sys < fib_sys_rise or o2pct < fib_o2_rise or org.temperature < fib_temp_rise or org.fibForced)
+	local strongStart = alive and (hrFib > fib_hr_start or sys < fib_sys_start or o2pct < fib_o2_start or org.temperature < fib_temp_start)
+	local strongRise = alive and (hrFib > fib_hr_start or sys < fib_sys_rise or o2pct < fib_o2_rise or org.temperature < fib_temp_rise or org.fibForced)
+	local shockPhys = (org.shockScore or 0) - Clamp(((org.pain or 0) - 70) / 80, 0, 1) * 8
+	local hyperNoPain = Clamp(Remap(org.bloodPressure * (1 - Clamp(org.shock or 0, 0, 45) / 360 / vascularTone), 115, 155, 0, 1), 0, 1)
 	-- "плохое сердце": растёт только до своего потолка
 	local ceil = 0
 	if (org.heart or 0) >= 0.2 then ceil = max(ceil, 20 + org.heart * 70) end
 	if ischemia >= 0.35 then ceil = max(ceil, ischemia * 80) end
 	if (org.heartStrain or 0) >= 0.5 then ceil = max(ceil, org.heartStrain * 50) end
 	if (org.blood or 5000) < fib_blood_start then ceil = max(ceil, Clamp(Remap(org.blood, fib_blood_start, fib_blood_full, 20, 60), 20, 60)) end
-	if (org.shockStage or 0) >= 3 then ceil = max(ceil, 40) end
-	if (org.hypertension or 0) >= 0.6 then ceil = max(ceil, 30) end
+	if shockPhys >= 60 then ceil = max(ceil, 40) end
+	if (org.hypertension or 0) >= 0.6 and hyperNoPain >= 0.6 then ceil = max(ceil, 30) end
 	if not alive then ceil = 0 end
 
 	if fib <= 0 and (strongStart or ceil > 0) then fib = 1 end
 	if fib > 0 then
 		if strongRise or fib < ceil then
-			fib = fib + timeValue * (hr > fib_fast_hr and fib_rate_fast or fib_rate)
+			fib = fib + timeValue * (hrFib > fib_fast_hr and fib_rate_fast or fib_rate)
 		elseif not org.fibForced then
 			fib = max(fib - timeValue * fib_fall, 0)
 		end
