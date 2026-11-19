@@ -250,7 +250,8 @@ local function CollectAfflictionIcons(ply, org)
 
 	-- плитка сердца - только если ЭКГ выключена (rem_ecg 0): пульс показывает монитор над силуэтом
 	if not (hg.ECG and hg.ECG.cv and hg.ECG.cv:GetBool()) then
-		add("pulse", 0.05, "Heart", false, "Pulse: " .. math.Round(Num(org.pulse)) .. " bpm")
+		add("pulse", 0.05, "Heart", false, "Pulse: " .. math.Round(Num(org.heartbeat)) .. " bpm\nBlood pressure: " ..
+			math.Round(Num(org.systolic)) .. "/" .. math.Round(Num(org.diastolic)) .. " mmHg")
 	end
 
 	-- раны и кровь
@@ -309,14 +310,27 @@ local function CollectAfflictionIcons(ply, org)
 	-- частота (если ритм не сорван)
 	if not org.heartstop and fib <= 50 and hr > 0 then
 		if hr > 110 then
-			add("tachycardia", math.Clamp((hr - 110) / 90, 0.15, 1), "Tachycardia", nil, "Heart rate: " .. math.Round(hr) .. " bpm")
+			add("tachycardia", math.Clamp((hr - 110) / 90, 0.15, 1), "Tachycardia", nil, "Heart rate: " .. math.Round(hr) .. " bpm" ..
+				(hr > 130 and "\nThe heart pounds - every beat jerks your aim." or ""))
 		elseif hr < 60 then
-			add("bradycardia", math.Clamp((60 - hr) / 40, 0.15, 1), "Bradycardia", nil, "Heart rate: " .. math.Round(hr) .. " bpm")
+			add("bradycardia", math.Clamp((60 - hr) / 40, 0.15, 1), "Bradycardia", nil, "Heart rate: " .. math.Round(hr) .. " bpm" ..
+				(hr < 55 and "\nWeakness: you move slower,\nvision dims between beats." or ""))
 		end
 	end
 	if Num(org.heart) > 0.1 then add("heart", Num(org.heart), "Heart damage") end
-	if Num(org.hypotension) > 0.2 then add("pressure_low", Num(org.hypotension), "Low blood pressure") end
-	if Num(org.hypertension) > 0.2 then add("pressure_high", Num(org.hypertension), "High blood pressure") end
+	-- давление с монитора действует на игрока (organism/tier_1/modules/sh_cardio.lua, sv_cardio.lua, cl_cardio.lua)
+	local cardio = hg.Cardio and hg.Cardio.Levels and hg.Cardio.Levels(org)
+	local bp = "Blood pressure: " .. math.Round(Num(org.systolic)) .. "/" .. math.Round(Num(org.diastolic)) .. " mmHg"
+	local low = math.max(Num(org.hypotension), cardio and cardio.low or 0)
+	local high = math.max(Num(org.hypertension), cardio and cardio.high or 0)
+	if low > 0.15 then
+		add("pressure_low", low, "Low blood pressure", nil, bp .. "\nWeak and slower, stamina recovers slower.\nVision darkens when you run or get up." ..
+			(Num(org.systolic) < 75 and "\nYour legs can give out while sprinting." or ""))
+	end
+	if high > 0.15 then
+		add("pressure_high", high, "High blood pressure", nil, bp .. "\nHeadache, pounding temples,\nevery heartbeat jerks your aim." ..
+			(Num(org.systolic) >= 190 and "\nNosebleed, nausea, risk of stroke." or ""))
+	end
 
 	-- лёгкие и кислород
 	if org.lungsfunction == false then add("lung_failure", 1, "Lung failure") end

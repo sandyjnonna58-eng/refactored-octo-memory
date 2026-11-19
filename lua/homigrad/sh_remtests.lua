@@ -14,6 +14,10 @@ local HELP = {
 	"rem_test_clear [ник]        - сбросить сотрясение, нокаут, оглушение",
 	"rem_test_heartstop [ник]    - остановить сердце (звук остановки; умрёт, если не завести дефибриллятором)",
 	"rem_test_spine [ник]        - сломать поясницу и уронить: ноги парализованы, реакции/Artagdoll их не крутят",
+	"rem_test_bp <сист.> [пульс] [сек] - на 40 с (или [сек]) давление/пульс как на мониторе (на кого смотришь / ты):",
+	"                              60 - слабость, темнеет на бегу и после подъёма, на бегу можно упасть (и аритмия, < 78);",
+	"                              200 - голова болит, стучит в висках, через 5 с кровь из носа; 210 - и тошнит;",
+	"                              120 40 - редкий пульс; 120 180 - сердце колотится; rem_test_bp off - снять",
 	"rem_reag_debug 1            - отладка реакций регдолла в консоль сервера",
 	"rem_reag_headshot_kind decerebrate|stiffen|limp|drop - какой будет реакция на смертельный выстрел в голову (пусто - случайно)",
 	"  (реакции Artagdoll: кувырок - бросить тело взрывом/машиной; вода; корчи - боль > 50% лёжа; ползком - на животе + W)",
@@ -152,6 +156,19 @@ if SERVER then
 		org.spine1 = math.max(org.spine1 or 0, 1)
 		if not IsValid(t.FakeRagdoll) and hg.Fake then hg.Fake(t, nil, true, true) end
 		return "позвоночник сломан, SpineCut = " .. tostring(hg.SpineCut and hg.SpineCut(org) or "?") .. " (снять - Reset organism)"
+	end)
+
+	-- давление и пульс (organism/tier_1/modules/sv_cardio.lua): подмена на время, sv_pulse.lua потом пересчитает сам
+	concommand.Add("rem_test_bp", function(ply, _, args)
+		if not IsValid(ply) or not ply:IsAdmin() then return end
+		local t = Target(ply, {})
+		if not IsValid(t) or not t:Alive() or not t.organism then return end
+		if args[1] == "off" then t.organism.remBPTest = nil ply:ChatPrint("rem_test_bp: снято -> " .. t:Nick()) return end
+		local sys = math.Clamp(tonumber(args[1]) or 60, 20, 260)
+		local hr = tonumber(args[2])
+		local dur = math.Clamp(tonumber(args[3]) or 40, 1, 600)
+		t.organism.remBPTest = {sys = sys, hr = hr and math.Clamp(hr, 25, 260) or nil, untilT = CurTime() + dur}
+		ply:ChatPrint(("rem_test_bp -> %s: давление %d, пульс %s, %d с"):format(t:Nick(), sys, hr and tostring(math.Round(hr)) or "свой", dur))
 	end)
 
 	Cmd("rem_test_clear", function(t, org)

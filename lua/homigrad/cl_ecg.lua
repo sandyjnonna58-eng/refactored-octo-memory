@@ -84,7 +84,8 @@ local function NextBeat(kind, hr, fib)
 	end
 end
 
--- счётчик настоящих ударов сердца (hg.ECG.beats): по нему cl_main.lua играет звук плохого сердца на каждый удар.
+-- счётчик настоящих ударов сердца на мониторе (hg.ECG.beats) и своих ударов (hg.ECG.ownBeats - монитор может показывать
+-- чужое сердце): по ownBeats cl_main.lua играет звук плохого сердца на каждый удар, cl_cardio.lua толкает взгляд.
 -- У аритмии волны на мониторе - трепетание, сами удары идут отдельно, неровно, с частотой пульса
 E.beats = E.beats or 0
 local pulseT, pulseLen = 0, 0.85
@@ -146,13 +147,24 @@ local function Update(org, n)
 end
 
 -- кардиограмма идёт всегда (а не только пока открыт осмотр): по ней же звучат удары
+E.ownBeats = E.ownBeats or 0
 hook.Add("Think", "rem_ecg", function()
+	local ply = LocalPlayer()
+	local own = IsValid(ply) and ply:Alive() and (ply.new_organism or ply.organism) or nil
 	local org = E.drawOrg
-	if not org or RealTime() - (E.drawTime or 0) > 0.5 then
-		local ply = LocalPlayer()
-		org = IsValid(ply) and ply:Alive() and (ply.new_organism or ply.organism) or nil
-	end
+	if not org or RealTime() - (E.drawTime or 0) > 0.5 then org = own end
+	local before = E.beats
 	Update(org, E.n or 100)
+	-- свои удары: монитор показывает своё сердце - по нему, чужое - свой отсчёт по пульсу
+	if org == own then
+		E.ownBeats = E.ownBeats + (E.beats - before)
+	elseif own and not own.heartstop and not own.fibrillation and (own.heartbeat or 0) > 0 then
+		local now = RealTime()
+		if now >= (E.ownNext or 0) then
+			E.ownNext = now + 60 / math.Clamp(own.heartbeat, 20, 300)
+			E.ownBeats = E.ownBeats + 1
+		end
+	end
 end)
 
 local LO, HI = -0.7, 1.1 -- диапазон значений по высоте графика

@@ -683,6 +683,8 @@ hook.Add("Org Think", "Main", function(owner, org, timeValue)
 		module.random_events[2](owner, org, timeValue)
 	end
 	module.pulse[2](owner, org, timeValue)
+	-- давление и пульс с монитора действуют на игрока (modules/sv_cardio.lua)
+	if hg.organism.Cardio then hg.organism.Cardio(owner, org, timeValue) end
 
 	module.depression[2](owner, org, timeValue)
 	module.concussion[2](owner, org, timeValue)
