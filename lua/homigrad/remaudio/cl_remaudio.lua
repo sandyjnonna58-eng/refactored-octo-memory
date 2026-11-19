@@ -23,7 +23,7 @@ local rawSetVolume = meta.RemRawSetVolume
 -- Песни экрана смерти и последних моментов сюда не входят: они звучат, когда ты уже без сознания.
 RA.MusicPatterns = {
 	"sound/zcity_ost/", "sound/zc_dyna_music/",        -- фоновая музыка режима (dynamic_music_v2, dynmusic)
-	"rem_letitgo", "rem_rage/", "rem_panic/",           -- критическое состояние, ярость, паника
+	"rem_letitgo", "rem_rage/",           -- критическое состояние, ярость, паника
 	"rem_excruciatingpain", "rem_despair", "rem_pain.mp3", "rem_aftermath", -- боль, отчаяние, суицид
 	"rem_laststand", "rem_lastbattle", "zbattle/pharmacia", -- последний бой, берсерк
 	"rem_hmcd_police",                                   -- прибытие полиции/SWAT в Homicide

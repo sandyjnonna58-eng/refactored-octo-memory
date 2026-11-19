@@ -215,11 +215,9 @@ end
 -- запоминаем состояние (настроение - только в сознании: в отключке остаётся последнее), умер - замораживаем.
 local MOOD = { -- по порядку: первое подходящее
 	{"Berserk", function(ply) return ply:GetNW2Int("rem_rage_stage", 0) >= 3 end},
-	{"Hysterical", function(ply) return ply:GetNW2Float("rem_panic", 0) >= 0.7 end},
 	{"Euphoric", function(ply) return ply:GetNW2Float("rem_high", 0) >= 0.5 end},
 	{"Agonized", function(_, org) return (org.pain or 0) >= 90 end},
 	{"Terrified", function(_, org) return (org.fear or 0) > 0.5 end},
-	{"Panicked", function(ply) return ply:GetNW2Float("rem_panic", 0) >= 0.35 end},
 	{"Enraged", function(ply) return ply:GetNW2Int("rem_rage_stage", 0) >= 1 end},
 	{"Hopeless", function(_, org) return (org.depression or 0) >= 0.6 end},
 	{"Miserable", function(_, org) return (org.depression or 0) >= 0.3 or (org.pain or 0) >= 60 end},

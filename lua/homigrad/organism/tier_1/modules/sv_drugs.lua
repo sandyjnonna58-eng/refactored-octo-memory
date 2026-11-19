@@ -5,7 +5,7 @@
 --           Подташнивает. Привыкание сильное, ломка - боль, тошнота и рвота, тревога, тремор.
 --   мет:    сил много (выносливость), пульс выше (org.remHRAdd -> sv_pulse.lua), паранойя (страх); передоз (> 2.5) -
 --           сердце (фибрилляция), жар. Привыкание, ломка - тоска, вялость.
---   кислота: трип (экран - cl_drugs.lua), странные мысли; передоз (> 2) - бэд-трип: паника (sv_panic.lua) и страх.
+--   кислота: трип (экран - cl_drugs.lua), странные мысли; передоз (> 2) - бэд-трип: страх.
 --           Привыкания нет.
 -- «Веселье» (эйфория 0..1) - NW2 "rem_high" (плитка euphoria в осмотре); уровни - NW2 "rem_heroin" / "rem_meth" / "rem_lsd".
 hg.Drugs = hg.Drugs or {}
@@ -122,7 +122,6 @@ function hg.organism.Drugs(owner, org, timeValue)
 		if lsd > 0 then
 			local od = lsd - C.lsd.overdose
 			if od > 0 then
-				org.panic = math.min((org.panic or 0) + timeValue * od * 0.03, 1) -- бэд-трип
 				org.fearadd = math.max(org.fearadd or 0, od * 0.6)
 				Think(owner, org, "lsd_od", "lsd")
 			elseif lsd > 0.3 then

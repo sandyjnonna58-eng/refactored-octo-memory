@@ -25,7 +25,7 @@ TABLER = {
     'blind': 'eye-off', 'burning': 'flame', 'gas': 'cloud-fog', 'infection': 'virus',
     'incapacitated': 'wheelchair', 'rage': 'swords',
     'nicotine': 'smoking', 'nicotine_wd': 'smoking-no', 'alcohol_wd': 'glass-off', 'tremor': 'hand-move',
-    'anger': 'mood-angry', 'panic': 'mood-surprised', 'pulse': 'heart',
+    'anger': 'mood-angry', 'pulse': 'heart',
     # наркотики (organism/tier_1/modules/sv_drugs.lua): «Веселье» и ломка
     'euphoria': 'mood-crazy-happy', 'heroin_wd': 'vaccine-off', 'meth_wd': 'pill-off',
 }

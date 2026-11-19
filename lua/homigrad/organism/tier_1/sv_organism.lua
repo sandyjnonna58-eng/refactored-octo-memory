@@ -437,8 +437,12 @@ function META2:IsStimulated()
 	return false
 end
 
+-- приступы паники Z-City (org.panicattack: тряска экрана, звук, одышка, дезориентация) - по просьбе выключены вместе
+-- с механикой паники; rem_panicattack 1 - вернуть
+CreateConVar("rem_panicattack", "0", FCVAR_ARCHIVE, "Panic attacks (from damage, explosions, witnessed deaths)", 0, 1)
 function hg.organism.AddPanicAttack(org, amount, silent)
 	if not org then return 0 end
+	if not GetConVar("rem_panicattack"):GetBool() then return 0 end
 	if hg.organism.IsMentalDisabled() then return org.panicattackadd or 0 end
 	if not isnumber(amount) or amount <= 0 then return org.panicattackadd or 0 end
 	if math.random(panicattack_gain_chance) != 1 then return org.panicattackadd or 0 end
@@ -671,8 +675,6 @@ hook.Add("Org Think", "Main", function(owner, org, timeValue)
 	if hg.organism.Vessels then hg.organism.Vessels(owner, org, timeValue) end
 	-- ярость (modules/sv_rage.lua): угрозы, удары; меньше страха и боли, больше адреналина
 	if hg.organism.Rage then hg.organism.Rage(owner, org, timeValue) end
-	-- паника (modules/sv_panic.lua): от сильного страха; после ярости - ярость её гасит
-	if hg.organism.Panic then hg.organism.Panic(owner, org, timeValue) end
 	module.blood[2](owner, org, timeValue)
 
 	module.pain[2](owner, org, timeValue)

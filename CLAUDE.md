@@ -291,13 +291,10 @@
 - Ярость (3 стадии, растёт ТОЛЬКО от: удара игрока, жеста «фак», «фак»/fuck в чате; удар - рывок и x2, без удара не выше 2-й):
   `modules/sv_rage.lua` и `cl_rage.lua` (музыка по стадиям `sound/rem_rage/anger.mp3`, права у пользователя,
   куски 0-59 / 58-117 / 117-конец), плитка «anger» с описанием в `cl_health_indicator.lua`.
-- Паника (`modules/sv_panic.lua`, `sh_panic.lua`, `cl_panic.lua`; выкл. - `rem_panic_enabled`, тест - `rem_panic_set`): org.panic 0..1
-  копится медленно: при смерти (Danger: кровь, кислород, боль, сознание, сердце) - быстрее всего, от страха выше 0.45 -
-  медленнее, понемногу за удары и смерть человека на глазах; ярость её гасит.
-  С 0.35: чёрные плывущие края экрана (слои tunnel.png), музыка `sound/rem_panic/panic.mp3` (трек пользователя; уступает
-  любой особой музыке - OtherMusic: Duck/Exempt других модулей, hg.CritMusicPlaying, PanicStation), дыхание чаще (cl_main.lua), прицел
-  гуляет, мысли; кто-то внезапно появился - рефлекторный выстрел (NW2 rem_panic_fire + рывок прицела), непроизвольные шаги.
-  С 0.7 - сам убегает от угрозы (rem_panic_flee_*). Действия тела - StartCommand в sh_panic.lua. Плитка "panic" в осмотре.
+- Паника (modules/sv_panic.lua / sh_panic.lua / cl_panic.lua, org.panic, NW2 rem_panic, музыка sound/rem_panic/panic.mp3,
+  плитка panic, rem_panic_enabled) - УБРАНА по просьбе (смотреть историю git, коммит 0e65325 и дальше). Приступы паники Z-City
+  (org.panicattack: шейдеры экрана в cl_screeneffects, звук rem_panicattack.mp3, одышка) выключены квaром rem_panicattack 0
+  (hg.organism.AddPanicAttack в sv_organism.lua сразу выходит); бета-блокатор/радио/алкоголь их по-прежнему гасят.
 - Самоповреждение (позыв при депрессии, жми E чтобы сопротивляться - старая механика, мини-игру с ножом убрали по просьбе):
   `modules/sv_depression.lua`, `cl_suicideurges.lua`. Тест: `rem_depression_set [0..1]` (админ, позыв через ~2-12 с при
   депрессии >= 0.4), `selfharm` - позыв сразу (нужна депрессия >= 0.5 и нож).
