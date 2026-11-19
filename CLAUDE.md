@@ -296,6 +296,13 @@
   rem_debug_vehexit 1 - в консоль сервера посадка (карта, сиденье, родитель, hg.NoFakeInCar, InfMap) и высадка: через
   сколько секунд, ExitVehicle() из Lua со стеком (PLAYER.ExitVehicle обёрнут, повторно через 5 с после InitPostEntity)
   или движком. Другие возможные причины высадки: сварка регдолла Z-City с машиной (sv_tier_0 "removeOwO") рвётся; hg.FakeUp с ragdoll.welds; InfMap.
+- Мотоциклы Glide (Glide лежит в сборке: lua/glide, lua/entities/base_glide_*, gtav_sanchez / bati801 / wolfsbane; модели -
+  отдельный аддон): руки на руль ставит IK Z-City (cl_tpik.lua, hg.GetCarSteering - кость руля + поправки adjust/modelAdjust
+  в sh_utility.lua); у машин - только левая, правая держит оружие. Скрин (Wolfsbane): правая висела в воздухе в позе
+  weapon_hands_sh - теперь у мотоцикла (VehicleType MOTORCYCLE) и руля "handlebars" обе руки на руле, если в руках не
+  оружие. Позу седока Glide (ManipulateBoneAngles из ENT:GetSeatBoneManipulations) Z-City выключил целиком (glide/sh_anims.lua
+  do return end) - `compat/cl_glide_bike.lua` возвращает только ноги (бедро/голень/стопа: на ходу на подножках, стоит -
+  на земле), сбрасывает только их; rem_glide_bike_legs 0 - выкл.
 - Оружие из паков Мастерской «Sandstorm SWEPs» (44 ствола weapon_rem_sand_* по моделям паков, генератор tools/sandstorm,
   compat/sh_sandstorm.lua) делали - убрано из сборки по просьбе. Если вернут: модели паков w_*.mdl в пространстве кисти
   R_Hand, WorldAng = RX * R^-1 * RX и ещё -90 к рысканию (проверено в игре на SG 552); смотреть историю git.

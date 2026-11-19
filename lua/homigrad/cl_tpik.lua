@@ -663,7 +663,11 @@ function hg.MainTPIKFunction(ent, ply, wpn)
                     wpn.lhandik = true
 
                     hg.DragLeftHand_Ex(ent,wpn,pos,ang)
-                    if not IsValid(wpn) and adjust[3] then
+                    -- мотоцикл / руль-рогатка (Glide): руль обеими руками, пока в руках не оружие - иначе правая висела в
+                    -- воздухе в позе рук weapon_hands_sh (скрин пользователя на Wolfsbane)
+                    local twoHanded = (Glide and Car.VehicleType == Glide.VEHICLE_TYPE.MOTORCYCLE or Car:GetBoneName(bone) == "handlebars")
+                        and (not IsValid(wpn) or wpn:GetClass() == "weapon_hands_sh")
+                    if (twoHanded or not IsValid(wpn)) and adjust[3] then
                         pos, ang = Car:GetBoneMatrix(bone):GetTranslation(), Car:GetBoneMatrix(bone):GetAngles()
                         pos, ang = LocalToWorld(adjust[3], adjust[4], pos, ang)
                         ply.lerp_rh = 1
