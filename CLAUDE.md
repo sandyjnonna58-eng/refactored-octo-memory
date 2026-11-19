@@ -293,8 +293,8 @@
   куски 0-59 / 58-117 / 117-конец), плитка «anger» с описанием в `cl_health_indicator.lua`.
 - Паника (modules/sv_panic.lua / sh_panic.lua / cl_panic.lua, org.panic, NW2 rem_panic, музыка sound/rem_panic/panic.mp3,
   плитка panic, rem_panic_enabled) - УБРАНА по просьбе (смотреть историю git, коммит 0e65325 и дальше). Приступы паники Z-City
-  (org.panicattack: шейдеры экрана в cl_screeneffects, звук rem_panicattack.mp3, одышка) выключены квaром rem_panicattack 0
-  (hg.organism.AddPanicAttack в sv_organism.lua сразу выходит); бета-блокатор/радио/алкоголь их по-прежнему гасят.
+  (org.panicattack: шейдеры экрана в cl_screeneffects, звук rem_panicattack.mp3, одышка) ОСТАВЛЕНЫ по просьбе:
+  rem_panicattack 1 по умолчанию (0 - hg.organism.AddPanicAttack в sv_organism.lua сразу выходит).
 - Самоповреждение (позыв при депрессии, жми E чтобы сопротивляться - старая механика, мини-игру с ножом убрали по просьбе):
   `modules/sv_depression.lua`, `cl_suicideurges.lua`. Тест: `rem_depression_set [0..1]` (админ, позыв через ~2-12 с при
   депрессии >= 0.4), `selfharm` - позыв сразу (нужна депрессия >= 0.5 и нож).

@@ -437,9 +437,9 @@ function META2:IsStimulated()
 	return false
 end
 
--- приступы паники Z-City (org.panicattack: тряска экрана, звук, одышка, дезориентация) - по просьбе выключены вместе
--- с механикой паники; rem_panicattack 1 - вернуть
-CreateConVar("rem_panicattack", "0", FCVAR_ARCHIVE, "Panic attacks (from damage, explosions, witnessed deaths)", 0, 1)
+-- приступы паники Z-City (org.panicattack: тряска экрана, звук, одышка, дезориентация) - по просьбе включены
+-- (механика паники sv_panic убрана); rem_panicattack 0 - выключить
+CreateConVar("rem_panicattack", "1", FCVAR_ARCHIVE, "Panic attacks (from damage, explosions, witnessed deaths)", 0, 1)
 function hg.organism.AddPanicAttack(org, amount, silent)
 	if not org then return 0 end
 	if not GetConVar("rem_panicattack"):GetBool() then return 0 end
