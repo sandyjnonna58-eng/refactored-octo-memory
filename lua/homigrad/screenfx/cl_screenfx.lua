@@ -24,10 +24,19 @@ local burst_aspect = 1370 / 768
 local mat_glow = Material("rem_fx/hit_glow.png", "smooth")
 local glow_aspect = 1024 / 512
 
--- сильная боль (по скриншоту пользователя, Fading Vitality): по краям серо-розовый пиксельный шум с красными
--- завихрениями, к центру редеет; мир в середине темнее и серее (клыки сверху убраны по просьбе). Картинка стоит -
--- ничего не движется, только проявляется с болью. Текстура - tools/pain_fx/make.py
-local mat_pain_static = Material("rem_fx/pain_static.png") -- без smooth: крупные пиксели
+-- сильная боль: края экрана наливаются красным, к центру тянутся красные лучи, между ними тёмное кольцо с шумом
+local mat_pain_edge = Material("rem_fx/pain_edge.png", "smooth")
+local mat_pain_dark = Material("rem_fx/pain_dark.png", "smooth")
+local mat_pain_rays = Material("rem_fx/pain_rays.png", "smooth")
+local mat_pain_noise = {}
+for i = 1, 4 do
+	mat_pain_noise[i] = Material("rem_death/vortex_static" .. i .. ".png") -- без smooth: крупные пиксели
+end
+
+-- шок и сильная кровопотеря (по скриншоту пользователя, Fading Vitality): по краям серо-розовый пиксельный шум с красными
+-- завихрениями, к центру редеет; мир в середине темнее и серее. Картинка стоит - ничего не движется, только проявляется
+-- с шоком/кровопотерей. Текстура - tools/pain_fx/make.py
+local mat_shock_static = Material("rem_fx/pain_static.png") -- без smooth: крупные пиксели
 
 local hg_reduce_screeneffects = ConVarExists("hg_reduce_screeneffects") and GetConVar("hg_reduce_screeneffects") or CreateClientConVar("hg_reduce_screeneffects", "0", true, false, "Reduce screen shader effects by 50%", 0, 1)
 local hg_potatopc = ConVarExists("hg_potatopc") and GetConVar("hg_potatopc")
@@ -51,9 +60,27 @@ local pain_max = 1
 -- боль 100% = 120: с 60% эффект проступает, к 140% (отключка, sv_pain.lua) - на полную
 local pain_overlay_start = 72
 local pain_overlay_full = 168
-local pain_dim = 0.3   -- насколько темнеет весь экран под шумом
-local pain_gray = 0.45 -- серость мира (шейдер grayscale, как от кровопотери) на полной боли
+-- как в Fading Vitality: ничего не крутится, краснота "дышит" с сердцем - на каждом ударе рывком лезет к центру
+-- и отходит; шипы мелко дрожат; резкий скачок боли - краснота наплывает почти на весь экран и отползает к краям
+local pain_beat_push = 0.07   -- насколько удар сердца толкает красноту к центру (доля размера)
+local pain_beat_decay = 7     -- как быстро отходит после удара
+local pain_jitter_hz = 15     -- как часто дрожат шипы
+local pain_jitter_ang = 0.8   -- градусов
+local pain_jitter_move = 0.006 -- доля экрана
+local pain_surge_jump = 0.08  -- скачок силы боли за 0.1 с, после которого краснота наплывает
+local pain_surge_time = 1.2   -- секунд отползает обратно
 local painOverlay = 0
+local painPulse = 70
+local painSurge = 0
+local painPrev, painPrevTime = 0, 0
+local jitterAng, jitterX, jitterY, nextJitter = 0, 0, 0, 0
+
+-- шок (org.shockScore/org.shock 0..100, sv_pain.lua; стадия 2 с 35) или кровь ниже 3.8 л - проявляется, к 80 / 2.6 л - полностью
+local shock_fx_start, shock_fx_full = 35, 80
+local shock_blood_start, shock_blood_full = 3800, 2600
+local shock_dim = 0.3   -- насколько темнеет весь экран под шумом
+local shock_gray = 0.45 -- серость мира на полной силе
+local shockOverlay = 0
 
 local blood_gray_start = 4200
 local blood_gray_full = 2600
@@ -148,7 +175,7 @@ local function GrayTarget(org)
 	if org.otrub and org.incapacitated and deathStateEnd and deathStateEnd > CurTime() then target = 1 end
 
 	target = math.max(target, Remap01(org.depression or 0, depression_gray_start, 1) * depression_gray_max)
-	target = math.max(target, painOverlay * pain_gray) -- painOverlay уже с EffectMul - умножится ещё раз, не страшно
+	target = math.max(target, shockOverlay * shock_gray)
 	return target * EffectMul()
 end
 
@@ -187,27 +214,93 @@ hook.Add("Think", "rem_fx", function()
 	painBlur = Lerp(math.min(dt * 2, 1), painBlur, pain)
 
 	local overlay = org and not org.otrub and Remap01(org.pain or 0, pain_overlay_start, pain_overlay_full) * EffectMul() or 0
-	if FX.PainTest then overlay = FX.PainTest end
 	painOverlay = Lerp(math.min(dt * 2, 1), painOverlay, overlay)
-end)
+	painPulse = org and math.Clamp(org.pulse or 70, 30, 220) or 70
 
--- предпросмотр эффекта сильной боли у себя: rem_test_painfx [0..1] (без аргумента - 1), rem_test_painfx off - снять
-concommand.Add("rem_test_painfx", function(_, _, args)
-	local v = args[1]
-	FX.PainTest = (v ~= "off" and v ~= "0") and math.Clamp(tonumber(v or "") or 1, 0, 1) or nil
-	print("rem_test_painfx: " .. (FX.PainTest and tostring(FX.PainTest) or "снят"))
+	-- шок / кровопотеря
+	local shockA = 0
+	if org and not org.otrub then
+		shockA = math.max(Remap01(math.max(org.shockScore or 0, org.shock or 0), shock_fx_start, shock_fx_full),
+			Remap01(org.blood or 5000, shock_blood_start, shock_blood_full)) * EffectMul()
+	end
+	if FX.ShockTest then shockA = FX.ShockTest end
+	shockOverlay = Lerp(math.min(dt * 2, 1), shockOverlay, shockA)
+
+	-- резкий скачок боли - наплыв
+	local now = CurTime()
+	if now - painPrevTime >= 0.1 then
+		if overlay - painPrev > pain_surge_jump then painSurge = 1 end
+		painPrev, painPrevTime = overlay, now
+	end
+	painSurge = math.Approach(painSurge, 0, dt / pain_surge_time)
+	if not org or org.otrub then painSurge = 0 end
+
+	-- дрожь шипов: рывками, не плавно
+	if now >= nextJitter then
+		nextJitter = now + 1 / pain_jitter_hz
+		jitterAng = math.Rand(-1, 1) * pain_jitter_ang
+		jitterX, jitterY = math.Rand(-1, 1) * pain_jitter_move, math.Rand(-1, 1) * pain_jitter_move
+	end
 end)
 
 local function DrawPainOverlay(a)
 	local sw, sh = ScrW(), ScrH()
+	-- удар сердца: резкий толчок и спад до следующего
+	local phase = (CurTime() * painPulse / 60) % 1
+	local beat = math.exp(-phase * pain_beat_decay)
+	local surge = painSurge * painSurge
+	a = math.min(a + surge * 0.6, 1)
+	-- пока боль слабее, кольца больше экрана - краснота подползает с краёв; удар и наплыв тянут её к центру
+	local scale = Lerp(a, 1.6, 1) - pain_beat_push * beat * a - 0.35 * surge
+	local w, h = sw * scale, sh * scale
+	local x, y = (sw - w) / 2 + jitterX * sw * a, (sh - h) / 2 + jitterY * sh * a
+
 	cam.Start2D()
-		surface.SetDrawColor(0, 0, 0, 255 * pain_dim * a)
+		surface.SetMaterial(mat_pain_dark)
+		surface.SetDrawColor(15, 0, 0, 235 * a)
+		surface.DrawTexturedRect(x, y, w, h)
+
+		surface.SetMaterial(mat_pain_noise[math.floor(CurTime() * 20) % 4 + 1])
+		surface.SetDrawColor(230, 15, 15, 40 * a)
+		surface.DrawTexturedRect(0, 0, sw, sh)
+
+		local size = math.max(sw, sh) * 1.15 * scale
+		surface.SetMaterial(mat_pain_rays)
+		surface.SetDrawColor(255, 15, 15, 230 * a)
+		surface.DrawTexturedRectRotated(x + w / 2, y + h / 2, size, size, jitterAng * a)
+
+		surface.SetMaterial(mat_pain_edge)
+		surface.SetDrawColor(255, 0, 0, 255 * a)
+		surface.DrawTexturedRect(x, y, w, h)
+
+		-- кольцо стянулось меньше экрана - снаружи сплошная краснота
+		if x > 0 or y > 0 or x + w < sw or y + h < sh then
+			surface.SetDrawColor(255, 0, 0, 255 * a)
+			if y > 0 then surface.DrawRect(0, 0, sw, y + 1) end
+			if y + h < sh then surface.DrawRect(0, y + h - 1, sw, sh - y - h + 1) end
+			if x > 0 then surface.DrawRect(0, y, x + 1, h) end
+			if x + w < sw then surface.DrawRect(x + w - 1, y, sw - x - w + 1, h) end
+		end
+	cam.End2D()
+end
+
+local function DrawShockOverlay(a)
+	local sw, sh = ScrW(), ScrH()
+	cam.Start2D()
+		surface.SetDrawColor(0, 0, 0, 255 * shock_dim * a)
 		surface.DrawRect(0, 0, sw, sh)
-		surface.SetMaterial(mat_pain_static)
+		surface.SetMaterial(mat_shock_static)
 		surface.SetDrawColor(255, 255, 255, 255 * a)
 		surface.DrawTexturedRect(0, 0, sw, sh)
 	cam.End2D()
 end
+
+-- предпросмотр у себя: rem_test_shockfx [0..1] (без аргумента - 1), rem_test_shockfx off - снять
+concommand.Add("rem_test_shockfx", function(_, _, args)
+	local v = args[1]
+	FX.ShockTest = (v ~= "off" and v ~= "0") and math.Clamp(tonumber(v or "") or 1, 0, 1) or nil
+	print("rem_test_shockfx: " .. (FX.ShockTest and tostring(FX.ShockTest) or "снят"))
+end)
 
 hook.Add("NeedsDepthPass", "rem_fx", function()
 	if gray > 0.01 or blur > 0.01 or trauma > 0.01 then return true end
@@ -339,8 +432,11 @@ hook.Add("Post Pain Post Processing", "rem_fx", function()
 		DrawShader(mat_radialblur)
 	end
 
+	-- шок / кровопотеря - под болью: краснота боли поверх шума
+	if shockOverlay > 0.01 and LocalPlayer():Alive() and not mat_shock_static:IsError() then DrawShockOverlay(shockOverlay) end
+
 	-- сильная боль - после радиального размытия, оно её не смазывает
-	if painOverlay > 0.01 and LocalPlayer():Alive() and not mat_pain_static:IsError() then DrawPainOverlay(painOverlay) end
+	if (painOverlay > 0.01 or painSurge > 0.01) and LocalPlayer():Alive() and not mat_pain_edge:IsError() then DrawPainOverlay(painOverlay) end
 
 	-- мозговая травма последней - поверх всего остального
 	if trauma > 0.01 and LocalPlayer():Alive() then DrawTrauma(trauma) end
