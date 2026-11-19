@@ -270,6 +270,7 @@ return {
 	"materials/rem_death/vortex_swirl.png",
 	"materials/rem_fx/hit_burst.png",
 	"materials/rem_fx/hit_glow.png",
+	"materials/rem_fx/pain_static.png",
 	"materials/rem_fx/tunnel.png",
 	"materials/rem_gore/l4d_neck_wound.vtf",
 	"materials/rem_menu/menu_bg.jpg",

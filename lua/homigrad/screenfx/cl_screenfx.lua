@@ -25,10 +25,9 @@ local mat_glow = Material("rem_fx/hit_glow.png", "smooth")
 local glow_aspect = 1024 / 512
 
 -- сильная боль (по скриншоту пользователя, Fading Vitality): по краям серо-розовый пиксельный шум с красными
--- завихрениями, к центру редеет; сверху свисают тёмно-красные клыки; мир в середине темнее и серее. Картинка стоит -
--- ничего не движется, только проявляется с болью. Текстуры - tools/pain_fx/make.py
-local mat_pain_static = Material("rem_fx/pain_static.png")          -- без smooth: крупные пиксели
-local mat_pain_spikes = Material("rem_fx/pain_spikes.png", "smooth")
+-- завихрениями, к центру редеет; мир в середине темнее и серее (клыки сверху убраны по просьбе). Картинка стоит -
+-- ничего не движется, только проявляется с болью. Текстура - tools/pain_fx/make.py
+local mat_pain_static = Material("rem_fx/pain_static.png") -- без smooth: крупные пиксели
 
 local hg_reduce_screeneffects = ConVarExists("hg_reduce_screeneffects") and GetConVar("hg_reduce_screeneffects") or CreateClientConVar("hg_reduce_screeneffects", "0", true, false, "Reduce screen shader effects by 50%", 0, 1)
 local hg_potatopc = ConVarExists("hg_potatopc") and GetConVar("hg_potatopc")
@@ -207,10 +206,6 @@ local function DrawPainOverlay(a)
 		surface.SetMaterial(mat_pain_static)
 		surface.SetDrawColor(255, 255, 255, 255 * a)
 		surface.DrawTexturedRect(0, 0, sw, sh)
-		if not mat_pain_spikes:IsError() then
-			surface.SetMaterial(mat_pain_spikes)
-			surface.DrawTexturedRect(0, 0, sw, sh)
-		end
 	cam.End2D()
 end
 

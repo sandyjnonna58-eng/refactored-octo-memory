@@ -3,13 +3,13 @@
 #   rem_fx/pain_static.png - кольцо крупного серо-розового пиксельного шума по краям экрана (к центру редеет и
 #                            пропадает), в нём красные завихрения (спиральные рукава к центру) и пара светлых рукавов;
 #                            рисуется без сглаживания (крупные пиксели), растягивается на весь экран.
-#   rem_fx/pain_spikes.png - тёмно-красные полупрозрачные клыки, свисающие с верхнего края шума; со сглаживанием.
+# Клыки сверху (pain_spikes.png) делали - убраны по просьбе.
 # Запуск из корня репозитория: python3 tools/pain_fx/make.py [preview.png]
 import os
 import sys
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "..", "materials", "rem_fx")
 rng = np.random.default_rng(20261119)
@@ -73,59 +73,21 @@ def make_static(W=960, H=540):
     return Image.fromarray(out, "RGBA")
 
 
-def make_spikes(W=1024, H=576):
-    S = 3  # сглаживание: рисуем крупнее и уменьшаем
-    img = Image.new("RGBA", (W * S, H * S), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    # клыки свисают с верхнего края шума (угол на эллипсе, длина в долях высоты, ширина в долях ширины, форма)
-    spikes = [(-1.56, 0.26, 0.036, "tri"), (-1.38, 0.34, 0.030, "kite"), (-0.98, 0.30, 0.062, "kite"),
-              (-1.95, 0.18, 0.028, "tri")]
-    for ang, length, width, kind in spikes:
-        bx = W / 2 + np.cos(ang) * 0.80 * W / 2
-        by = H / 2 + np.sin(ang) * 0.80 * H / 2
-        # вниз и чуть к центру
-        dx, dy = (W / 2 - bx) * 0.25 / (W / 2), 1.0
-        ln = np.hypot(dx, dy)
-        dx, dy = dx / ln, dy / ln
-        px, py = -dy, dx
-        L, Wd = length * H, width * W
-        pts_l, pts_r = [], []
-        for t in np.linspace(0, 1, 40):
-            if kind == "kite":
-                f = (0.35 + 0.65 * t / 0.28) if t < 0.28 else (1 - (t - 0.28) / 0.72) ** 1.15
-            else:
-                f = (1 - t) ** 1.25
-            cx, cy = bx + dx * L * t, by + dy * L * t
-            pts_l.append(((cx + px * Wd / 2 * f) * S, (cy + py * Wd / 2 * f) * S))
-            pts_r.append(((cx - px * Wd / 2 * f) * S, (cy - py * Wd / 2 * f) * S))
-        poly = pts_l + pts_r[::-1]
-        d.polygon(poly, fill=(105, 14, 20, 150))
-        d.line(poly + [poly[0]], fill=(70, 8, 12, 165), width=S)
-    img = img.filter(ImageFilter.GaussianBlur(S * 1.0)).resize((W, H), Image.LANCZOS)
-    # верх клыков уходит в шум - мягко
-    a = np.asarray(img).astype(float)
-    r, _ = polar(W, H)
-    a[..., 3] *= 1 - 0.6 * smoothstep(0.75, 0.95, r)
-    return Image.fromarray(a.astype(np.uint8), "RGBA")
-
-
-def preview(static, spikes, path):
-    # проверка: серая «улица» под эффектом, как в игре (cl_screenfx: затемнение 0.3 + шум + клыки)
+def preview(static, path):
+    # проверка: серая «улица» под эффектом, как в игре (cl_screenfx: затемнение 0.3 + шум)
     W, H = 1242, 729
     y, x = np.mgrid[0:H, 0:W]
     bg = np.dstack([90 + 40 * (y < H * 0.45) - 25 * (x > W * 0.6)] * 3).astype(np.uint8)
     base = Image.fromarray(bg, "RGB").convert("RGBA")
     base.alpha_composite(Image.new("RGBA", (W, H), (0, 0, 0, int(255 * 0.3))))
     base.alpha_composite(static.resize((W, H), Image.NEAREST))
-    base.alpha_composite(spikes.resize((W, H), Image.LANCZOS))
     base.convert("RGB").save(path)
 
 
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
-    st, sp = make_static(), make_spikes()
+    st = make_static()
     st.save(os.path.join(OUT, "pain_static.png"), optimize=True)
-    sp.save(os.path.join(OUT, "pain_spikes.png"), optimize=True)
     if len(sys.argv) > 1:
-        preview(st, sp, sys.argv[1])
+        preview(st, sys.argv[1])
     print("ok")
