@@ -32,8 +32,9 @@ if SERVER then
 end
 
 local cvDebris = CreateClientConVar("rem_craters_debris", 1, true, false, "Explosion debris amount (0 - none, 2 - double)", 0, 2)
-local cvPortals = CreateClientConVar("rem_crater_portals", 2, true, false, "See-through explosion holes drawn at once (0 - off)", 0, 4)
-local cvPortalRes = CreateClientConVar("rem_crater_portal_res", 0.5, true, false, "See-through hole picture resolution (share of the screen)", 0.25, 1)
+-- оптимизация: каждая сквозная пробоина - ещё одна отрисовка всего мира за кадр; по умолчанию одна и в 0.4 экрана
+local cvPortals = CreateClientConVar("rem_crater_portals", 1, true, false, "See-through explosion holes drawn at once (0 - off)", 0, 4)
+local cvPortalRes = CreateClientConVar("rem_crater_portal_res", 0.4, true, false, "See-through hole picture resolution (share of the screen)", 0.25, 1)
 local portal_max_thick = 40   -- юнитов: стена тоньше - дыра сквозная
 local portal_max_dist = 1200
 local portal_hole_k = 0.13    -- радиус отверстия от размера пробоины (как чёрная дыра на текстуре)

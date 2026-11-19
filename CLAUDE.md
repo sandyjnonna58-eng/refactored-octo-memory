@@ -318,8 +318,8 @@
   обломки у игрока - rem_craters_debris 0..2. Сквозные (TryPortal: стена тоньше 40, выходная пробоина с другой стороны):
   hg.Craters.RenderPortals(origin, angles, fov) рисует мир за стеной в RT (render.RenderView + PushCustomClipPlane по
   дальней стороне), PostDrawOpaqueRenderables показывает его трафаретом в рваном отверстии. Зовёт камера Z-City
-  (cl_camera.lua renderscene, во всех ветках), без неё - свой хук RenderScene. rem_crater_portals (сколько сразу, 0 - выкл.),
-  rem_crater_portal_res (доля экрана).
+  (cl_camera.lua renderscene, во всех ветках), без неё - свой хук RenderScene. rem_crater_portals (сколько сразу, 0 - выкл.;
+  по умолчанию 1 - оптимизация, каждая = ещё отрисовка мира), rem_crater_portal_res (доля экрана, по умолчанию 0.4).
 - Сердце по SCAV Prototype (`modules/sv_pulse.lua`, звуки - `cl_main.lua` RemCardiacSounds): шкала фибрилляции `org.fib` 0..100
   (+ fibForced). Растёт 1%/с (4%/с при пульсе > 280), падает 0.75%/с. Запуск/рост: пульс > 200, давление < 78 (рост < 88),
   кислород < 50% (< 60%), температура < 28 (< 28.5), forced; плохое сердце держит потолок (повреждение >= 0.2, ишемия,
