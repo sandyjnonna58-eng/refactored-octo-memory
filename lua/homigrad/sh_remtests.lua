@@ -14,6 +14,8 @@ local HELP = {
 	"rem_test_clear [ник]        - сбросить сотрясение, нокаут, оглушение",
 	"rem_test_heartstop [ник]    - остановить сердце (звук остановки; умрёт, если не завести дефибриллятором)",
 	"rem_test_spine [ник]        - сломать поясницу и уронить: ноги парализованы, реакции/Artagdoll их не крутят",
+	"rem_test_legs [ник]         - сломать обе ноги и уронить: ноги не должны выгибаться назад и уходить за спину",
+	"                              (rem_floppy_bones 1 - вернуть «болтающиеся» суставы Z-City, с этим багом)",
 	"rem_test_bp <сист.> [пульс] [сек] - на 40 с (или [сек]) давление/пульс как на мониторе (на кого смотришь / ты):",
 	"                              60 - слабость, темнеет на бегу и после подъёма, на бегу можно упасть (и аритмия, < 78);",
 	"                              200 - голова болит, стучит в висках, через 5 с кровь из носа; 210 - и тошнит;",
@@ -156,6 +158,20 @@ if SERVER then
 		org.spine1 = math.max(org.spine1 or 0, 1)
 		if not IsValid(t.FakeRagdoll) and hg.Fake then hg.Fake(t, nil, true, true) end
 		return "позвоночник сломан, SpineCut = " .. tostring(hg.SpineCut and hg.SpineCut(org) or "?") .. " (снять - Reset organism)"
+	end)
+
+	-- перелом обеих ног (как от падения с высоты): ноги «сломаны» (fake/sv_tier_0.lua fakeBoneFlop), тело в регдолл
+	Cmd("rem_test_legs", function(t, org)
+		org.lleg, org.rleg = 1, 1
+		if hg.fakeBoneFlop then
+			for _, limb in ipairs({"lleg", "rleg"}) do
+				hg.fakeBoneFlop.SetLimbSegmentState(org, limb, "up", true)
+				hg.fakeBoneFlop.SetLimbSegmentState(org, limb, "down", true)
+			end
+		end
+		if IsValid(t.FakeRagdoll) and hg.fakeBoneFlop then hg.fakeBoneFlop.ScheduleRebuild(t)
+		elseif hg.Fake then hg.Fake(t, nil, nil, true) end
+		return "ноги сломаны, rem_floppy_bones " .. GetConVar("rem_floppy_bones"):GetString() .. " (снять - Reset organism)"
 	end)
 
 	-- давление и пульс (organism/tier_1/modules/sv_cardio.lua): подмена на время, sv_pulse.lua потом пересчитает сам

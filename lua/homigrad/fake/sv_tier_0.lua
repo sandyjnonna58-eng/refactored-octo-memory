@@ -553,6 +553,13 @@ end
 
 hg.fakeBoneFlop = hg.fakeBoneFlop or {}
 local fakeBoneFlop = hg.fakeBoneFlop
+-- Сломанная/вывихнутая конечность («болтается»). У Z-City ApplyBone снимает родной сустав модели и ставит свой
+-- phys_ragdollconstraint, но оси его пределов - мировые (угол сущности 0), а кости в этот момент стоят в позе привязки,
+-- повёрнутой по тазу: какой сгиб разрешён - зависит от того, как лежало тело. Отсюда колени назад, ноги за спину, тело
+-- складывается (скрины пользователя: упал с высоты - сломал ноги). rem_floppy_bones 0 (по умолчанию): родные суставы
+-- остаются, кость только помечается сломанной (rag.hg_floppy_bones - ей не управляешь в регдолле, реакции её не трогают,
+-- лёгкий изгиб BendBone - в пределах сустава); 1 - как у Z-City.
+local cvFloppy = CreateConVar("rem_floppy_bones", "0", FCVAR_ARCHIVE, "Broken limbs replace the joint with Z-City's loose constraint (1, buggy: limbs bend backwards) or keep the model's joint (0)", 0, 1)
 local fakeBoneMatrixCache = fakeBoneFlop.matrix_cache or {}
 fakeBoneFlop.matrix_cache = fakeBoneMatrixCache
 
@@ -813,6 +820,14 @@ end
 function fakeBoneFlop.ApplyBone(rag, bone)
 	if not IsValid(rag) then return end
 	if rag.hg_floppy_bones and rag.hg_floppy_bones[bone] then return end
+	if not cvFloppy:GetBool() then
+		-- только метка: сустав модели остаётся (см. rem_floppy_bones выше)
+		if fakeBoneParents[bone] and rag:LookupBone(bone) then
+			rag.hg_floppy_bones = rag.hg_floppy_bones or {}
+			rag.hg_floppy_bones[bone] = true
+		end
+		return
+	end
 
 	local parentBone = fakeBoneParents[bone]
 	local limits = fakeBoneLimits[bone]
@@ -918,6 +933,16 @@ end
 function fakeBoneFlop.ScheduleRebuild(ply)
 	if not IsValid(ply) or not ply:Alive() or not IsValid(ply.FakeRagdoll) then return end
 	if ply.hg_floppy_rebuild then return end
+	-- суставы не менялись (rem_floppy_bones 0) - пересоздавать тело незачем, только обновить метки
+	local rag = ply.FakeRagdoll
+	if not cvFloppy:GetBool() and not (rag.hg_floppy_constraints and next(rag.hg_floppy_constraints)) then
+		rag.hg_floppy_bones = nil
+		local org = ply.organism
+		if org and org.fake_floppy_bones then
+			for bone in pairs(org.fake_floppy_bones) do fakeBoneFlop.ApplyBone(rag, bone) end
+		end
+		return
+	end
 
 	ply.hg_floppy_rebuild = true
 
