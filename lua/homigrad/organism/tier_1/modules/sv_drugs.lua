@@ -165,6 +165,7 @@ end)
 -- (иначе эффекты на экране остаются после смерти и продолжаются после возрождения). Зависимость - sv_addiction.lua.
 local function ResetDrugs(ply)
 	if not IsValid(ply) then return end
+	if OverrideSpawn then return end -- встал из регдолла (fake/sv_tier_0.lua hg.FakeUp делает ply:Spawn()) - это не новая жизнь
 	local org = ply.organism
 	if org then
 		org.heroin, org.meth, org.lsd, org.remHRAdd = 0, 0, 0, 0
@@ -178,6 +179,7 @@ local function ResetDrugs(ply)
 end
 hook.Add("PlayerDeath", "rem_drugs_reset", ResetDrugs)
 hook.Add("PlayerSpawn", "rem_drugs_reset", function(ply)
+	if OverrideSpawn then return end -- встал из регдолла (fake/sv_tier_0.lua hg.FakeUp делает ply:Spawn()) - это не новая жизнь
 	ResetDrugs(ply)
 	timer.Simple(0, function() ResetDrugs(ply) end) -- после того как Z-City соберёт организм заново
 end)

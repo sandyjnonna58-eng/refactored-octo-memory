@@ -79,7 +79,7 @@ if SERVER then
 		Play(ply, hit)
 	end)
 
-	hook.Add("PlayerSpawn", "rem_headshot", function(ply) ply.remHeadHit = nil end)
+	hook.Add("PlayerSpawn", "rem_headshot", function(ply) if OverrideSpawn then return end ply.remHeadHit = nil end)
 else
 	net.Receive("rem_headshot", function()
 		surface.PlaySound(SND)

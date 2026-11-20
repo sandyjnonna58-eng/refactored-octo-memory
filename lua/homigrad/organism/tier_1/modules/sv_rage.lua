@@ -175,6 +175,7 @@ timer.Simple(0, WrapGestures)
 
 -- после смерти/возрождения - с нуля
 local function Reset(ply)
+	if OverrideSpawn then return end -- встал из регдолла (hg.FakeUp делает ply:Spawn()) - не сброс
 	local org = ply.organism
 	if org then org.rage, org.rageStage, org.rageHitUntil, org.ragePainRelief, org.rageSent = 0, 0, 0, 0, 0 end
 	ply:SetNW2Float("rem_rage", 0)

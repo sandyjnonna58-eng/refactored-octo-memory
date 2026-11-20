@@ -116,6 +116,7 @@ function hg.organism.Cardio(owner, org, timeValue)
 end
 
 local function Reset(ply)
+	if OverrideSpawn then return end -- встал из регдолла (hg.FakeUp делает ply:Spawn()) - кровь из носа идёт дальше
 	local org = ply.organism
 	if org then org.remNoseEnd, org.remHighT, org.remBPTest = nil, 0, nil end
 	ply:SetNW2Float("rem_cardio_move", 1)

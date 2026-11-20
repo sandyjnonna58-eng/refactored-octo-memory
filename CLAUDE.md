@@ -47,6 +47,9 @@
   зовётся в fake/sh_render.lua после оружия) берут положение суставов пальцев из скелета самой модели, иначе пальцы рвутся.
   Модели без `$includemodel "models/m_anm.mdl"` не получают анимаций wOS DynaBase (пинок и т.п.) - T-поза.
 
+- Встать из регдолла (hg.FakeUp, fake/sv_tier_0.lua) = ply:Spawn() при глобальном OverrideSpawn = true: срабатывают ВСЕ
+  хуки PlayerSpawn. Свой сброс «на новую жизнь» в PlayerSpawn начинать с `if OverrideSpawn then return end` - иначе он
+  сработает при каждом вставании (так сбрасывались наркотики, ломка, ярость, кровь из носа - исправлено).
 - Лимиты LuaJIT: у функции не больше 60 upvalue (внешних local) и 200 локальных - иначе файл не грузится ЦЕЛИКОМ.
   Хук "ItHurts" в `cl_screeneffects.lua` ровно на 60: новый local файла в нём - и пропадают ВСЕ эффекты экрана (их хуки
   зовёт этот файл). Новое состояние там хранить в таблице (hg.*), не в local. check.py теперь ловит это (FAIL ... upvalues).
@@ -441,7 +444,7 @@
   Привыкание героина и мета - виды в hg.Addiction.Kinds (свои effects и craving ломки, sv_addiction.lua их зовёт).
   Звук мета - свой sound/rem_drugs/snort.wav (tools/sounds/make_snort.py); НЕ player/breathe1.wav - он зациклен.
   NW2 rem_high («Веселье», плитка euphoria), rem_heroin / rem_meth / rem_lsd; плитки heroin_wd / meth_wd. Тест: rem_drug_set.
-  Смерть / возрождение (PlayerDeath, PlayerSpawn, "Player Spawn") - ResetDrugs: наркотики, тошнота и их NW2 в ноль
+  Смерть / возрождение (PlayerDeath, PlayerSpawn, "Player Spawn"; не при вставании из регдолла - OverrideSpawn) - ResetDrugs: наркотики, тошнота и их NW2 в ноль
   (организм Z-City тот же - иначе эффекты остаются); зависимость и ломка тоже сбрасываются при смерти (sv_addiction.lua ResetAddiction).
   "Reset organism" (контекстное меню, hg.organism.Clear -> хук "Org Clear") сбрасывает панику, наркотики, тошноту и ломку.
 - Тошнота: стадии в sv_vomit.lua AddNausea (0.45 / 0.8 - мысль; плитка Queasy / Nauseous / About to vomit), экран -

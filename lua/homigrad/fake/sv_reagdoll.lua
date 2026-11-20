@@ -757,7 +757,7 @@ local function Track(rag, ply, dead, moveVel)
 	end
 end
 
-hook.Add("PlayerSpawn", "rem_reagdoll", function(ply) ply.remReagMul = nil end) -- новая жизнь - новый характер
+hook.Add("PlayerSpawn", "rem_reagdoll", function(ply) if OverrideSpawn then return end ply.remReagMul = nil end) -- новая жизнь - новый характер
 
 hook.Add("Fake", "rem_reagdoll", function(ply, rag)
 	if not cvOn:GetBool() or not IsValid(ply) or not IsValid(rag) or ply:InVehicle() then return end

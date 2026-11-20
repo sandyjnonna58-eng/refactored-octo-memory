@@ -106,6 +106,7 @@ end
 -- смерть - конец зависимости и ломки: новая жизнь начинается чистой (по просьбе)
 local function ResetAddiction(ply)
 	if not IsValid(ply) or not ply.rem_addict then return end
+	if OverrideSpawn then return end -- встал из регдолла (fake/sv_tier_0.lua hg.FakeUp делает ply:Spawn()) - это не новая жизнь
 	for kind, d in pairs(ply.rem_addict) do
 		d.dep, d.wd, d.vomit = 0, 0, 0
 		Sync(ply, kind, d)

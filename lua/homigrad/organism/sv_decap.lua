@@ -133,7 +133,7 @@ hook.Add("PostEntityTakeDamage", "rem_decap", function(target, dmg)
 	OnDamage(target, dmg)
 end)
 
-hook.Add("PlayerSpawn", "rem_decap_reset", function(ply) ply.__remHeadHits = nil end)
+hook.Add("PlayerSpawn", "rem_decap_reset", function(ply) if OverrideSpawn then return end ply.__remHeadHits = nil end)
 hook.Add("Org Clear", "rem_decap_reset", function(org)
 	local ply = istable(org) and org.owner
 	if IsValid(ply) then ply.__remHeadHits = nil end

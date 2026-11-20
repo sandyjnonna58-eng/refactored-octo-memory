@@ -343,4 +343,4 @@ timer.Create("rem_reag_grimace", 0.25, 0, function()
 	end
 end)
 
-hook.Add("PlayerSpawn", "rem_reag_extra", function(ply) ply.remHSHit = nil end)
+hook.Add("PlayerSpawn", "rem_reag_extra", function(ply) if OverrideSpawn then return end ply.remHSHit = nil end)

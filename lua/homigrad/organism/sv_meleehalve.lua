@@ -170,7 +170,7 @@ local function OnDamage(target, dmg)
 	end
 end
 
-hook.Add("PlayerSpawn", "rem_meleehalve_reset", function(ply) ply.__remCutHits = nil end)
+hook.Add("PlayerSpawn", "rem_meleehalve_reset", function(ply) if OverrideSpawn then return end ply.__remCutHits = nil end)
 hook.Add("EntityTakeDamage", "rem_meleehalve", function(target, dmg) OnDamage(target, dmg) end)
 hook.Add("PostEntityTakeDamage", "rem_meleehalve", function(target, dmg) OnDamage(target, dmg) end)
 
