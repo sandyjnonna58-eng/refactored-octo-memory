@@ -1,10 +1,21 @@
 -- Аппараты жизнеобеспечения: стационарный (ent_life_support) и переносной (weapon_hg_lifesupport_portable).
--- Пока подключён, лёгкие и сердце работают за пациента; у переносного всё слабее.
+-- Пока подключён, аппарат дышит за пациента и КАЧАЕТ КРОВЬ вместо сердца (по просьбе - как auto-pump в SCAV): сердце он
+-- не запускает - остановившееся так и стоит (на мониторе прямая, плитка остановки), а давление, кровоток и кислород держит
+-- аппарат; таймер смерти от остановки сердца не идёт (LS.IsPumping в sv_organism.lua). Завести сердце - как обычно:
+-- дефибриллятор, эпинефрин, СЛР. Бьющемуся сердцу помогает (давление/выброс не ниже своих). Качать нечего без крови:
+-- давление и выброс тем меньше, чем меньше крови (полностью при 80% объёма). У переносного всё слабее.
 hg.LifeSupport = hg.LifeSupport or {}
 local LS = hg.LifeSupport
 
--- o2 - до какой доли от нормы держится кислород; остальное - минимум пульса, давления и выброса сердца
+-- o2 - до какой доли от нормы держится кислород; остальное - минимум кровотока (org.pulse), давления и выброса,
+-- которые даёт насос аппарата (heartbeat - больше не используется: частоту сердца аппарат не задаёт)
 LS.FullParams = {o2 = 1, pulse = 65, heartbeat = 70, pressure = 85, output = 1}
+local pump_blood_full = 0.8 -- при такой доле объёма крови насос качает в полную силу
+
+-- аппарат качал кровь в этот тик (sv_organism.lua: остановка сердца не запускает таймер смерти)
+function LS.IsPumping(org)
+	return org and (org.remPumpUntil or 0) > CurTime()
+end
 
 -- переносной: раз в секунду тратит 1% батареи и отключается, если пациента утащили дальше трубки
 local portable_drain_interval = 1
@@ -43,14 +54,18 @@ function LS.OrganismThink(owner, org)
 	org.CO = 0
 	org.lungsfunction = true
 
-	org.heartstop = false
-	org.fibrillation = false
-	org.arrhythmia = math.min(org.arrhythmia or 0, 1 - params.output)
-	org.myocardialOxygen = math.max(org.myocardialOxygen or 0, params.output)
-	org.pulse = math.max(org.pulse or 0, params.pulse)
-	org.heartbeat = math.max(org.heartbeat or 0, params.heartbeat)
-	org.bloodPressure = math.max(org.bloodPressure or 0, params.pressure)
-	org.cardiacOutput = math.max(org.cardiacOutput or 0, params.output)
+	-- насос вместо сердца: сердце (heartstop, ритм, частота) не трогаем, держим кровоток
+	local volume = math.Clamp(((org.blood or 5000) - 900) / 4100 / pump_blood_full, 0, 1)
+	org.remPumpUntil = CurTime() + 0.5
+	org.pulse = math.max(org.pulse or 0, params.pulse * volume)
+	org.bloodPressure = math.max(org.bloodPressure or 0, params.pressure * volume)
+	org.cardiacOutput = math.max(org.cardiacOutput or 0, params.output * volume)
+	org.myocardialOxygen = math.max(org.myocardialOxygen or 0, params.output * volume) -- сердечная мышца тоже снабжается
+	if org.heartstop then
+		org.heartstoptime = CurTime() -- без агонального дыхания (sv_pulse.lua - через 30 с остановки)
+		org.systolic = math.Round(org.bloodPressure * 1.24)
+		org.diastolic = math.Round(org.bloodPressure * 0.88)
+	end
 end
 
 local function PatientPos(ply)

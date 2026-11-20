@@ -318,6 +318,11 @@
 - Самоповреждение (позыв при депрессии, жми E чтобы сопротивляться - старая механика, мини-игру с ножом убрали по просьбе):
   `modules/sv_depression.lua`, `cl_suicideurges.lua`. Тест: `rem_depression_set [0..1]` (админ, позыв через ~2-12 с при
   депрессии >= 0.4), `selfharm` - позыв сразу (нужна депрессия >= 0.5 и нож).
+- Аппараты жизнеобеспечения (`modules/sv_lifesupport.lua`, ent_life_support, weapon_hg_lifesupport_portable): по просьбе
+  НЕ заводят сердце, а качают кровь вместо него (как auto-pump в SCAV): LS.OrganismThink (из "Org Think" Main после
+  модулей) держит кислород, кровоток org.pulse, давление и выброс не ниже параметров (x объём крови, полностью с 80%),
+  heartstop/ритм/частоту не трогает; org.remPumpUntil -> LS.IsPumping(org) - в sv_organism.lua остановка сердца под
+  насосом не запускает таймер смерти (dying). Завести сердце - дефибриллятор, эпинефрин, СЛР.
 - Последний бой (`lua/homigrad/lastbattle/`): во время таймера смерти попытка (шанс zb_lastbattle_chance + 1%/мин) каждые 30 с,
   на половине и в конце (RollLastBattle, org.lastBattleTimer), раз за жизнь; старт - Revive (сердце запускается, таймер
   смерти снят, FakeUp), заставка "Not like this." (cl_lastbattle.lua: темнота-туннель, красный текст, удар сердца, серая

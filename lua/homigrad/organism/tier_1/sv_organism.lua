@@ -952,7 +952,9 @@ hook.Add("Org Think", "Main", function(owner, org, timeValue)
 		org.remBrainDyingT = (org.remBrainRate >= death_brain_rate) and (org.remBrainDyingT or 0) + timeValue or 0
 	end
 	local brainDying = (org.remBrainDyingT or 0) >= death_brain_hold
-	local dying = org.alive and (org.heartstop or (org.blood or 5000) < death_blood or brainDying)
+	-- сердце стоит, но аппарат жизнеобеспечения качает кровь (modules/sv_lifesupport.lua) - от остановки не умирает
+	local pumped = isPly and hg.LifeSupport and hg.LifeSupport.IsPumping and hg.LifeSupport.IsPumping(org)
+	local dying = org.alive and ((org.heartstop and not pumped) or (org.blood or 5000) < death_blood or brainDying)
 	if dying then org.incapacitated = true end -- умирающий не встаёт сам (и клиент показывает экран умирания)
 
 	if isPly and org.otrub and dying then
