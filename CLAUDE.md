@@ -321,7 +321,8 @@
 - Аппараты жизнеобеспечения (`modules/sv_lifesupport.lua`, ent_life_support, weapon_hg_lifesupport_portable): по просьбе
   НЕ заводят сердце, а качают кровь вместо него (как auto-pump в SCAV): LS.OrganismThink (из "Org Think" Main после
   модулей) держит кислород, кровоток org.pulse, давление и выброс не ниже параметров (x объём крови, полностью с 80%),
-  heartstop/ритм/частоту не трогает; org.remPumpUntil -> LS.IsPumping(org) - в sv_organism.lua остановка сердца под
+  heartstop/ритм/частоту не трогает; понемногу закачивает кровь до 5000 (params.blood: стационарный 4 мл/с, переносной 2);
+  org.remPumpUntil -> LS.IsPumping(org) - в sv_organism.lua остановка сердца под
   насосом не запускает таймер смерти (dying). Завести сердце - дефибриллятор, эпинефрин, СЛР.
 - Последний бой (`lua/homigrad/lastbattle/`): во время таймера смерти попытка (шанс zb_lastbattle_chance + 1%/мин) каждые 30 с,
   на половине и в конце (RollLastBattle, org.lastBattleTimer), раз за жизнь; старт - Revive (сердце запускается, таймер

@@ -27,7 +27,7 @@ SWEP.Secondary.Automatic = false
 SWEP.Secondary.Ammo = "none"
 
 SWEP.IsPortableLifeSupport = true
-SWEP.LifeSupportParams = {o2 = 0.6, pulse = 45, heartbeat = 50, pressure = 60, output = 0.6}
+SWEP.LifeSupportParams = {o2 = 0.6, pulse = 45, heartbeat = 50, pressure = 60, output = 0.6, blood = 2} -- blood: мл/с крови (sv_lifesupport.lua)
 
 local connect_reach = 80
 

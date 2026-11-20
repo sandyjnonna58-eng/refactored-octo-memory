@@ -9,7 +9,8 @@ local LS = hg.LifeSupport
 
 -- o2 - до какой доли от нормы держится кислород; остальное - минимум кровотока (org.pulse), давления и выброса,
 -- которые даёт насос аппарата (heartbeat - больше не используется: частоту сердца аппарат не задаёт)
-LS.FullParams = {o2 = 1, pulse = 65, heartbeat = 70, pressure = 85, output = 1}
+-- blood - сколько крови аппарат понемногу закачивает, мл в секунду (до 5000; у переносного своё - в его SWEP)
+LS.FullParams = {o2 = 1, pulse = 65, heartbeat = 70, pressure = 85, output = 1, blood = 4}
 local pump_blood_full = 0.8 -- при такой доле объёма крови насос качает в полную силу
 
 -- аппарат качал кровь в этот тик (sv_organism.lua: остановка сердца не запускает таймер смерти)
@@ -53,6 +54,11 @@ function LS.OrganismThink(owner, org)
 	end
 	org.CO = 0
 	org.lungsfunction = true
+
+	-- понемногу закачивает кровь (по просьбе), до нормы 5000; при кровотечении часть сразу уходит
+	if isnumber(org.blood) and org.blood < 5000 then
+		org.blood = math.min(org.blood + (params.blood or 2) * (org.timeValue or 0), 5000)
+	end
 
 	-- насос вместо сердца: сердце (heartstop, ритм, частота) не трогаем, держим кровоток
 	local volume = math.Clamp(((org.blood or 5000) - 900) / 4100 / pump_blood_full, 0, 1)
