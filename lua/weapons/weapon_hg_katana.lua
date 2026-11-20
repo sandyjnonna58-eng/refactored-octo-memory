@@ -188,7 +188,8 @@ function SWEP:PrimaryAttackAdd(ent, trace)
 		limb = bone and bone >= 0 and boneLimb[ent:GetBoneName(bone)]
 	end
 	if not limb or org[limb .. "amputated"] ~= false then return end
-	hg.organism.AmputateLimb(org, limb)
+	-- с аддоном zcity_gore - его разрез (кусок на артериях): обычный AmputateLimb аддон пропускает только свой
+	if hg.ZCityGore_Sever then hg.ZCityGore_Sever(org, limb, nil, "katana") else hg.organism.AmputateLimb(org, limb) end
 end
 
 SWEP.SwingAng = -15

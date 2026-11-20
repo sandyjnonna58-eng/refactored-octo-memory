@@ -435,6 +435,18 @@
   головы (cl_decap.lua CLIP_BELOW) - иначе воротник торчит лоскутами вокруг головы. Ассеты - models/headpartial, models/gore,
   models/mosi (+ materials).
   Тест: rem_decap_test, меню Amputate Limb -> Cut Off Head (id 7). rem_decap 0 - выкл.
+- Аддон «z-city arteries & blood (cheese pull)» (прислал пользователь, встроен в сборку): `lua/autorun/zcity_gore.lua`
+  (грузит после Z-City), `lua/zcity_gore/` (sh_gore - настройки: какое оружие за сколько ударов у сустава режет,
+  взрывы, артерии; sv_gore - разрезы, обёртка hg.organism.AmputateLimb пропускает ТОЛЬКО свои разрезы и раздавливание
+  sv_bone; sv_torso - торс пополам; sv_npc; cl_artery - отрезанный кусок висит на 3 артериях, рвутся по очереди; своё
+  меню amputate_limb вместо Z-City), модели/материалы models/torsopartial, materials/models/torsopartial,
+  materials/zcity_gore. Наши правки в нём помечены «remorse»: zcity_gore_block_gibs 0 (аддон удалял ВСЕ headpartial/
+  limbspartial/арбузное мясо - ломал взрыв головы и sv_decap), zcity_gore_head_chop 0 (голову режет sv_decap; 1 - аддон,
+  sv_decap молчит). Катана режет через hg.ZCityGore_Sever. ВЗРЫВ КОНЕЧНОСТИ (по просьбе, как голова):
+  `organism/sv_limbburst.lua` hg.LimbBurst - sv_input.lua в ветке instant (порог урона, как у головы) для нережущего
+  урона зовёт его вместо AmputateLimb: исходный AmputateLimb Z-City (hg.ZCityGore_BaseAmputate) + 5..8 кусков мяса,
+  облако крови hg_fullbody_bloodmist, всплеск аддона SendSeverBlood, звук; режущее - аддон. rem_limb_burst 0 - выкл.
+  Тест: rem_test_limbburst <larm|rarm|lleg|rleg> [ник].
 - Отрубленные конечности отдельными кусками (подбирать, есть - weapon_rem_flesh) делали - убраны по просьбе.
   Катана: 5% отрубить конечность - раз за взмах (MultiDmg1 бьёт каждый тик).
 - Наркотики (`modules/sv_drugs.lua` + `cl_drugs.lua`, предметы `weapon_rem_heroin` / `_meth` / `_lsd` на основе

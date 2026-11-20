@@ -1163,7 +1163,13 @@ hook.Add("EntityTakeDamage", "homigrad-damage", function(ent, dmgInfo)
 				end
 			end
 		elseif !org[damagedLimb.."amputated"] then
-			hg.organism.AmputateLimb(org, damagedLimb)
+			-- remorse: сильное нережущее попадание взрывает конечность, как голову (organism/sv_limbburst.lua);
+			-- режущее отрезает аддон zcity_gore (lua/zcity_gore) по своим правилам - тут ничего не делаем
+			if hg.LimbBurst then
+				if not slash then hg.LimbBurst(org, damagedLimb, dirCool * len) end
+			else
+				hg.organism.AmputateLimb(org, damagedLimb)
+			end
 		end
 	end
 	

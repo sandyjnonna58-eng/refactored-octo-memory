@@ -21,6 +21,9 @@ local HELP = {
 	"                              100 остановка); forced - принудительная (растёт сама до 100 или до сброса в 0)",
 	"  (лечение: weapon_rem_amiodarone - снимает фибрилляцию; дефибриллятор - 20% сброс/запуск; weapon_adrenaline -",
 	"   стоящее сердце 3%/с заводится, два шприца подряд - передозировка)",
+	"rem_test_limbburst <larm|rarm|lleg|rleg> [ник] - взорвать конечность, как от сильного попадания (rem_limb_burst)",
+	"  (аддон z-city arteries & blood: zcity_gore_debug 1 - в консоль каждый разрез; zcity_gore_head_chop 1 - голову",
+	"   режет аддон, а не sv_decap; zcity_gore_block_gibs 1 - старое поведение аддона: прятать мясо и обрубки)",
 	"rem_test_legs [ник]         - сломать обе ноги и уронить: ноги не должны выгибаться назад и уходить за спину",
 	"                              (rem_floppy_bones 1 - вернуть «болтающиеся» суставы Z-City, с этим багом)",
 	"rem_test_bp <сист.> [пульс] [сек] - на 40 с (или [сек]) давление/пульс как на мониторе (на кого смотришь / ты):",
@@ -181,6 +184,16 @@ if SERVER then
 			if hg.organism.SyncFibOut then hg.organism.SyncFibOut(org) end
 		end
 		ply:ChatPrint(("rem_test_fib -> %s: фибрилляция %d%%%s"):format(t:Nick(), math.Round(org.fib or 0), org.fibForced and ", принудительная" or ""))
+	end)
+
+	-- взрыв конечности (organism/sv_limbburst.lua)
+	concommand.Add("rem_test_limbburst", function(ply, _, args)
+		if not IsValid(ply) or not ply:IsAdmin() then return end
+		local limb = ({larm = true, rarm = true, lleg = true, rleg = true})[args[1] or ""] and args[1] or "larm"
+		local t = Target(ply, {select(2, unpack(args))})
+		if not IsValid(t) or not t:Alive() or not t.organism then return end
+		local ok = hg.LimbBurst and hg.LimbBurst(t.organism, limb, ply:GetAimVector() * 3000)
+		ply:ChatPrint("rem_test_limbburst " .. limb .. " -> " .. t:Nick() .. (ok and "" or ": не вышло (уже нет конечности или rem_limb_burst 0)"))
 	end)
 
 	-- перелом обеих ног (как от падения с высоты): ноги «сломаны» (fake/sv_tier_0.lua fakeBoneFlop), тело в регдолл

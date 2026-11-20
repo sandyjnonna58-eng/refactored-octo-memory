@@ -1,0 +1,7 @@
+"UnlitGeneric"
+{
+	"$basetexture"	"zcity_gore/artery_vessel"
+	"$vertexcolor"	1
+	"$vertexalpha"	1
+	"$nocull"		1
+}
