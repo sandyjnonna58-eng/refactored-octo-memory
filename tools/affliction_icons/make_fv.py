@@ -24,6 +24,7 @@ STYLE = {
     'vtach': ('fill', (236, 196, 190), (225, 20, 20)),
     'tachycardia': ('fill', (236, 214, 208), (215, 60, 40)),
     'bradycardia': ('fill', (220, 222, 232), (60, 90, 210)),
+    'palpitations': ('fill', (236, 204, 198), (230, 35, 35)),
     'arterial': ('fill', (200, 18, 18)),
     'bleeding': ('fill', (205, 22, 22)),
     'blind': ('fill', (232, 226, 218)),

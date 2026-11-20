@@ -186,7 +186,8 @@ local function StartRemFibrillationSound()
  if IsValid(remFibrillationStation) then
   remFibrillationStopping = nil
   remFibrillationStation:Play()
-  if remFibrillationStation.ChangeVolume then remFibrillationStation:ChangeVolume(1, 1) else remFibrillationStation:SetVolume(1) end
+  -- SCAV: с 80% пульс слабеет - звук тише (hg.remFibVol считает cl_heart_alarm.lua)
+  remFibrillationStation:SetVolume(hg.remFibVol or 1)
   return
  end
  if remFibrillationLoading then return end
@@ -262,14 +263,15 @@ local function ThinkArrhythmiaSound(org)
 end
 
 -- звук плохого сердца - только в ТЯЖЁЛОМ состоянии (по просьбе; у простой аритмии свой фон arrhythmia.mp3):
--- желудочковая тахикардия (fib > 50; у фибрилляции и остановки свои звуки), сердце разбито (>= 0.6), сильная ишемия
+-- фибрилляция > 60% (SCAV: с 60% сердцебиение слышно вне панели осмотра; у фибрилляции желудочков и остановки свои
+-- звуки), сердце разбито (>= 0.6), сильная ишемия
 -- (<= 0.45), перегрузка (>= 0.75), пульс < 40 или > 210, давление сист. < 70 или > 210 (sh_cardio.lua), кровоток почти
 -- встал (org.pulse < 40)
 local function IsHeartCritical(org)
  local hr = org.heartbeat or 70
  local fib = org.fib or (org.arrhythmia or 0) * 100
  local sys = org.systolic or 120
- return (org.heart or 0) >= 0.6 or fib > 50 or (org.myocardialOxygen or 1) <= 0.45
+ return (org.heart or 0) >= 0.6 or fib > 60 or (org.myocardialOxygen or 1) <= 0.45
   or (org.heartStrain or 0) >= 0.75 or hr < 40 or hr > 210 or (org.pulse or 70) < 40
   or sys < 70 or sys > 210
 end

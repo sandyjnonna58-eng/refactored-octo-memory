@@ -307,15 +307,23 @@ local function CollectAfflictionIcons(ply, org)
 	elseif fib > 15 then
 		add("arrhythmia", 0.25 + (fib - 15) / 35 * 0.35, "Arrhythmia", nil, "Abnormal heart rhythm from strain on the body. Worsens if the cause stays.")
 	end
-	-- частота (если ритм не сорван)
+	-- частота (если ритм не сорван); стадии как в SCAV: тахикардия > 110 / > 160 / > 200, брадикардия < 60 / < 40
 	if not org.heartstop and fib <= 50 and hr > 0 then
+		local bpm = "Heart rate: " .. math.Round(hr) .. " bpm"
 		if hr > 110 then
-			add("tachycardia", math.Clamp((hr - 110) / 90, 0.15, 1), "Tachycardia", nil, "Heart rate: " .. math.Round(hr) .. " bpm" ..
-				(hr > 130 and "\nThe heart pounds - every beat jerks your aim." or ""))
+			local name = hr > 200 and "Extreme tachycardia" or hr > 160 and "Severe tachycardia" or "Tachycardia"
+			add("tachycardia", hr > 200 and 0.95 or hr > 160 and 0.6 or math.Clamp((hr - 110) / 90, 0.15, 0.45), name, nil, bpm ..
+				(hr > 130 and "\nThe heart pounds - every beat jerks your aim." or "") ..
+				(hr > 200 and "\nOver 200 bpm the heart starts to fibrillate." or ""))
 		elseif hr < 60 then
-			add("bradycardia", math.Clamp((60 - hr) / 40, 0.15, 1), "Bradycardia", nil, "Heart rate: " .. math.Round(hr) .. " bpm" ..
-				(hr < 55 and "\nWeakness: you move slower,\nvision dims between beats." or ""))
+			add("bradycardia", hr < 40 and 0.75 or math.Clamp((60 - hr) / 40, 0.15, 0.45), hr < 40 and "Severe bradycardia" or "Bradycardia", nil, bpm ..
+				(hr < 55 and "\nWeakness: you move slower,\nvision dims between beats." or "") ..
+				(hr < 40 and "\nUnder 20 bpm the heart stops." or ""))
 		end
+	end
+	-- сердцебиение (SCAV, palpitations): фибрилляция > 50% или пульс > 200
+	if not org.heartstop and (fib > 50 or hr > 200) then
+		add("palpitations", 0.7, "Palpitations", nil, "Your heart is hammering and stumbling in your chest.")
 	end
 	if Num(org.heart) > 0.1 then add("heart", Num(org.heart), "Heart damage") end
 	-- давление с монитора действует на игрока (organism/tier_1/modules/sh_cardio.lua, sv_cardio.lua, cl_cardio.lua)

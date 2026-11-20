@@ -87,6 +87,10 @@ if SERVER then
 		local entOwner = IsValid(org.owner.FakeRagdoll) and org.owner.FakeRagdoll or org.owner
 		entOwner:EmitSound("snd_jack_hmcd_needleprick.wav", 60, math.random(95, 105))
 		org.adrenalineAdd = math.Approach(org.adrenalineAdd, 4, self.modeValues[1] * 4)
+		-- эпинефрин по SCAV (sv_pulse.lua): шприц +120 с действия; стоящее сердце 3%/с заводится (фибрилляция 50%);
+		-- сверх 240 с (второй шприц подряд) - передозировка, принудительная фибрилляция
+		org.remEpiT = (org.remEpiT or 0) + 120 * self.modeValues[1]
+		if org.remEpiT > 240 and hg.organism.ForceFibrillation then hg.organism.ForceFibrillation(org) end
 		self.modeValues[1] = 0
 
 		if self.poisoned2 then

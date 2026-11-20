@@ -70,6 +70,10 @@ def bradycardia(out):
     # брадикардия: две стрелки вниз
     heart_with(out, [[(34, 46), (40, 53), (46, 46)], [(50, 46), (56, 53), (62, 46)]], 4)
 
+def palpitations(out):
+    # сердцебиение (SCAV palpitations): внутри один высокий резкий толчок (толще, чем у аритмии)
+    heart_with(out, [[(29, 52), (39, 52), (43, 42), (49, 63), (53, 52), (67, 52)]], 5)
+
 def arrhythmia(out):
     # аритмия: сердце, внутри неровная кардиограмма - зубцы разной высоты и пропущенный удар (своя, не Tabler)
     import math
@@ -194,7 +198,7 @@ mark(os.path.join(OUT, 'pressure_low.png'), False)
 o2(os.path.join(OUT, 'hypoxia.png'))
 liver(os.path.join(OUT, 'liver.png'))
 arrhythmia(os.path.join(OUT, 'arrhythmia.png'))
-for f in (vtach, tachycardia, bradycardia):
+for f in (vtach, tachycardia, bradycardia, palpitations):
     f(os.path.join(OUT, f.__name__ + '.png'))
 for f in (wound, internal, immobilized, amputation, dislocation):
     f(os.path.join(OUT, f.__name__ + '.png'))

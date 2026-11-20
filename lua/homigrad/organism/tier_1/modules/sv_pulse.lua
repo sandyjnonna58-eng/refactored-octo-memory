@@ -16,7 +16,8 @@ local function getHeartEfficiency(org)
 end
 
 -- звуки сердца (sound/rem_heart, cl_main.lua) - раздать игрокам
-for _, f in ipairs({"sound/rem_heart/heartbeat_bad.mp3", "sound/rem_heart/arrhythmia.mp3"}) do
+for _, f in ipairs({"sound/rem_heart/heartbeat_bad.mp3", "sound/rem_heart/arrhythmia.mp3", "sound/rem_heart/alarm.wav",
+	"sound/rem_heart/flatline.wav"}) do
 	if file.Exists(f, "GAME") then resource.AddSingleFile(f) end
 end
 
@@ -46,6 +47,26 @@ local arr_consc_time = 45
 local hypotension_consc_time = 15
 local fibrillation_consc_time = 6
 
+-- Частота сердца по SCAV (wiki Heart_rate): база 70 + прибавки. Шкалы пересчитаны на Z-City (адреналин 0..5, боль 120 = 100%,
+-- обезболивание 0..4): адреналин +11 за единицу (5 -> +55), выносливость +60 при нуле (+0.6 за процент ниже 100), боль +1 за
+-- процент, температура +-0.5 за градус от 37, опиаты (analgesia) -6 за единицу, фибрилляция +1/% (+4 выше 75, +30 выше 95).
+-- Барорефлекс: пульс держит давление ~120/80 - сист. ниже 112 - прибавка растёт до +80, выше 128 - падает до -30, в норме
+-- возвращается к 0 (org.hrBaro). Ниже 40 он пульс сам не роняет. Сист. в покое = 120 (bloodPressure 90 * 1.24 + 70 * 0.12).
+local hr_base = 70
+local hr_adrenaline, hr_stamina, hr_pain, hr_temp, hr_opiate, hr_fear = 11, 60, 1 / 1.2, 0.5, 6, 25
+local hr_up, hr_down = 8, 4                 -- как быстро пульс идёт к цели, уд/мин в секунду
+local baro_sys, baro_band, baro_up, baro_down = 120, 8, 80, 30
+local baro_rate, baro_back = 3, 1.5         -- уд/мин в секунду: к пределу / обратно к 0
+local sys_bp_mul, sys_hr_mul = 1.24, 0.12
+-- эпинефрин (weapon_adrenaline, org.remEpiT - секунды действия, шприц +120): сердце стоит - 3%/с завести (фибрилляция 50%);
+-- больше 240 - передозировка: фибрилляция растёт (и при уколе сверх 240 - принудительный старт)
+local epi_per_dose, epi_overdose, epi_restart_chance = 120, 240, 0.03
+-- амиодарон (weapon_rem_amiodarone, org.remAmioT - секунды): -2% фибрилляции в секунду сверх обычного
+local amio_drop = 2
+-- тяжёлая ломка опиатов (героин, rem_wd_heroin >= 0.9) - 1%/с принудительный старт; кровоизлияние в мозг >= 0.9 - сразу
+local wd_fib_from, wd_fib_chance = 0.9, 0.01
+local stroke_fib_from = 0.9
+
 -- производные поля из шкалы и обратно (правки снаружи - в шкалу)
 local function SyncFibOut(org)
 	org.fib = Clamp(org.fib or 0, 0, 100)
@@ -64,6 +85,30 @@ local function SyncFibIn(org)
 	if org.fib <= 0 then org.fibForced = false end
 end
 hg.organism.SyncFibOut = SyncFibOut
+
+-- завести остановившееся сердце (эпинефрин, дефибриллятор): по SCAV после эпинефрина фибрилляция 50%, иначе 0
+function hg.organism.RestartHeart(org, fib)
+	if not org or not org.heartstop then return false end
+	org.heartstop = false
+	org.fib, org.fibForced = Clamp(fib or 0, 0, 99), false
+	SyncFibOut(org)
+	org.heartbeat = Clamp(org.heartbeat or 70, 55, 90)
+	org.pulse = max(org.pulse or 0, 45)
+	org.bloodPressure = max(org.bloodPressure or 0, 60)
+	org.cardiacOutput = max(org.cardiacOutput or 0, 0.4)
+	org.myocardialOxygen = max(org.myocardialOxygen or 0, 0.35)
+	org.hrBaro = 0
+	return true
+end
+
+-- принудительная фибрилляция (SCAV fibrillationForced): растёт сама до 100% или пока не сбросят в 0
+function hg.organism.ForceFibrillation(org)
+	if not org or org.heartstop then return end
+	SyncFibIn(org)
+	org.fib = max(org.fib, 1)
+	org.fibForced = true
+	SyncFibOut(org)
+end
 
 -- нагрузка на сердце (попадание в сердце и т.п.): сразу добавляет фибрилляции
 function hg.organism.AddCardiacStress(org, amount)
@@ -124,6 +169,10 @@ module[1] = function(org)
 	org.fibrillationStart = 0
 	org.myocardialOxygen = 1
 	org.heartStrain = 0
+	org.hrBaro = 0      -- барорефлекс (SCAV): прибавка к пульсу ради давления 120/80
+	org.remEpiT = 0     -- эпинефрин, секунд действия
+	org.remAmioT = 0    -- амиодарон, секунд действия
+	org.remShockT = 0   -- до какого времени монитор пишет BPM ??? (разряд дефибриллятора)
 	org.hypertension = 0
 	org.hypotension = 0
 	org.nextArrhythmiaRoll = 0
@@ -175,7 +224,7 @@ module[2] = function(owner, org, timeValue)
 	local pressureFallSpeed = defibGrace and 4 or 18
 	org.bloodPressure = Approach(org.bloodPressure or pressure, pressure, pressure > (org.bloodPressure or 0) and timeValue * 12 or timeValue * pressureFallSpeed)
 	org.pulse = Approach(org.pulse, org.bloodPressure, heart == 0 and timeValue * 10 or timeValue * 5)
-	org.systolic = Round(Clamp(org.bloodPressure * 1.38 + (org.heartbeat or 70) * 0.12, 0, 240))
+	org.systolic = Round(Clamp(org.bloodPressure * sys_bp_mul + (org.heartbeat or 70) * sys_hr_mul, 0, 240))
 	org.diastolic = Round(Clamp(org.bloodPressure * 0.88, 0, 160))
 	org.cardiacOutput = org.heartstop and (defibGrace and Clamp((org.pulse or org.bloodPressure) / 70 * 0.35, 0, 0.45) or 0) or Clamp((org.bloodPressure / 90) * heart * rhythmMul, 0, 1.5)
 	if not org.heartstop and not org.fibrillation and (org.arrhythmia or 0) < 0.25 and (org.myocardialOxygen or 1) > 0.65 and org.bloodPressure > 55 then
@@ -189,27 +238,29 @@ module[2] = function(owner, org, timeValue)
 
 	org.fearadd = math.Clamp(org.fearadd, 0, 3)
 
-	local heartbeat = org.bloodPressure < 70 and 70 + (70 - org.bloodPressure) * 3 or 70
-
-	local runnin_or_exhausted = org.analgesia < 1 and (org.stamina.sub > 0 or org.stamina[1] < (org.stamina.max * 0.66))
-	org.heartbeat = math.Approach(org.heartbeat, math.max(heartbeat - 10, runnin_or_exhausted and ((1 - math.min(1, org.stamina[1] / (org.stamina.max * 1))) * 110 + 90) or 60), !runnin_or_exhausted and timeValue * 2 or timeValue * 15)
-	
-	heartbeat = heartbeat + (owner.suiciding and 50 or 0)
-	heartbeat = heartbeat + 40 * math.max(0, org.fear)
-	heartbeat = heartbeat + math.Clamp(org.shock, 0, 40)
-	heartbeat = heartbeat + math.Clamp(org.pain, 40, 80) - 40
-	heartbeat = heartbeat + 40 * math.min(org.adrenaline, 3)
-	heartbeat = heartbeat - 40 * math.min(org.analgesia / 2.5, 1)
-	heartbeat = heartbeat + 100 * math.Clamp(math.Remap(org.temperature, 40, 42, 0, 1), 0, 1)
-	heartbeat = heartbeat - 160 * (1 - math.Clamp(math.Remap(org.temperature, 28, 36.7, 0, 1), 0, 1))
-	heartbeat = heartbeat + (org.hypotension or 0) * 55
-	heartbeat = heartbeat + (org.remHRAdd or 0) -- наркотики (sv_drugs.lua): мет гонит, героин замедляет
-	heartbeat = heartbeat - (org.myocardialOxygen and (1 - org.myocardialOxygen) or 0) * 35
+	-- пульс по SCAV (константы hr_* выше)
+	local stFrac = Clamp((stamina[1] or 0) / max(stamina.max or 180, 1), 0, 1)
+	local dev = (org.systolic or baro_sys) - baro_sys
+	local baroT = dev < -baro_band and baro_up or dev > baro_band and -baro_down or 0
+	org.hrBaro = Approach(org.hrBaro or 0, baroT, timeValue * (baroT == 0 and baro_back or baro_rate))
+	local painHR = (org.pain or 0) * hr_pain
+	local heartbeat = hr_base + org.hrBaro
+		+ hr_stamina * (1 - stFrac)
+		+ hr_adrenaline * Clamp(org.adrenaline or 0, 0, 5)
+		+ painHR
+		+ hr_temp * ((org.temperature or 37) - 37)
+		- hr_opiate * Clamp(org.analgesia or 0, 0, 4)
+		+ hr_fear * max(0, org.fear)
+		+ (owner.suiciding and 30 or 0)
+		+ (org.remHRAdd or 0) -- наркотики (sv_drugs.lua): мет гонит, героин замедляет
+		- (org.myocardialOxygen and (1 - org.myocardialOxygen) or 0) * 35
 	-- фибрилляция гонит пульс (SCAV): +1 за процент, +4 выше 75, +30 выше 95; при аритмии он ещё и скачет
 	heartbeat = heartbeat + fib + max(fib - 75, 0) * 4 + max(fib - 95, 0) * 30
 	if fib > 15 and fib < 75 then heartbeat = heartbeat + math.Rand(-0.6, 0.6) * fib end
+	-- барорефлекс сам не роняет пульс ниже 40
+	if org.hrBaro < 0 then heartbeat = max(heartbeat, min(40, heartbeat - org.hrBaro)) end
 
-	org.heartbeat = math.Approach(org.heartbeat, heartbeat, heartbeat > org.heartbeat and timeValue * 5 or timeValue * 3)
+	org.heartbeat = math.Approach(org.heartbeat, heartbeat, heartbeat > org.heartbeat and timeValue * hr_up or timeValue * hr_down)
 	
 	local ischemia = Clamp(1 - (org.myocardialOxygen or 1), 0, 1)
 	-- шкала фибрилляции. Боль аритмию не вызывает (по просьбе): из пульса для шкалы вычитается то, что добавили боль
@@ -218,11 +269,21 @@ module[2] = function(owner, org, timeValue)
 	local o2pct = istable(org.o2) and (org.o2[1] or 30) / (org.o2.range or 30) * 100 or 100
 	local sys = org.systolic or 120
 	local hr = org.heartbeat or 70
-	local painHR = Clamp(org.pain or 0, 40, 80) - 40 + Clamp(org.shock or 0, 0, 40)
 	local hrFib = hr - painHR
 	local alive = org.alive and not org.heartstop
 	local strongStart = alive and (hrFib > fib_hr_start or sys < fib_sys_start or o2pct < fib_o2_start or org.temperature < fib_temp_start)
-	local strongRise = alive and (hrFib > fib_hr_start or sys < fib_sys_rise or o2pct < fib_o2_rise or org.temperature < fib_temp_rise or org.fibForced)
+	-- эпинефрин: время действия идёт; больше 240 - передозировка (фибрилляция растёт)
+	if (org.remEpiT or 0) > 0 then org.remEpiT = max(org.remEpiT - timeValue, 0) end
+	local epiOver = (org.remEpiT or 0) > epi_overdose
+	-- принудительный старт: тяжёлая ломка опиатов (шанс в секунду), кровоизлияние в мозг (SCAV: инсульт > 90%)
+	if alive and not org.fibForced then
+		local wd = hg.Addiction and hg.Addiction.Get and owner:IsPlayer() and select(2, hg.Addiction.Get(owner, "heroin")) or 0
+		if (wd >= wd_fib_from and math.Rand(0, 1) < timeValue * wd_fib_chance) or (org.brainHemorrhage or 0) >= stroke_fib_from then
+			fib = max(fib, 1)
+			org.fibForced = true
+		end
+	end
+	local strongRise = alive and (hrFib > fib_hr_start or sys < fib_sys_rise or o2pct < fib_o2_rise or org.temperature < fib_temp_rise or org.fibForced or epiOver)
 	local shockPhys = (org.shockScore or 0) - Clamp(((org.pain or 0) - 70) / 80, 0, 1) * 8
 	local hyperNoPain = Clamp(Remap(org.bloodPressure * (1 - Clamp(org.shock or 0, 0, 45) / 360 / vascularTone), 115, 155, 0, 1), 0, 1)
 	-- "плохое сердце": растёт только до своего потолка
@@ -243,7 +304,13 @@ module[2] = function(owner, org, timeValue)
 			fib = max(fib - timeValue * fib_fall, 0)
 		end
 	end
+	-- амиодарон: снимает фибрилляцию сверх обычного спада (SCAV: каждый тик)
+	if (org.remAmioT or 0) > 0 then
+		org.remAmioT = max(org.remAmioT - timeValue, 0)
+		fib = max(fib - timeValue * amio_drop, 0)
+	end
 	fib = Clamp(fib, 0, 100)
+	if fib <= 0 then org.fibForced = false end
 	if fib >= 100 and alive then
 		org.heartstop = true -- фибрилляция дошла до конца - остановка сердца
 	end
@@ -334,6 +401,12 @@ module[2] = function(owner, org, timeValue)
 	
 	if not org.heartstop then
 		org.last_heartbeat = CurTime()
+	end
+
+	-- эпинефрин в крови и сердце стоит: 3% в секунду завести (SCAV), фибрилляция 50%
+	if org.heartstop and org.alive and (org.remEpiT or 0) > 0 and not org.deathStateKilled and (org.brain or 0) < 0.6
+		and (org.heart or 0) < 1 and org.temperature >= 28 and math.Rand(0, 1) < timeValue * epi_restart_chance then
+		hg.organism.RestartHeart(org, 50)
 	end
 
 	if org.heartstop then

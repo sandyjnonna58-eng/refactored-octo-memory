@@ -76,7 +76,7 @@ local function NextBeat(kind, hr, fib)
 		beatLen = 60 / math.Clamp(hr * 2.2, 200, 320) * math.Rand(0.85, 1.15)
 		beatAmp = math.Rand(0.8, 1.1)
 	elseif kind == "vf" then
-		local k = math.Clamp((fib - 75) / 24, 0, 1) -- к 100% слабеет
+		local k = math.Clamp((fib - 80) / 19, 0, 1) -- SCAV: с 80% пульс слабеет, к 99% - еле видно
 		beatLen = 60 / math.Rand(300, 380)
 		beatAmp = math.Rand(0.6, 1.2) * (1 - k * 0.7)
 	else
@@ -205,7 +205,9 @@ function E.Draw(x, y, w, h, org, a)
 	surface.SetDrawColor(14, 22, 18, 235 * a)
 	surface.DrawRect(gx, gy, n * P, rows * P)
 
-	draw.SimpleText(("BPM: %d  SpO2: %d%%"):format(hr, o2), font, x + pad, y + pad * 0.5,
+	-- во время разряда дефибриллятора пульс не определить (SCAV): BPM ??? (org.remShockT, weapon_defibrillator.lua)
+	local shocking = org and (org.remShockT or 0) > CurTime()
+	draw.SimpleText(shocking and ("BPM: ???  SpO2: %d%%"):format(o2) or ("BPM: %d  SpO2: %d%%"):format(hr, o2), font, x + pad, y + pad * 0.5,
 		flat and Color(255, 90, 80, 255 * a) or Color(235, 240, 235, 255 * a))
 
 	local function Row(v)

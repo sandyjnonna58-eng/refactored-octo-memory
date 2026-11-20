@@ -94,6 +94,7 @@ MODE.LootTable = {
 		{0.1,"weapon_fentanyl"},
 		{0.9,"weapon_betablock"},
 		{0.6,"weapon_adrenaline"},
+		{0.4,"weapon_rem_amiodarone"}, -- амиодарон (сердце по SCAV, sv_pulse.lua)
 		{0.5,"weapon_midazolam"},
 		{0.3,"weapon_defibrillator"},
 		{0.10,"hg_brassknuckles"},

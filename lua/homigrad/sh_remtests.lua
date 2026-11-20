@@ -14,6 +14,10 @@ local HELP = {
 	"rem_test_clear [ник]        - сбросить сотрясение, нокаут, оглушение",
 	"rem_test_heartstop [ник]    - остановить сердце (звук остановки; умрёт, если не завести дефибриллятором)",
 	"rem_test_spine [ник]        - сломать поясницу и уронить: ноги парализованы, реакции/Artagdoll их не крутят",
+	"rem_test_fib <0..100|forced> [ник] - сердце по SCAV: задать фибрилляцию (15 аритмия, 50 ЖТ, 60 тревога, 75 ФЖ,",
+	"                              100 остановка); forced - принудительная (растёт сама до 100 или до сброса в 0)",
+	"  (лечение: weapon_rem_amiodarone - снимает фибрилляцию; дефибриллятор - 20% сброс/запуск; weapon_adrenaline -",
+	"   стоящее сердце 3%/с заводится, два шприца подряд - передозировка)",
 	"rem_test_legs [ник]         - сломать обе ноги и уронить: ноги не должны выгибаться назад и уходить за спину",
 	"                              (rem_floppy_bones 1 - вернуть «болтающиеся» суставы Z-City, с этим багом)",
 	"rem_test_bp <сист.> [пульс] [сек] - на 40 с (или [сек]) давление/пульс как на мониторе (на кого смотришь / ты):",
@@ -158,6 +162,22 @@ if SERVER then
 		org.spine1 = math.max(org.spine1 or 0, 1)
 		if not IsValid(t.FakeRagdoll) and hg.Fake then hg.Fake(t, nil, true, true) end
 		return "позвоночник сломан, SpineCut = " .. tostring(hg.SpineCut and hg.SpineCut(org) or "?") .. " (снять - Reset organism)"
+	end)
+
+	-- сердце по SCAV (organism/tier_1/modules/sv_pulse.lua): фибрилляция вручную
+	concommand.Add("rem_test_fib", function(ply, _, args)
+		if not IsValid(ply) or not ply:IsAdmin() then return end
+		local t = Target(ply, {select(2, unpack(args))})
+		if not IsValid(t) or not t:Alive() or not t.organism then return end
+		local org = t.organism
+		if args[1] == "forced" then
+			if hg.organism.ForceFibrillation then hg.organism.ForceFibrillation(org) end
+		else
+			org.fib = math.Clamp(tonumber(args[1]) or 0, 0, 100)
+			org.fibForced = false
+			if hg.organism.SyncFibOut then hg.organism.SyncFibOut(org) end
+		end
+		ply:ChatPrint(("rem_test_fib -> %s: фибрилляция %d%%%s"):format(t:Nick(), math.Round(org.fib or 0), org.fibForced and ", принудительная" or ""))
 	end)
 
 	-- перелом обеих ног (как от падения с высоты): ноги «сломаны» (fake/sv_tier_0.lua fakeBoneFlop), тело в регдолл

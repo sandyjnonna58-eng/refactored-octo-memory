@@ -188,9 +188,12 @@ local function GetDefibOrganism(ply, target)
 	if IsValid(target) and target.organism then return target.organism end
 end
 
+-- по SCAV (wiki Heart_rate): разряд показан при желудочковой тахикардии (фибрилляция > 50%), фибрилляции, пульсе > 200
+-- и при остановке сердца - дефибриллятор может её завести
 local function ShouldShock(org)
-	if not org or not org.alive or org.heartstop or org.deathStateKilled then return false end
-	return org.fibrillation or (org.arrhythmia or 0) > 0.65 or (org.heartbeat or 0) > 200
+	if not org or not org.alive or org.deathStateKilled then return false end
+	if org.heartstop then return true end
+	return org.fibrillation or (org.fib or (org.arrhythmia or 0) * 100) > 50 or (org.heartbeat or 0) > 200
 end
 
 local function ShouldFalseShock(org)
@@ -362,22 +365,17 @@ local function ApplyAEDShock(org, accidental)
 		return
 	end
 
-	org.fibrillation = false
-	org.arrhythmia = 0
-	org.heartStrain = math.max((org.heartStrain or 0) - 0.2, 0)
-
-	if math.random(100) <= 22 then
-		org.heartstop = false
-		org.heartbeat = math.Clamp(org.heartbeat or 70, 55, 90)
-		org.pulse = math.max(org.pulse or 0, 45)
+	-- по SCAV: удачный разряд - 20%: фибрилляция в 0 и сердце снова бьётся (если стояло); неудачный ничего не меняет -
+	-- фибрилляция идёт дальше / сердце стоит, можно бить ещё раз. Монитор 2 с пишет BPM ??? (org.remShockT, cl_ecg.lua)
+	org.remShockT = CurTime() + 2
+	if math.random(100) <= 20 then
+		org.fib, org.fibForced = 0, false
+		org.fibrillation = false
+		org.arrhythmia = 0
+		if hg.organism.SyncFibOut then hg.organism.SyncFibOut(org) end
+		org.heartStrain = math.max((org.heartStrain or 0) - 0.2, 0)
+		if org.heartstop and hg.organism.RestartHeart then hg.organism.RestartHeart(org, 0) end
 		org.bloodPressure = math.max(org.bloodPressure or 0, 65)
-		org.myocardialOxygen = math.max(org.myocardialOxygen or 0, 0.35)
-	else
-		org.heartstop = true
-		org.heartbeat = 0
-		org.pulse = 0
-		org.bloodPressure = math.max(org.bloodPressure or 0, 35)
-		org.myocardialOxygen = math.max(org.myocardialOxygen or 0, 0.2)
 	end
 
 	org.deathStateKilled = nil
@@ -404,8 +402,7 @@ local function BeginAEDShock(defib, ply, getTarget, uses, accidental)
 		local target = GetCurrentDefibTarget(ply, getTarget())
 		if not IsValid(target) then return end
 		local org = GetDefibOrganism(ply, target)
-		if IsDefibDead(org) or org.heartstop then
-			if org and org.heartstop then PlayAEDSound(defib, AEDSounds.asystole, 75, 100, 2) end
+		if IsDefibDead(org) then
 			PlayAEDSound(defib, AEDSounds.shocknotdelivered, 75, 100, 2)
 			DropDefib(defib, target, uses)
 			return

@@ -141,6 +141,7 @@ AddItemToBUY( "Mannitol", "Weapon", "weapon_mannitol", 300, "Medical", {} )
 AddItemToBUY( "Naloxone", "Weapon", "weapon_naloxone", 100, "Medical", {} )
 AddItemToBUY( "Decompression needle", "Weapon", "weapon_needle", 50, "Medical", {} )
 AddItemToBUY( "Beta-Blocker", "Weapon", "weapon_betablock", 250, "Medical", {} )
+AddItemToBUY( "Amiodarone", "Weapon", "weapon_rem_amiodarone", 300, "Medical", {} )
 
 -- Explosive
 AddItemToBUY( "M67", "Weapon", "weapon_hg_grenade_tpik", 500, "Explosive", {} )
