@@ -441,12 +441,15 @@
   sv_bone; sv_torso - торс пополам; sv_npc; cl_artery - отрезанный кусок висит на 3 артериях, рвутся по очереди; своё
   меню amputate_limb вместо Z-City), модели/материалы models/torsopartial, materials/models/torsopartial,
   materials/zcity_gore. Наши правки в нём помечены «remorse»: zcity_gore_block_gibs 0 (аддон удалял ВСЕ headpartial/
-  limbspartial/арбузное мясо - ломал взрыв головы и sv_decap), zcity_gore_head_chop 0 (голову режет sv_decap; 1 - аддон,
-  sv_decap молчит). Катана режет через hg.ZCityGore_Sever. ВЗРЫВ КОНЕЧНОСТИ (по просьбе, как голова):
+  limbspartial/арбузное мясо - ломал взрыв головы и sv_decap), zcity_gore_heads 1 (по жалобе «нет артерий, когда режешь»:
+  голову режет аддон - висит на артериях, sv_decap молчит; 0 - sv_decap без артерий; ZCityGore.HeadHits - ударов по шее
+  для мечей/топоров/пилы, иначе x2 от конечности, мечам было 24; HeadJointRadius 10), zcity_gore_hl2_blood 0 (клиент; кровь Z-City: BloodDrops -> hg.addBloodPart, без bloodspray HL2,
+  пятна Normal.Blood1). Катана режет через hg.ZCityGore_Sever. ВЗРЫВ КОНЕЧНОСТИ (по просьбе, как голова):
   `organism/sv_limbburst.lua` hg.LimbBurst - sv_input.lua в ветке instant (порог урона, как у головы) для нережущего
   урона зовёт его вместо AmputateLimb: исходный AmputateLimb Z-City (hg.ZCityGore_BaseAmputate) + 5..8 кусков мяса,
   облако крови hg_fullbody_bloodmist, всплеск аддона SendSeverBlood, звук; режущее - аддон. rem_limb_burst 0 - выкл.
-  Тест: rem_test_limbburst <larm|rarm|lleg|rleg> [ник].
+  Тест: rem_test_limbburst <larm|rarm|lleg|rleg> [ник]; артерии - rem_test_arteries (клиент), zcity_gore_debug 1 (сервер).
+  Артерий нет у: взорванной конечности (по задумке), оторванного взрывом гранаты (TetherOnBlast false).
 - Отрубленные конечности отдельными кусками (подбирать, есть - weapon_rem_flesh) делали - убраны по просьбе.
   Катана: 5% отрубить конечность - раз за взмах (MultiDmg1 бьёт каждый тик).
 - Наркотики (`modules/sv_drugs.lua` + `cl_drugs.lua`, предметы `weapon_rem_heroin` / `_meth` / `_lsd` на основе

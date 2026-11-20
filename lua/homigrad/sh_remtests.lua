@@ -22,8 +22,9 @@ local HELP = {
 	"  (лечение: weapon_rem_amiodarone - снимает фибрилляцию; дефибриллятор - 20% сброс/запуск; weapon_adrenaline -",
 	"   стоящее сердце 3%/с заводится, два шприца подряд - передозировка)",
 	"rem_test_limbburst <larm|rarm|lleg|rleg> [ник] - взорвать конечность, как от сильного попадания (rem_limb_burst)",
-	"  (аддон z-city arteries & blood: zcity_gore_debug 1 - в консоль каждый разрез; zcity_gore_head_chop 1 - голову",
-	"   режет аддон, а не sv_decap; zcity_gore_block_gibs 1 - старое поведение аддона: прятать мясо и обрубки)",
+	"  (аддон z-city arteries & blood: zcity_gore_debug 1 - сервер пишет каждый удар у сустава и разрез; rem_test_arteries -",
+	"   у себя: какие отрезанные куски видит клиент и почему не рисуются артерии; zcity_gore_heads 0 - голову режет",
+	"   sv_decap без артерий; zcity_gore_hl2_blood 1 - кровь HL2 в аддоне; zcity_gore_block_gibs 1 - прятать мясо, как было)",
 	"rem_test_legs [ник]         - сломать обе ноги и уронить: ноги не должны выгибаться назад и уходить за спину",
 	"                              (rem_floppy_bones 1 - вернуть «болтающиеся» суставы Z-City, с этим багом)",
 	"rem_test_bp <сист.> [пульс] [сек] - на 40 с (или [сек]) давление/пульс как на мониторе (на кого смотришь / ты):",
@@ -254,6 +255,22 @@ else
 			ch:Play()
 		end)
 	end
+
+	-- аддон артерий (lua/zcity_gore): отрезанные куски, которые знает клиент, и рисуется ли их пучок артерий
+	concommand.Add("rem_test_arteries", function()
+		if not ZCityGore then print("rem_test_arteries: аддон zcity_gore не загружен на клиенте") return end
+		local n = 0
+		for ent in pairs(hg.clientSeveredLimbs or {}) do
+			if IsValid(ent) then
+				n = n + 1
+				local ok, bundle = pcall(ZCityGore.BundleFor, ent)
+				print(("rem_test_arteries: %s, кусок %s, на артериях %s, порвано %d, до тела %s, пучок %s"):format(tostring(ent),
+					ent:GetNWString("SeveredLimb", "?"), tostring(ent:GetNWBool("SeveredTethered")), ent:GetNWInt("ZCArteryTorn", 0),
+					tostring(ent:GetNWEntity("SeveredBody")), ok and (bundle and "рисуется" or "НЕТ (тело не найдено/кость)") or ("ошибка: " .. tostring(bundle))))
+			end
+		end
+		print("rem_test_arteries: отрезанных кусков у клиента - " .. n .. (n == 0 and " (отрезанное ещё не создавалось или не дошло до клиента)" or ""))
+	end)
 
 	concommand.Add("rem_test_deathsound", function(_, _, args)
 		Play(tonumber(args[1]) == 1 and "rem_heartstop.ogg" or "rem_brutaldeath.mp3")

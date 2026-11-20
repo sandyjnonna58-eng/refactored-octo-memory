@@ -3,10 +3,10 @@ ZCityGore = ZCityGore or {}
 -- remorse (сборка remorseism): аддон встроен в сборку, своё поверх него - organism/sv_limbburst.lua.
 -- zcity_gore_block_gibs: аддон удалял/прятал ВСЕ куски мяса и обрубки (headpartial, limbspartial, арбузные куски...) -
 -- ломал взрыв головы Z-City, наше отрезание головы (organism/sv_decap.lua) и взрыв конечностей. 0 по умолчанию.
--- zcity_gore_head_chop: голову режущим оружием режет организм/sv_decap.lua (с 4-го удара, шанс по оружию); 1 - режет
--- аддон (голова повиснет на артериях), а sv_decap молчит.
+-- zcity_gore_heads: голову режущим оружием режет аддон - голова висит на артериях (по жалобе «нет артерий, когда
+-- режешь»); 0 - режет organism/sv_decap.lua (с 4-го удара, шанс по оружию, обрубки Zippy), без артерий.
 CreateConVar("zcity_gore_block_gibs", "0", FCVAR_ARCHIVE + FCVAR_REPLICATED, "Remove/hide Z-City gore gibs and stumps (old addon behaviour, breaks head explosions)", 0, 1)
-CreateConVar("zcity_gore_head_chop", "0", FCVAR_ARCHIVE + FCVAR_REPLICATED, "Cutting weapons sever the head through this addon (0 = organism/sv_decap.lua does it)", 0, 1)
+CreateConVar("zcity_gore_heads", "1", FCVAR_ARCHIVE + FCVAR_REPLICATED, "Cutting weapons sever the head through this addon, it hangs on arteries (0 = organism/sv_decap.lua does it)", 0, 1)
 
 ZCityGore.LimbBones = {
 	larm = "ValveBiped.Bip01_L_Forearm",
@@ -40,10 +40,16 @@ ZCityGore.WeaponHits = {
 ZCityGore.DefaultSharpHits = 12
 -- Head needs this many times more hits than a limb with the same weapon
 ZCityGore.HeadHitsMul = 2
+-- remorse: ударов по шее для отдельного оружия (вместо удары по конечности x HeadHitsMul) - мечам иначе нужно 24
+ZCityGore.HeadHits = {
+	weapon_hg_axe = 2, weapon_hatchet = 5, weapon_tomahawk = 5,
+	weapon_hg_machete = 6, weapon_fc3_machete = 6, weapon_fc3_tribalknife = 7,
+	weapon_hg_katana = 5, weapon_hg_slayersword = 4, weapon_chainsaw = 3,
+}
 
 -- Only a hit close to the joint counts (elbow / knee / neck), distance in units
 ZCityGore.JointRadius = 7
-ZCityGore.HeadJointRadius = 7
+ZCityGore.HeadJointRadius = 10 -- remorse: 7 - удар в лицо/макушку не засчитывался
 -- Joint bone per limb (the bone the limb is severed at)
 ZCityGore.JointBones = {
 	larm = "ValveBiped.Bip01_L_Forearm",

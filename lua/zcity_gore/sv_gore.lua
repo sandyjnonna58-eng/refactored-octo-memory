@@ -944,8 +944,8 @@ end
 
 local function trySever(org, dmgInfo, limb, ent)
 	if not org or not limbRootBones[limb] then return false end
-	-- remorse: голову режет organism/sv_decap.lua, пока zcity_gore_head_chop 0
-	if limb == "head" and not GetConVar("zcity_gore_head_chop"):GetBool() then return false end
+	-- remorse: при zcity_gore_heads 0 голову режет organism/sv_decap.lua
+	if limb == "head" and not GetConVar("zcity_gore_heads"):GetBool() then return false end
 	if org[limb .. "amputated"] == true then return false end
 	if not dmgInfo or not dmgInfo:IsDamageType(DMG_SLASH) then return false end
 	local hits = hitsForWeapon(dmgInfo:GetInflictor())
@@ -957,7 +957,12 @@ local function trySever(org, dmgInfo, limb, ent)
 	if (org.severNext[limb] or 0) > CurTime() then return false end
 	org.severNext[limb] = CurTime() + 0.35
 
-	if limb == "head" then hits = hits * (ZCityGore.HeadHitsMul or 2) end
+	if limb == "head" then
+		-- remorse: своё число ударов по шее для мечей, топоров и т.п. (ZCityGore.HeadHits)
+		local inf = dmgInfo:GetInflictor()
+		if IsValid(inf) and inf:IsPlayer() then inf = inf:GetActiveWeapon() end
+		hits = (IsValid(inf) and ZCityGore.HeadHits and ZCityGore.HeadHits[inf:GetClass()]) or hits * (ZCityGore.HeadHitsMul or 2)
+	end
 	-- each hit is worth 1/hits of a cut; mixed weapons add up
 	org.severprogress[limb] = (org.severprogress[limb] or 0) + 1 / hits
 	if zg_debug:GetBool() then

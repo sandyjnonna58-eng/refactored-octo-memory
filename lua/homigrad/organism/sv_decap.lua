@@ -90,9 +90,9 @@ end
 
 local function OnDamage(target, dmg)
 	if not cvOn:GetBool() or not IsValid(target) then return end
-	-- голову режет аддон zcity_gore (lua/zcity_gore), если так выбрано
-	local addonChop = GetConVar("zcity_gore_head_chop")
-	if addonChop and addonChop:GetBool() then return end
+	-- голову режет аддон zcity_gore (lua/zcity_gore, голова висит на артериях), пока zcity_gore_heads 1
+	local addonHeads = GetConVar("zcity_gore_heads")
+	if addonHeads and addonHeads:GetBool() then return end
 	if not (target:IsPlayer() or target:IsRagdoll()) then return end
 	local wep = dmg:GetInflictor()
 	local kind = Kind(wep)

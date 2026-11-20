@@ -56,7 +56,7 @@ function hg.LimbBurst(org, limb, force)
 	net.Broadcast()
 	if ZCityGore and ZCityGore.SendSeverBlood then pcall(ZCityGore.SendSeverBlood, ent, limb, pos, force) end
 	ent:EmitSound(SOUNDS[math.random(#SOUNDS)], 75, math.random(90, 110))
-	util.Decal("Blood", pos, pos - Vector(0, 0, 72), ent)
+	util.Decal("Normal.Blood1", pos, pos - Vector(0, 0, 72), ent) -- пятно крови Z-City
 	return true
 end
 

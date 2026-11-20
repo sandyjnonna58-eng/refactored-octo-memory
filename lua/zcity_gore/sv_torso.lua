@@ -664,7 +664,7 @@ local function splitEffects(rag)
 	local pos = bone and rag:GetBonePosition(bone) or rag:WorldSpaceCenter()
 	if pos then
 		if SpawnMeatGore then SpawnMeatGore(rag, pos, 10, VectorRand(-350, 350), 1.15) end
-		util.Decal("Blood", pos + Vector(0, 0, 10), pos - Vector(0, 0, 35), rag)
+		util.Decal("Normal.Blood1", pos + Vector(0, 0, 10), pos - Vector(0, 0, 35), rag) -- remorse: пятно Z-City, не HL2
 	end
 	playTear(rag, 92, 1.15)
 	if pos then

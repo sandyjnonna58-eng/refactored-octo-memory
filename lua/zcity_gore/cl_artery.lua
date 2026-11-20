@@ -71,6 +71,9 @@ end
 -- ---------------------------------------------------------------------------
 local cvQuality = CreateClientConVar("zcity_gore_quality", "2", true, false,
 	"Artery / blood visual quality: 0 = simple, 1 = low, 2 = normal, 3 = high", 0, 3)
+-- remorse: кровь как в Z-City - капли и пятна Z-City (hg.addBloodPart), без всплеска и капель HL2 (bloodspray,
+-- effects/blood + декаль Blood); 1 - как было в аддоне
+local cvHL2Blood = CreateClientConVar("zcity_gore_hl2_blood", "0", true, false, "Artery gore also uses Half-Life 2 blood (spray effect and drops)", 0, 1)
 local cvJets = CreateClientConVar("zcity_gore_jets", "1", true, false,
 	"Draw visible arterial blood streams (0 = particles only)", 0, 1)
 local cvMaxDetailed = CreateClientConVar("zcity_gore_max_detailed", "6", true, false,
@@ -197,6 +200,14 @@ local function dropHit(part, hitpos, normal)
 end
 
 function ZCityGore.BloodDrops(pos, dir, speed, count, size, em)
+	-- remorse: капли Z-City вместо частиц HL2 (они сами оставляют пятна Z-City, где упадут)
+	if not cvHL2Blood:GetBool() and hg and hg.addBloodPart then
+		for _ = 1, count do
+			local sz = size * math.Rand(0.7, 1.2)
+			hg.addBloodPart(pos + VectorRand() * 0.4, dir * speed * math.Rand(0.5, 1.15) + VectorRand() * speed * 0.28, nil, sz, sz)
+		end
+		return
+	end
 	local own = em == nil
 	if own then em = ParticleEmitter(pos) end
 	if not em then return end
@@ -258,6 +269,7 @@ function ZCityGore.TearBurst(pos, dir, strength, ent)
 	end
 	if em then em:Finish() end
 
+	if not cvHL2Blood:GetBool() then return end -- remorse: всплеск HL2 только по zcity_gore_hl2_blood 1
 	local ed = EffectData()
 	ed:SetOrigin(pos)
 	ed:SetNormal(dir)
