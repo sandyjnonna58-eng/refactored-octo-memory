@@ -187,6 +187,36 @@ local near_death_positive = {
 	"This isn't how I pictured it.",
 }
 
+-- умирает в сознании (по просьбе: «нет, нет, я не хочу умереть»): мало крови, шок 3+, сердце сбивается (фибрилляция > 50%),
+-- сознание уходит, кислорода нет, давление падает - NearDeath ниже
+local dont_want_to_die = {
+	"No, no, no... I don't want to die.",
+	"No... no... not like this.",
+	"I don't want to die. Please. I don't want to die.",
+	"Please... not now... not here...",
+	"I'm not ready. I'm not ready yet.",
+	"Somebody... anybody... please...",
+	"Stay awake. Stay awake. Stay awake.",
+	"I just want to go home...",
+	"Mom... I'm sorry...",
+	"This isn't happening. This isn't happening.",
+	"I can't die here. Not like this.",
+	"Please, God... let me live.",
+	"Don't close your eyes. Don't you dare close your eyes.",
+	"I have so much left to do...",
+	"Not yet... please, not yet...",
+	"I don't want to go...",
+	"Help... someone... help me...",
+	"I'm scared. I'm so scared.",
+}
+
+local function NearDeath(org)
+	if org.otrub or org.alive == false then return false end
+	local o2 = istable(org.o2) and org.o2[1] or 30
+	return (org.blood or 5000) < 3100 or (org.shockStage or 0) >= 3 or (org.fib or 0) > 50
+		or (org.consciousness or 1) < 0.45 or o2 < 10 or (not org.heartstop and (org.systolic or 120) < 75)
+end
+
 local broken_limb = {
 	"FUCK. FUCK. ITS DEFINITELY BROKEN!",
 	"I CAN FEEL THE BONE PIECES MOVING!",
@@ -350,6 +380,7 @@ function hg.likely_to_phrase(ply)
 
 	return (broken_dislocated) and 5
 		or (pain > 65) and 5
+		or (NearDeath(org) and 1.2) -- умирает в сознании - мысли чаще (dont_want_to_die)
 		or (panicattack > 0.55 and 1.2)
 		or (temperature < 31 and 0.5)
 		or (temperature > 38 and 0.5)
@@ -448,6 +479,12 @@ local function get_status_message(ply)
 		end
 	elseif hg.fearful(ply) then
 		most_wanted_phraselist = ((IsAimedAt(ply) > 0.9) and is_aimed_at_phrases or (math.random(10) == 1 and fear_hurt_ironic or fear_phrases))
+	end
+
+	-- умирает в сознании: чаще всего «не хочу умирать», иногда отрешённо или «держись»; при сильной боли - вперемешку с ней
+	if NearDeath(org) and (not (most_wanted_phraselist == sharp_pain or most_wanted_phraselist == audible_pain) or math.random() < 0.4) then
+		local r = math.random()
+		most_wanted_phraselist = r < 0.6 and dont_want_to_die or r < 0.8 and near_death_poetic or near_death_positive
 	end
 
 	if brain > 0.1 then
