@@ -5,6 +5,8 @@
 -- Начался - сердце запускается, таймер смерти снят, встаёшь из рэгдолла; на экране "Not like this." (cl_lastbattle.lua).
 -- Пока идёт бой: нельзя потерять сознание и упасть в рэгдолл, сердце не останавливается, мозг всегда здоров,
 -- нет эпилепсии, кислород держится на 60%, нет боли, депрессия не растёт, всё остальное не лечится.
+-- Кровь (по просьбе): на старте боя ОДИН раз останавливаются все кровотечения (раны, артерии, внутреннее) - StopBleeding;
+-- новые раны в бою кровят как обычно. Кровь не держится «полом», а восстанавливается до 5000 как обычно (sv_blood.lua).
 hg.LastBattle = hg.LastBattle or {}
 local LB = hg.LastBattle
 
@@ -131,10 +133,32 @@ local function ClearFloor(ply)
 	if IsValid(ply) and ply.organism then ply.organism.lastBattleFloor = nil end
 end
 
--- сердце запускается, таймер смерти снят, сознание вернулось, встаёт из рэгдолла
+-- все кровотечения разом: обычные и артериальные раны (у артерий ещё флаг org[артерия], например arteria - шея),
+-- внутреннее кровотечение; клиенту - пустые списки ран (и на регдолл, если лежит)
+local function StopBleeding(ply, org)
+	for _, w in ipairs(org.arterialwounds or {}) do
+		if isstring(w[7]) then org[w[7]] = 0 end
+	end
+	org.wounds = {}
+	org.arterialwounds = {}
+	org.bleed = 0
+	org.internalBleed = 0
+	org.internalBleedHeal = 0
+	org.holdWound, org.holdWoundArterial = nil, nil
+	for _, ent in ipairs({ply, ply.FakeRagdoll}) do
+		if IsValid(ent) then
+			ent:SetNetVar("wounds", org.wounds)
+			ent:SetNetVar("arterialwounds", org.arterialwounds)
+		end
+	end
+	org.lastWoundsSig, org.lastArterialWoundsSig = nil, nil
+end
+
+-- сердце запускается, таймер смерти снят, сознание вернулось, кровотечения остановлены, встаёт из рэгдолла
 local function Revive(ply)
 	local org = ply.organism
 	if not org then return end
+	StopBleeding(ply, org)
 	org.heartstop = false
 	org.fibrillation = false
 	org.arrhythmia = 0
@@ -324,10 +348,7 @@ local function ApplyFloor(owner, org)
 		if floor[key] then org[key] = true end
 	end
 
-	if isnumber(org.blood) then
-		floor.blood = math.min(floor.blood or org.blood, org.blood)
-		org.blood = floor.blood
-	end
+	-- кровь «полом» не держим: восстанавливается до 5000 как обычно (по просьбе)
 
 	-- депрессия может только уменьшаться
 	org.depressionadd = 0
