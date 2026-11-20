@@ -313,7 +313,7 @@
 - Оружие из паков Мастерской «Sandstorm SWEPs» (44 ствола weapon_rem_sand_* по моделям паков, генератор tools/sandstorm,
   compat/sh_sandstorm.lua) делали - убрано из сборки по просьбе. Если вернут: модели паков w_*.mdl в пространстве кисти
   R_Hand, WorldAng = RX * R^-1 * RX и ещё -90 к рысканию (проверено в игре на SG 552); смотреть историю git.
-- Lambda gore mod (связка `compat/sh_lambdagore.lua`) пробовали - убран по просьбе; отрезание головы - sv_decap.lua на моделях Zippy.
+- Lambda gore mod (связка `compat/sh_lambdagore.lua`) пробовали - убран по просьбе; отрезание головы - аддон zcity_gore.
 - Ярость (3 стадии, растёт ТОЛЬКО от: удара игрока, жеста «фак», «фак»/fuck в чате; удар - рывок и x2, без удара не выше 2-й):
   `modules/sv_rage.lua` и `cl_rage.lua` (музыка по стадиям `sound/rem_rage/anger.mp3`, права у пользователя,
   куски 0-59 / 58-117 / 117-конец), плитка «anger» с описанием в `cl_health_indicator.lua`.
@@ -411,39 +411,18 @@
   цеплялся к ещё не вставшим костям и съезжал к плечу). Косой разрез (плоскость отсечения на клиенте) пробовали - рисовался с багами, убран по
   просьбе. Кости для CutFromHit - у регдолла по физике, у игрока после SetupBones (старые матрицы - удар не узнавался); пила считает
   5 с по человеку (упал в регдолл - не сначала). В консоль - [rem_halve]: удары, шанс, почему нет. Тест: `rem_halve_test` (админ, на кого смотришь); в меню - Amputate Limb -> Amputate Torso (это Z-City).
-- Отрезание головы режущим оружием: `organism/sv_decap.lua` + `cl_decap.lua` - ножи, мачете, топоры, мечи, бензопила
-  (CLASS_KIND + по имени класса). Z-City сносит голову с одного сильного удара (sv_input.lua, instant) - для этого оружия
-  заблокировано (hg.RemDecapBlocks; и в отложенном взрыве головы мёртвого тела - таймер dmgstack в sv_input.lua,
-  иначе после смерти голова взрывалась и удары дальше не считались); здесь: удар по голове/шее (HeadHit у Head1/Neck1), раз за взмах (пила - раз в 0.5 с),
-  с 4-го удара шанс по виду (KIND_CHANCE: нож 20%, мачете 35%, топор 45%, меч 50%, пила 60%) -> hg.Decapitate (живого -
-  Kill и через 0.15 с регдолл смерти). Модели и расстановка - Zippy's Gore Mod Enhanced (dismemberment.lua; модели
-  пользователь прислал сам): голова - копия регдолла, видна только Head1 (сервер - scale 0 и физ. кости едут за головой,
-  клиент - колбэк BuildBonePositions сжимает всё в точку среза), снизу рваный обрубок models/limbspartial/unistump (Zippy; FollowBone
-  Head1, масштаб 3, угол 90,0,0 - ось вдоль кости, сдвиг -1.2,0,0 - HEAD_CAP_*); на теле Gib_RemoveBone(Head1), на шее headpartial5 (FollowBone Neck1, NeckCapPlace: угол/сдвиг по
-  модели - мужская / женская / alyx, mossman; плюс NECK_DOWN 3.5 вниз по шее - у Zippy он торчал на месте головы), фонтан Z-City (addfountain), шапки/очки уходят с головой, шлем/маска
-  падают. Голова: лишние кости без физики ещё и ManipulateBonePosition(-местное смещение) - к началу родителя, а
-  физические каждый тик в начале головы: всё тело в одной точке у среза даже без клиентского колбэка (он у регдоллов,
-  похоже, не всегда работает - воротник торчал вокруг головы). Разнообразие: срез Fallout NV на шее
-  (models/mosi/fnv/props/character/headcap.mdl) встал боком на плечо - отключён (USE_FNV_NECK = false); на шее всегда
-  обрубок L4D из Lambda (headpartial5 Zippy - только запасной: торчал над плечами) (models/noob_dev2323/gib/l4d/common_infected_w_neck.mdl, FollowBone Neck1,
-  угол/сдвиг из giblist.lua мода; родная текстура битая - своя перекраска жёлтой materials/rem_gore/l4d_neck_wound.vtf,
-  tools/gore/make_l4d_neck.py, vmt master_wound_cmapmaterial переписан на неё); под головой - всегда
-  unistump (выбран пользователем из 12 вариантов Zippy; headcap Lambda убран - в присланном rar битый). Bonemerge - BonemergeProp: SetParent + Fire
-  SetParentAttachment (как у Lambda / кишок Z-City), без точки крепления модель встаёт в таз. HeadHit - отрезок шея..макушка
-  вдоль кости Head1, у регдолла по физике (матрицы костей регдолла на сервере бывают старые). В консоль - [rem_decap]:
-  счёт ударов, промах шанса, отрезано / почему нет. У головы клиент ставит SetRenderClipPlane на 2 ниже начала кости
-  головы (cl_decap.lua CLIP_BELOW) - иначе воротник торчит лоскутами вокруг головы. Ассеты - models/headpartial, models/gore,
-  models/mosi (+ materials).
-  Тест: rem_decap_test, меню Amputate Limb -> Cut Off Head (id 7). rem_decap 0 - выкл.
+- Своё отрезание головы режущим оружием (organism/sv_decap.lua + cl_decap.lua: с 4-го удара шанс по оружию, обрубки
+  Zippy unistump / L4D-шея materials/rem_gore, hg.Decapitate) - УБРАНО по просьбе вместе с моделями, голову режет аддон
+  zcity_gore (ниже). Смотреть историю git, если вернут.
 - Аддон «z-city arteries & blood (cheese pull)» (прислал пользователь, встроен в сборку): `lua/autorun/zcity_gore.lua`
   (грузит после Z-City), `lua/zcity_gore/` (sh_gore - настройки: какое оружие за сколько ударов у сустава режет,
   взрывы, артерии; sv_gore - разрезы, обёртка hg.organism.AmputateLimb пропускает ТОЛЬКО свои разрезы и раздавливание
   sv_bone; sv_torso - торс пополам; sv_npc; cl_artery - отрезанный кусок висит на 3 артериях, рвутся по очереди; своё
   меню amputate_limb вместо Z-City), модели/материалы models/torsopartial, materials/models/torsopartial,
   materials/zcity_gore. Наши правки в нём помечены «remorse»: zcity_gore_block_gibs 0 (аддон удалял ВСЕ headpartial/
-  limbspartial/арбузное мясо - ломал взрыв головы и sv_decap), zcity_gore_heads 1 (по жалобе «нет артерий, когда режешь»:
-  голову режет аддон - висит на артериях, sv_decap молчит; 0 - sv_decap без артерий; ZCityGore.HeadHits - ударов по шее
-  для мечей/топоров/пилы, иначе x2 от конечности, мечам было 24; HeadJointRadius 10), zcity_gore_hl2_blood 0 (клиент; кровь Z-City: BloodDrops -> hg.addBloodPart, без bloodspray HL2,
+  limbspartial/арбузное мясо - ломал взрыв головы), голову режет только аддон (висит на артериях;
+  ZCityGore.HeadHits - ударов по шее для мечей/топоров/пилы, иначе x2 от конечности, мечам было 24; HeadJointRadius 10);
+  клинки голову с одного удара не взрывают - hg.RemDecapBlocks в organism/sv_limbburst.lua (sv_input.lua его спрашивает), zcity_gore_hl2_blood 0 (клиент; кровь Z-City: BloodDrops -> hg.addBloodPart, без bloodspray HL2,
   пятна Normal.Blood1). Катана режет через hg.ZCityGore_Sever. ВЗРЫВ КОНЕЧНОСТИ (по просьбе, как голова):
   `organism/sv_limbburst.lua` hg.LimbBurst - sv_input.lua в ветке instant (порог урона, как у головы) для нережущего
   урона зовёт его вместо AmputateLimb: исходный AmputateLimb Z-City (hg.ZCityGore_BaseAmputate) + 5..8 кусков мяса,

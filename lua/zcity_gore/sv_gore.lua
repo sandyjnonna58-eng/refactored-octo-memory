@@ -944,8 +944,6 @@ end
 
 local function trySever(org, dmgInfo, limb, ent)
 	if not org or not limbRootBones[limb] then return false end
-	-- remorse: при zcity_gore_heads 0 голову режет organism/sv_decap.lua
-	if limb == "head" and not GetConVar("zcity_gore_heads"):GetBool() then return false end
 	if org[limb .. "amputated"] == true then return false end
 	if not dmgInfo or not dmgInfo:IsDamageType(DMG_SLASH) then return false end
 	local hits = hitsForWeapon(dmgInfo:GetInflictor())

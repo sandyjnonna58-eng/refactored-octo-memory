@@ -2,11 +2,9 @@ ZCityGore = ZCityGore or {}
 
 -- remorse (сборка remorseism): аддон встроен в сборку, своё поверх него - organism/sv_limbburst.lua.
 -- zcity_gore_block_gibs: аддон удалял/прятал ВСЕ куски мяса и обрубки (headpartial, limbspartial, арбузные куски...) -
--- ломал взрыв головы Z-City, наше отрезание головы (organism/sv_decap.lua) и взрыв конечностей. 0 по умолчанию.
--- zcity_gore_heads: голову режущим оружием режет аддон - голова висит на артериях (по жалобе «нет артерий, когда
--- режешь»); 0 - режет organism/sv_decap.lua (с 4-го удара, шанс по оружию, обрубки Zippy), без артерий.
+-- ломал взрыв головы Z-City и взрыв конечностей (organism/sv_limbburst.lua). 0 по умолчанию.
+-- Голову режущим оружием режет только аддон (висит на артериях): своё отрезание головы (sv_decap.lua) убрано по просьбе.
 CreateConVar("zcity_gore_block_gibs", "0", FCVAR_ARCHIVE + FCVAR_REPLICATED, "Remove/hide Z-City gore gibs and stumps (old addon behaviour, breaks head explosions)", 0, 1)
-CreateConVar("zcity_gore_heads", "1", FCVAR_ARCHIVE + FCVAR_REPLICATED, "Cutting weapons sever the head through this addon, it hangs on arteries (0 = organism/sv_decap.lua does it)", 0, 1)
 
 ZCityGore.LimbBones = {
 	larm = "ValveBiped.Bip01_L_Forearm",

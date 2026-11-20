@@ -60,4 +60,28 @@ function hg.LimbBurst(org, limb, force)
 	return true
 end
 
+-- Клинки голову с одного удара не взрывают (Z-City в sv_input.lua умножает режущий урон по голове x25 и сносит её
+-- hg.ExplodeHead): голову режет аддон zcity_gore - за несколько ударов по шее, и она висит на артериях. Своё отрезание
+-- головы (organism/sv_decap.lua) убрано по просьбе. Без аддона - как в Z-City.
+local BLADE_CLASS = {
+	weapon_buck200knife = true, weapon_combatknife = true, weapon_sogknife = true, weapon_pocketknife = true,
+	weapon_hg_spear_knife = true, weapon_hg_machete = true, weapon_fc3_machete = true, weapon_fc3_tribalknife = true,
+	weapon_hg_axe = true, weapon_hatchet = true, weapon_tomahawk = true, weapon_hg_katana = true, weapon_hg_slayersword = true,
+	weapon_chainsaw = true,
+}
+local BLADE_PATTERNS = {"chainsaw", "katana", "sword", "axe", "hatchet", "machete", "knife", "bayonet"}
+
+function hg.RemDecapBlocks(dmgInfo)
+	if not ZCityGore or not hg.ZCityGore_Sever then return false end
+	local wep = dmgInfo:GetInflictor()
+	if IsValid(wep) and wep:IsPlayer() then wep = wep:GetActiveWeapon() end
+	if not IsValid(wep) or not wep:IsWeapon() then return false end
+	local class = wep:GetClass()
+	if BLADE_CLASS[class] then return true end
+	for _, p in ipairs(BLADE_PATTERNS) do
+		if string.find(class, p, 1, true) then return true end
+	end
+	return false
+end
+
 -- тест: rem_test_limbburst (sh_remtests.lua)
