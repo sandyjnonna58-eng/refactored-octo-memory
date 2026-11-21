@@ -30,7 +30,7 @@ local HELP = {
 	"rem_reag_debug 1            - отладка реакций регдолла в консоль сервера",
 	"rem_reag_headshot_kind decerebrate|stiffen|limp|drop - какой будет реакция на смертельный выстрел в голову (пусто - случайно)",
 	"  (реакции Artagdoll: кувырок - бросить тело взрывом/машиной; вода; корчи - боль > 50% лёжа; ползком - на животе + W)",
-	"rem_decap_test / rem_halve_test - отрезать голову / разрубить того, на кого смотришь",
+	"rem_halve_test - разрубить того, на кого смотришь",
 	"rem_drug_set heroin|meth|lsd 1, rem_depression_set 0..1, selfharm, zb_lastbattle <ник>",
 	"rem_test_vac                - состояние совместимости с V.A.C. (аддон найден, сидишь в его технике, чья камера)",
 	"rem_test_rvb                - то же для Realistic Vehicles Base (RVB)",
