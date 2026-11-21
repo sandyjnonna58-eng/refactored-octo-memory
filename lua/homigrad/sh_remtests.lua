@@ -21,10 +21,6 @@ local HELP = {
 	"                              100 остановка); forced - принудительная (растёт сама до 100 или до сброса в 0)",
 	"  (лечение: weapon_rem_amiodarone - снимает фибрилляцию; дефибриллятор - 20% сброс/запуск; weapon_adrenaline -",
 	"   стоящее сердце 3%/с заводится, два шприца подряд - передозировка)",
-	"rem_test_limbburst <larm|rarm|lleg|rleg> [ник] - взорвать конечность, как от сильного попадания (rem_limb_burst)",
-	"  (аддон z-city arteries & blood: zcity_gore_debug 1 - сервер пишет каждый удар у сустава и разрез; rem_test_arteries -",
-	"   у себя: какие отрезанные куски видит клиент и почему не рисуются артерии; zcity_gore_hl2_blood 1 - кровь HL2",
-	"   в аддоне; zcity_gore_block_gibs 1 - прятать мясо, как было)",
 	"rem_test_legs [ник]         - сломать обе ноги и уронить: ноги не должны выгибаться назад и уходить за спину",
 	"                              (rem_floppy_bones 1 - вернуть «болтающиеся» суставы Z-City, с этим багом)",
 	"rem_test_bp <сист.> [пульс] [сек] - на 40 с (или [сек]) давление/пульс как на мониторе (на кого смотришь / ты):",
@@ -34,7 +30,7 @@ local HELP = {
 	"rem_reag_debug 1            - отладка реакций регдолла в консоль сервера",
 	"rem_reag_headshot_kind decerebrate|stiffen|limp|drop - какой будет реакция на смертельный выстрел в голову (пусто - случайно)",
 	"  (реакции Artagdoll: кувырок - бросить тело взрывом/машиной; вода; корчи - боль > 50% лёжа; ползком - на животе + W)",
-	"rem_halve_test              - разрубить того, на кого смотришь (голову отрезать - меню Amputate Limb -> Head)",
+	"rem_decap_test / rem_halve_test - отрезать голову / разрубить того, на кого смотришь",
 	"rem_drug_set heroin|meth|lsd 1, rem_depression_set 0..1, selfharm, zb_lastbattle <ник>",
 	"rem_test_vac                - состояние совместимости с V.A.C. (аддон найден, сидишь в его технике, чья камера)",
 	"rem_test_rvb                - то же для Realistic Vehicles Base (RVB)",
@@ -187,16 +183,6 @@ if SERVER then
 		ply:ChatPrint(("rem_test_fib -> %s: фибрилляция %d%%%s"):format(t:Nick(), math.Round(org.fib or 0), org.fibForced and ", принудительная" or ""))
 	end)
 
-	-- взрыв конечности (organism/sv_limbburst.lua)
-	concommand.Add("rem_test_limbburst", function(ply, _, args)
-		if not IsValid(ply) or not ply:IsAdmin() then return end
-		local limb = ({larm = true, rarm = true, lleg = true, rleg = true})[args[1] or ""] and args[1] or "larm"
-		local t = Target(ply, {select(2, unpack(args))})
-		if not IsValid(t) or not t:Alive() or not t.organism then return end
-		local ok = hg.LimbBurst and hg.LimbBurst(t.organism, limb, ply:GetAimVector() * 3000)
-		ply:ChatPrint("rem_test_limbburst " .. limb .. " -> " .. t:Nick() .. (ok and "" or ": не вышло (уже нет конечности или rem_limb_burst 0)"))
-	end)
-
 	-- перелом обеих ног (как от падения с высоты): ноги «сломаны» (fake/sv_tier_0.lua fakeBoneFlop), тело в регдолл
 	Cmd("rem_test_legs", function(t, org)
 		org.lleg, org.rleg = 1, 1
@@ -255,22 +241,6 @@ else
 			ch:Play()
 		end)
 	end
-
-	-- аддон артерий (lua/zcity_gore): отрезанные куски, которые знает клиент, и рисуется ли их пучок артерий
-	concommand.Add("rem_test_arteries", function()
-		if not ZCityGore then print("rem_test_arteries: аддон zcity_gore не загружен на клиенте") return end
-		local n = 0
-		for ent in pairs(hg.clientSeveredLimbs or {}) do
-			if IsValid(ent) then
-				n = n + 1
-				local ok, bundle = pcall(ZCityGore.BundleFor, ent)
-				print(("rem_test_arteries: %s, кусок %s, на артериях %s, порвано %d, до тела %s, пучок %s"):format(tostring(ent),
-					ent:GetNWString("SeveredLimb", "?"), tostring(ent:GetNWBool("SeveredTethered")), ent:GetNWInt("ZCArteryTorn", 0),
-					tostring(ent:GetNWEntity("SeveredBody")), ok and (bundle and "рисуется" or "НЕТ (тело не найдено/кость)") or ("ошибка: " .. tostring(bundle))))
-			end
-		end
-		print("rem_test_arteries: отрезанных кусков у клиента - " .. n .. (n == 0 and " (отрезанное ещё не создавалось или не дошло до клиента)" or ""))
-	end)
 
 	concommand.Add("rem_test_deathsound", function(_, _, args)
 		Play(tonumber(args[1]) == 1 and "rem_heartstop.ogg" or "rem_brutaldeath.mp3")

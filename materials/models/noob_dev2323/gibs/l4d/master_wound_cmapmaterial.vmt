@@ -1,0 +1,12 @@
+VertexLitGeneric
+{
+	// обрубок шеи Lambda (L4D): родная master_wound_cmap.vtf была битой - своя перекраска (tools/gore/make_l4d_neck.py)
+	$basetexture "rem_gore/l4d_neck_wound"
+	$bumpmap "models/noob_dev2323/gibs/l4d/master_wound_normal"
+	$color2 "[.6 .6 .6]"
+	$phong 1
+	$phongexponent 70
+	$phongfresnelranges "[.2 .5 1]"
+	$phongboost 10
+	$diffuseexp "1.75"
+}

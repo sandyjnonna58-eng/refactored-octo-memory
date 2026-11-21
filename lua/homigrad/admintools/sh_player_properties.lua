@@ -539,7 +539,7 @@ properties.Add( "amputate_limb", {
 		torso:SetIsCheckable(true)
 		torso.OnChecked = function(s, checked) self:AmputateLimb(ent, 5) end
 
-		-- отрезать голову: через аддон zcity_gore (своё отрезание sv_decap.lua убрано; меню аддон всё равно заменяет)
+		-- отрезать голову (organism/sv_decap.lua, по Lambda Gore Mod): голова отваливается целиком
 		local decap = submenu:AddOption("Cut Off Head")
 		decap:SetRadio(true)
 		decap:SetIsCheckable(true)
@@ -575,8 +575,8 @@ properties.Add( "amputate_limb", {
 			hg.organism.AmputateLimb(ent.organism, "rleg")
 		elseif limb == 5 then
 			hg.AmputateTorso(ent, VectorRand(-250, 250), false)
-		elseif limb == 7 and hg.ZCityGore_Sever and ent.organism then
-			hg.ZCityGore_Sever(ent.organism, "head", nil, "menu") -- голова - через аддон zcity_gore (своё отрезание убрано)
+		elseif limb == 7 and hg.Decapitate then
+			hg.Decapitate(ent, VectorRand(-150, 150))
 		end
 	end
 } )

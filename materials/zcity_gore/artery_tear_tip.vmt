@@ -1,8 +1,0 @@
-"UnlitGeneric"
-{
-	"$basetexture"	"zcity_gore/artery_tear_tip"
-	"$translucent"	1
-	"$vertexcolor"	1
-	"$vertexalpha"	1
-	"$nocull"		1
-}
